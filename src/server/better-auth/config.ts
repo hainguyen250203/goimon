@@ -1,0 +1,52 @@
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { admin, phoneNumber } from "better-auth/plugins";
+
+import { db } from "~/server/db";
+import { account, session, user, verification } from "./schema";
+import {
+  ac,
+  admin as adminRole,
+  manager as managerRole,
+  user as userRole,
+} from "./permissions";
+
+export const auth = betterAuth({
+  database: drizzleAdapter(db, {
+    provider: "pg", // or "pg" or "mysql"
+    // BetterAuth tra bảng qua modelName (string) chứ không qua tên SQL của
+    // pgTable, nên phải map tường minh modelName -> table object ở đây.
+    schema: {
+      users: user,
+      sessions: session,
+      accounts: account,
+      verifications: verification,
+    },
+  }),
+  emailAndPassword: {
+    enabled: true,
+  },
+  // Toàn bộ bảng nghiệp vụ trong app đặt tên số nhiều (orders, tables,
+  // categories...) cho nhất quán — bảng do BetterAuth sinh ra cũng theo
+  // đúng quy tắc này, không dùng tiền tố riêng. Xem CLAUDE.md.
+  user: { modelName: "users" },
+  session: { modelName: "sessions" },
+  account: { modelName: "accounts" },
+  verification: { modelName: "verifications" },
+  plugins: [
+    admin({
+      ac,
+      roles: { admin: adminRole, manager: managerRole, user: userRole },
+    }),
+    phoneNumber({
+      // Nhân viên đăng nhập bằng số điện thoại + mật khẩu, tài khoản do
+      // admin tạo sẵn (auth.api.createUser) — không có flow OTP/SMS nào
+      // trong app, nên endpoint gửi OTP không bao giờ thực sự được gọi.
+      sendOTP: () => {
+        throw new Error("OTP sign-in is not used in this app.");
+      },
+    }),
+  ],
+});
+
+export type Session = typeof auth.$Infer.Session;
