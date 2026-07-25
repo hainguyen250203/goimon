@@ -1,13 +1,16 @@
+import { Flex, Text } from "@chakra-ui/react";
 import { Construction } from "lucide-react";
 
 export function ComingSoon() {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-2 py-24 text-center">
-      <Construction className="size-10 text-muted-foreground" />
-      <p className="text-sm font-medium">Sắp ra mắt</p>
-      <p className="text-sm text-muted-foreground">
+    <Flex flex={1} direction="column" align="center" justify="center" gap={2} py={24} textAlign="center">
+      <Construction size={40} color="var(--chakra-colors-fg-muted)" />
+      <Text fontSize="sm" fontWeight="medium">
+        Sắp ra mắt
+      </Text>
+      <Text fontSize="sm" color="fg.muted">
         Trang này đang được phát triển.
-      </p>
-    </div>
+      </Text>
+    </Flex>
   );
 }

@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Skeleton } from "~/components/ui/skeleton";
 
 import { api, HydrateClient } from "~/trpc/server";
 import { MenuItemList } from "./menu-item-list";
@@ -19,16 +20,10 @@ export default async function MonAnPage({
   void api.menu.listCategories.prefetch();
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
-      <HydrateClient>
-        <Suspense fallback={<MenuItemListSkeleton />}>
-          <MenuItemList page={page} categoryId={categoryId} />
-        </Suspense>
-      </HydrateClient>
-    </div>
+    <HydrateClient>
+      <Suspense fallback={<Skeleton h={96} rounded="l3" />}>
+        <MenuItemList page={page} categoryId={categoryId} />
+      </Suspense>
+    </HydrateClient>
   );
-}
-
-function MenuItemListSkeleton() {
-  return <div className="h-96 animate-pulse rounded-lg border bg-muted/30" />;
 }

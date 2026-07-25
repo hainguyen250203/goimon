@@ -1,30 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button, Input, Stack } from "@chakra-ui/react";
 
-import { Button } from "~/components/ui/button";
 import {
-  Dialog,
+  DialogBody,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogRoot,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { Field, FieldError, FieldGroup, FieldLabel } from "~/components/ui/field";
-import { Input } from "~/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
-import { toast } from "~/components/ui/toast";
+import { Field } from "~/components/ui/field";
+import { FilterSelect } from "~/components/data-table/filter-select";
+import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
 import type { UserRole } from "~/modules/user/domain/user-account.entity";
-import { ROLE_LABEL } from "./user-list";
+import { ROLE_LABEL } from "./role-label";
 
 type FormState = {
   name: string;
@@ -41,6 +33,11 @@ const EMPTY_FORM: FormState = {
 };
 
 const PHONE_NUMBER_REGEX = /^0\d{9}$/;
+
+const ROLE_OPTIONS = (Object.keys(ROLE_LABEL) as UserRole[]).map((value) => ({
+  value,
+  label: ROLE_LABEL[value],
+}));
 
 /**
  * Chỉ có dialog tạo mới — không có dialog "sửa" đầy đủ vì tài khoản không
@@ -89,12 +86,12 @@ export function CreateUserDialog({
         role: form.role,
       })
       .then(() => {
-        toast.add({ title: "Đã tạo tài khoản", type: "success" });
+        toaster.create({ title: "Đã tạo tài khoản", type: "success" });
         onOpenChange(false);
         void utils.user.list.invalidate();
       })
       .catch((error: unknown) => {
-        toast.add({
+        toaster.create({
           title: "Có lỗi xảy ra",
           description: error instanceof Error ? error.message : undefined,
           type: "error",
@@ -103,87 +100,71 @@ export function CreateUserDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogRoot open={open} onOpenChange={(e) => onOpenChange(e.open)}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Thêm người dùng</DialogTitle>
-          <DialogDescription>Tạo tài khoản nhân viên mới.</DialogDescription>
         </DialogHeader>
 
-        <FieldGroup>
-          <Field data-invalid={!!errors.name}>
-            <FieldLabel htmlFor="user-name">Tên</FieldLabel>
-            <Input
-              id="user-name"
-              value={form.name}
-              aria-invalid={!!errors.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            />
-            <FieldError>{errors.name}</FieldError>
-          </Field>
+        <DialogBody>
+          <Stack gap={4}>
+            <Field label="Tên" invalid={!!errors.name} errorText={errors.name}>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              />
+            </Field>
 
-          <Field data-invalid={!!errors.phoneNumber}>
-            <FieldLabel htmlFor="user-phone">Số điện thoại</FieldLabel>
-            <Input
-              id="user-phone"
-              value={form.phoneNumber}
-              aria-invalid={!!errors.phoneNumber}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, phoneNumber: e.target.value }))
-              }
-            />
-            <FieldError>{errors.phoneNumber}</FieldError>
-          </Field>
-
-          <Field data-invalid={!!errors.password}>
-            <FieldLabel htmlFor="user-password">Mật khẩu</FieldLabel>
-            <Input
-              id="user-password"
-              type="password"
-              value={form.password}
-              aria-invalid={!!errors.password}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, password: e.target.value }))
-              }
-            />
-            <FieldError>{errors.password}</FieldError>
-          </Field>
-
-          <Field>
-            <FieldLabel htmlFor="user-role">Vai trò</FieldLabel>
-            <Select
-              value={form.role}
-              onValueChange={(value) =>
-                setForm((f) => ({ ...f, role: (value ?? "user") as UserRole }))
-              }
+            <Field
+              label="Số điện thoại"
+              invalid={!!errors.phoneNumber}
+              errorText={errors.phoneNumber}
             >
-              <SelectTrigger id="user-role">
-                <SelectValue placeholder="Chọn vai trò">
-                  {(value: string) =>
-                    ROLE_LABEL[value as UserRole] ?? "Chọn vai trò"
-                  }
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="user">Nhân viên</SelectItem>
-                  <SelectItem value="manager">Quản lý</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </Field>
-        </FieldGroup>
+              <Input
+                value={form.phoneNumber}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, phoneNumber: e.target.value }))
+                }
+              />
+            </Field>
+
+            <Field
+              label="Mật khẩu"
+              invalid={!!errors.password}
+              errorText={errors.password}
+            >
+              <Input
+                type="password"
+                value={form.password}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, password: e.target.value }))
+                }
+              />
+            </Field>
+
+            <Field label="Vai trò">
+              <FilterSelect
+                width="full"
+                placeholder="Chọn vai trò"
+                value={form.role}
+                onValueChange={(value) =>
+                  setForm((f) => ({ ...f, role: value as UserRole }))
+                }
+                options={ROLE_OPTIONS}
+              />
+            </Field>
+          </Stack>
+        </DialogBody>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Huỷ
           </Button>
-          <Button onClick={handleSubmit} disabled={create.isPending}>
+          <Button onClick={handleSubmit} loading={create.isPending}>
             Thêm
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+    </DialogRoot>
   );
 }

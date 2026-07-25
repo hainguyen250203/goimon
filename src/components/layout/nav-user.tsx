@@ -1,20 +1,19 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { Flex, IconButton, Separator, Stack, Text } from "@chakra-ui/react";
 import { LogOut, Settings } from "lucide-react";
 
-import { Avatar, AvatarFallback } from "~/components/ui/avatar";
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
+import { Avatar } from "~/components/ui/avatar";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
+  MenuContent,
+  MenuItem,
+  MenuItemGroup,
+  MenuRoot,
+  MenuTrigger,
+} from "~/components/ui/menu";
+import { StatusDot } from "~/components/ui/status-dot";
 import { authClient } from "~/server/better-auth/client";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -24,9 +23,11 @@ const ROLE_LABEL: Record<string, string> = {
   user: "Nhân viên",
 };
 
-function initialsOf(name: string) {
-  return name.trim().slice(0, 1).toUpperCase() || "?";
-}
+const ROLE_DOT_COLOR: Record<string, string> = {
+  admin: "purple.500",
+  manager: "blue.500",
+  user: "gray.400",
+};
 
 export function NavUser({
   user,
@@ -41,65 +42,61 @@ export function NavUser({
   };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button variant="ghost" size="icon" className="rounded-full">
-            <Avatar size="sm">
-              <AvatarFallback>{initialsOf(user.name)}</AvatarFallback>
-            </Avatar>
-          </Button>
-        }
-      />
-      <DropdownMenuContent align="end" className="w-72">
-        <DropdownMenuGroup>
-          <DropdownMenuLabel>
-            <div className="flex items-center gap-3 py-1">
-              <Avatar size="lg">
-                <AvatarFallback>{initialsOf(user.name)}</AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col gap-0.5">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold">{user.name}</span>
-                  <Badge variant="secondary">
-                    {ROLE_LABEL[user.role] ?? user.role}
-                  </Badge>
-                </div>
-                {user.phoneNumber ? (
-                  <span className="text-xs text-muted-foreground">
-                    {user.phoneNumber}
-                  </span>
-                ) : null}
-              </div>
-            </div>
-          </DropdownMenuLabel>
-        </DropdownMenuGroup>
+    <MenuRoot positioning={{ placement: "bottom-end" }}>
+      <MenuTrigger asChild>
+        <IconButton variant="ghost" rounded="full" size="sm" aria-label="Tài khoản">
+          <Avatar name={user.name} size="sm" />
+        </IconButton>
+      </MenuTrigger>
+      <MenuContent minW="18rem">
+        <Stack gap={3} px={3} py={2}>
+          <Flex align="center" gap={3}>
+            <Avatar name={user.name} size="lg" />
+            <Stack gap="1px">
+              <Flex align="center" gap={2}>
+                <Text fontSize="sm" fontWeight="semibold">
+                  {user.name}
+                </Text>
+                <StatusDot color={ROLE_DOT_COLOR[user.role] ?? "gray.400"}>
+                  {ROLE_LABEL[user.role] ?? user.role}
+                </StatusDot>
+              </Flex>
+              {user.phoneNumber ? (
+                <Text fontSize="xs" color="fg.muted">
+                  {user.phoneNumber}
+                </Text>
+              ) : null}
+            </Stack>
+          </Flex>
+        </Stack>
 
-        <DropdownMenuSeparator />
+        <Separator />
 
-        <DropdownMenuGroup>
-          <DropdownMenuItem render={<a href="/quan-ly/tuy-chinh" />}>
-            <Settings />
-            <span>Tuỳ chỉnh tài khoản</span>
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
+        <MenuItemGroup>
+          <MenuItem value="settings" asChild>
+            <Link href="/quan-ly/tuy-chinh">
+              <Settings size={16} />
+              Tuỳ chỉnh tài khoản
+            </Link>
+          </MenuItem>
+        </MenuItemGroup>
 
-        <DropdownMenuSeparator />
+        <Separator />
 
-        <div className="flex items-center justify-between px-1.5 py-1">
-          <span className="text-sm">Giao diện</span>
+        <Flex align="center" justify="space-between" px={3} py={2}>
+          <Text fontSize="sm">Giao diện</Text>
           <ThemeToggle />
-        </div>
+        </Flex>
 
-        <DropdownMenuSeparator />
+        <Separator />
 
-        <DropdownMenuGroup>
-          <DropdownMenuItem variant="destructive" onClick={handleSignOut}>
-            <LogOut />
-            <span>Đăng xuất</span>
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <MenuItemGroup>
+          <MenuItem value="logout" color="fg.error" onClick={handleSignOut}>
+            <LogOut size={16} />
+            Đăng xuất
+          </MenuItem>
+        </MenuItemGroup>
+      </MenuContent>
+    </MenuRoot>
   );
 }

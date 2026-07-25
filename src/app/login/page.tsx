@@ -1,3 +1,5 @@
+import { Flex } from "@chakra-ui/react";
+
 import { redirect } from "next/navigation";
 
 import { getSession } from "~/server/better-auth/server";
@@ -11,8 +13,8 @@ export default async function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center p-4">
+    <Flex as="main" minH="100vh" align="center" justify="center" p={4}>
       <LoginForm />
-    </main>
+    </Flex>
   );
 }

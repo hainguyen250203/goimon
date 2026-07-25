@@ -1,27 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button, Input, Stack } from "@chakra-ui/react";
 
-import { Button } from "~/components/ui/button";
 import {
-  Dialog,
+  DialogBody,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogRoot,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { Field, FieldError, FieldGroup, FieldLabel } from "~/components/ui/field";
-import { Input } from "~/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
-import { toast } from "~/components/ui/toast";
+import { Field } from "~/components/ui/field";
+import { FilterSelect } from "~/components/data-table/filter-select";
+import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
 import type {
   RestaurantTable,
@@ -49,8 +41,10 @@ function toFormState(item?: RestaurantTable): FormState {
 }
 
 /**
- * Dialog dùng chung cho tạo mới lẫn sửa bàn — `item` undefined nghĩa là
- * đang ở chế độ tạo mới, tương tự MenuItemFormDialog.
+ * Dialog dùng chung cho cả tạo mới lẫn sửa — `item` undefined nghĩa là
+ * đang ở chế độ tạo mới. Điều khiển hoàn toàn qua `open`/`onOpenChange` từ
+ * component cha để 1 instance duy nhất phục vụ được cả nút "Thêm bàn"
+ * trên toolbar lẫn "Sửa" trong menu thao tác từng dòng.
  */
 export function TableFormDialog({
   open,
@@ -100,7 +94,7 @@ export function TableFormDialog({
 
     mutation
       .then(() => {
-        toast.add({
+        toaster.create({
           title: isEdit ? "Đã cập nhật bàn" : "Đã thêm bàn",
           type: "success",
         });
@@ -108,7 +102,7 @@ export function TableFormDialog({
         void utils.table.list.invalidate();
       })
       .catch((error: unknown) => {
-        toast.add({
+        toaster.create({
           title: "Có lỗi xảy ra",
           description: error instanceof Error ? error.message : undefined,
           type: "error",
@@ -117,85 +111,57 @@ export function TableFormDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogRoot open={open} onOpenChange={(e) => onOpenChange(e.open)}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{isEdit ? "Sửa bàn" : "Thêm bàn"}</DialogTitle>
-          <DialogDescription>
-            {isEdit ? "Cập nhật thông tin bàn." : "Nhập thông tin bàn mới."}
-          </DialogDescription>
         </DialogHeader>
 
-        <FieldGroup>
-          <Field data-invalid={!!errors.name}>
-            <FieldLabel htmlFor="table-name">Tên bàn</FieldLabel>
-            <Input
-              id="table-name"
-              value={form.name}
-              aria-invalid={!!errors.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            />
-            <FieldError>{errors.name}</FieldError>
-          </Field>
+        <DialogBody>
+          <Stack gap={4}>
+            <Field label="Tên bàn" invalid={!!errors.name} errorText={errors.name}>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              />
+            </Field>
 
-          <Field data-invalid={!!errors.areaId}>
-            <FieldLabel htmlFor="table-area">Khu vực</FieldLabel>
-            <Select
-              value={form.areaId}
-              onValueChange={(value) => setForm((f) => ({ ...f, areaId: value ?? "" }))}
-            >
-              <SelectTrigger id="table-area" aria-invalid={!!errors.areaId}>
-                <SelectValue placeholder="Chọn khu vực">
-                  {(value: string) =>
-                    areas.find((a) => String(a.id) === value)?.name ?? "Chọn khu vực"
-                  }
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {areas.map((a) => (
-                    <SelectItem key={a.id} value={String(a.id)}>
-                      {a.name}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <FieldError>{errors.areaId}</FieldError>
-          </Field>
+            <Field label="Khu vực" invalid={!!errors.areaId} errorText={errors.areaId}>
+              <FilterSelect
+                width="full"
+                placeholder="Chọn khu vực"
+                value={form.areaId}
+                onValueChange={(value) => setForm((f) => ({ ...f, areaId: value }))}
+                options={areas.map((a) => ({ value: String(a.id), label: a.name }))}
+              />
+            </Field>
 
-          <Field>
-            <FieldLabel htmlFor="table-status">Trạng thái</FieldLabel>
-            <Select
-              value={form.status}
-              onValueChange={(value) =>
-                setForm((f) => ({ ...f, status: value as TableStatus }))
-              }
-            >
-              <SelectTrigger id="table-status">
-                <SelectValue placeholder="Trạng thái">
-                  {(value: string) => STATUS_LABEL[value as TableStatus] ?? value}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="available">Trống</SelectItem>
-                  <SelectItem value="occupied">Đang phục vụ</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </Field>
-        </FieldGroup>
+            <Field label="Trạng thái">
+              <FilterSelect
+                width="full"
+                placeholder="Trạng thái"
+                value={form.status}
+                onValueChange={(value) =>
+                  setForm((f) => ({ ...f, status: value as TableStatus }))
+                }
+                options={[
+                  { value: "available", label: STATUS_LABEL.available },
+                  { value: "occupied", label: STATUS_LABEL.occupied },
+                ]}
+              />
+            </Field>
+          </Stack>
+        </DialogBody>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Huỷ
           </Button>
-          <Button onClick={handleSubmit} disabled={isPending}>
+          <Button onClick={handleSubmit} loading={isPending}>
             {isEdit ? "Lưu" : "Thêm"}
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+    </DialogRoot>
   );
 }

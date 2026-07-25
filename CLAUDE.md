@@ -6,11 +6,15 @@ Hệ thống POS quản lý nhà hàng: order món, tạo hóa đơn, in bill, x
 
 - `../pos-be` và `../pos-fe`: dùng để tham khảo UI và business flow hiện có.
 - **Cấm** copy code, copy cấu trúc thư mục, hoặc kế thừa pattern từ hai repo này. Toàn bộ code trong `goimon` viết mới từ đầu, tuân theo kiến trúc mô tả bên dưới.
+- `alix-bo-frontend-v2` (repo Chakra UI v3 khác của cùng tổ chức): tham khảo UX layout (admin shell/sidebar/header) và pattern Chakra thật (theme `system.ts`, `EmotionRegistry`, snippet `components/ui/*`) — được phép lấy trực tiếp pattern/API vì cùng stack Chakra, khác `pos-be`/`pos-fe` (khác hẳn stack, chỉ được tham khảo cấu trúc/UX).
 
 ## Tech stack (bắt buộc)
 
 - **Scaffold**: T3 Stack (https://create.t3.gg) — Next.js App Router + tRPC + TypeScript.
-- **UI**: shadcn/ui + Tailwind CSS.
+- **UI**: Chakra UI v3 (Ark UI based) + `next-themes` cho color mode. Không dùng Tailwind CSS.
+  - Component dùng chung sinh qua CLI chính thức (`npx @chakra-ui/cli snippet add <name>`), đặt ở `src/components/ui/` — sửa icon từ `react-icons` sang `lucide-react` cho khớp icon library cả app đang dùng.
+  - Bo góc toàn app chỉnh qua 3 semantic token `l1`/`l2`/`l3` (6/8/12px) trong `src/lib/theme/system.ts` — cố tình bo nhẹ, không dùng `xl`/`2xl`/`full` cho container.
+  - **Bắt buộc** có `EmotionRegistry` (`src/components/ui/emotion-registry.tsx`, pattern SSR chuẩn của Next.js cho Emotion) bọc ngoài cùng `ChakraProvider` trong root layout — Chakra v3 vẫn dùng Emotion's `<Global>` cho global styles, thiếu registry này gây hydration mismatch thật (React error #418), không phải cảnh báo vô hại.
 - **Database**: PostgreSQL + Drizzle ORM.
 - **Validation**: Zod, kết hợp `drizzle-zod` để sinh schema từ table (không tự tay viết lại schema Zod trùng với schema DB).
   - Ngoại lệ: `drizzle-zod@0.8` sinh schema kiểu `zod/v4`, không `.extend()`/`.omit()` tương thích với `z` (zod v3 classic) mà cả app dùng — kể cả khi trỏ `zodInstance` về `z` qua `createSchemaFactory`. Với input CRUD cần `.extend()` (vd: thêm `id` cho update), viết tay `z.object({...})` thay vì sinh từ drizzle-zod.
@@ -44,7 +48,7 @@ Hệ thống POS quản lý nhà hàng: order món, tạo hóa đơn, in bill, x
 
 2. **Chia folder theo module/feature**, không chia theo loại file toàn cục (không có `components/`, `hooks/`, `services/` dùng chung cho toàn app ở root).
    - Ví dụ module: `modules/order`, `modules/menu`, `modules/table`, `modules/printer`, `modules/activity-log`, `modules/report`.
-   - Code dùng chung thật sự cross-module (UI primitive từ shadcn, utils thuần) mới đặt ở `src/components/ui`, `src/lib`.
+   - Code dùng chung thật sự cross-module (UI primitive từ Chakra snippet, utils thuần) mới đặt ở `src/components/ui`, `src/lib`.
 
 3. **Mỗi action/mutation là một file/hàm riêng, nhỏ và đơn nhiệm.**
    - Không gộp nhiều nghiệp vụ vào một action lớn.
@@ -135,7 +139,7 @@ src/
 ## Luôn chạy song song nhiều agent
 
 - Mặc định PHẢI dùng nhiều subagent chạy song song thay vì tuần tự một mình, đặc biệt:
-  - Research/search: tra docs (BetterAuth, Drizzle, shadcn...), tìm hiểu codebase,
+  - Research/search: tra docs (BetterAuth, Drizzle, Chakra UI...), tìm hiểu codebase,
     đọc repo tham khảo pos-be/pos-fe → tách thành nhiều agent search song song,
     mỗi agent một chủ đề.
   - Các task độc lập không đụng chung file: ví dụ scaffold module `menu` và module

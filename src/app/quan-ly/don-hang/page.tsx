@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Skeleton } from "~/components/ui/skeleton";
 
 import { api, HydrateClient } from "~/trpc/server";
 import type { OrderStatus } from "~/modules/order/domain/order-list-item.entity";
@@ -22,16 +23,10 @@ export default async function DonHangPage({
   void api.order.list.prefetch({ page, pageSize: PAGE_SIZE, status });
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
-      <HydrateClient>
-        <Suspense fallback={<OrderListSkeleton />}>
-          <OrderList page={page} status={status} />
-        </Suspense>
-      </HydrateClient>
-    </div>
+    <HydrateClient>
+      <Suspense fallback={<Skeleton h={96} rounded="l3" />}>
+        <OrderList page={page} status={status} />
+      </Suspense>
+    </HydrateClient>
   );
-}
-
-function OrderListSkeleton() {
-  return <div className="h-96 animate-pulse rounded-lg border bg-muted/30" />;
 }

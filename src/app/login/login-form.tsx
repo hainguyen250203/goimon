@@ -2,17 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Button, Card, Input, Stack, Text } from "@chakra-ui/react";
 
-import { Button } from "~/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "~/components/ui/card";
-import { Input } from "~/components/ui/input";
-import { Label } from "~/components/ui/label";
+import { Field } from "~/components/ui/field";
 import { authClient } from "~/server/better-auth/client";
 
 export function LoginForm() {
@@ -44,41 +36,47 @@ export function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-sm">
-      <CardHeader>
-        <CardTitle>Đăng nhập</CardTitle>
-        <CardDescription>Nhập số điện thoại và mật khẩu để tiếp tục.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form className="flex flex-col gap-4" onSubmit={handleSubmit}>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="phoneNumber">Số điện thoại</Label>
-            <Input
-              id="phoneNumber"
-              type="tel"
-              autoComplete="tel"
-              required
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-2">
-            <Label htmlFor="password">Mật khẩu</Label>
-            <Input
-              id="password"
-              type="password"
-              autoComplete="current-password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <Button type="submit" disabled={isSubmitting} className="mt-2">
-            {isSubmitting ? "Đang đăng nhập..." : "Đăng nhập"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+    <Card.Root w="full" maxW="sm">
+      <Card.Header>
+        <Card.Title>Đăng nhập</Card.Title>
+        <Card.Description>
+          Nhập số điện thoại và mật khẩu để tiếp tục.
+        </Card.Description>
+      </Card.Header>
+      <Card.Body>
+        <Stack asChild gap={4}>
+          <form onSubmit={handleSubmit}>
+            <Field label="Số điện thoại">
+              <Input
+                id="phoneNumber"
+                type="tel"
+                autoComplete="tel"
+                required
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+              />
+            </Field>
+            <Field label="Mật khẩu">
+              <Input
+                id="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </Field>
+            {error ? (
+              <Text fontSize="sm" color="fg.error">
+                {error}
+              </Text>
+            ) : null}
+            <Button type="submit" loading={isSubmitting} mt={2}>
+              Đăng nhập
+            </Button>
+          </form>
+        </Stack>
+      </Card.Body>
+    </Card.Root>
   );
 }

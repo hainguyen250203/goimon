@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { Skeleton } from "~/components/ui/skeleton";
 
 import { api, HydrateClient } from "~/trpc/server";
 import { getSession } from "~/server/better-auth/server";
@@ -44,16 +45,10 @@ export default async function NguoiDungPage({
   void api.user.list.prefetch({ page, pageSize: PAGE_SIZE, role, banned });
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
-      <HydrateClient>
-        <Suspense fallback={<UserListSkeleton />}>
-          <UserList page={page} role={role} banned={banned} />
-        </Suspense>
-      </HydrateClient>
-    </div>
+    <HydrateClient>
+      <Suspense fallback={<Skeleton h={96} rounded="l3" />}>
+        <UserList page={page} role={role} banned={banned} />
+      </Suspense>
+    </HydrateClient>
   );
-}
-
-function UserListSkeleton() {
-  return <div className="h-96 animate-pulse rounded-lg border bg-muted/30" />;
 }

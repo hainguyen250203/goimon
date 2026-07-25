@@ -1,88 +1,166 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Box, Flex, IconButton, Text } from "@chakra-ui/react";
 import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
-import { Button } from "~/components/ui/button";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarHeader,
-  SidebarInset,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarProvider,
-  useSidebar,
-} from "~/components/ui/sidebar";
+import { DrawerBody, DrawerContent, DrawerRoot, DrawerTitle } from "~/components/ui/drawer";
+import { VisuallyHidden } from "@chakra-ui/react";
+import { Tooltip } from "~/components/ui/tooltip";
 
 import { AdminSidebarItem } from "./admin-sidebar-item";
 import { ADMIN_NAV, filterNavByRole, type NavItem, type Role } from "./nav-config";
 import { NavUser } from "./nav-user";
 
+const SIDEBAR_W = "224px";
+const SIDEBAR_COLLAPSED_W = "60px";
+
 // Ưu tiên exact-match trước; prefix-match chỉ dùng làm fallback và loại trừ
 // href gốc "/quan-ly" (mục Tổng quan) vì nó là prefix của MỌI route con,
 // nếu không sẽ luôn thắng trước các route cụ thể hơn.
 function findActiveLabel(nav: NavItem[], pathname: string): string {
-  const flat = nav.flatMap((item) => [item, ...(item.children ?? [])]);
-
-  const exact = flat.find((item) => item.href === pathname);
+  const exact = nav.find((item) => item.href === pathname);
   if (exact) return exact.label;
 
-  const prefixed = flat.find(
+  const prefixed = nav.find(
     (item) =>
-      item.href &&
-      item.href !== "/quan-ly" &&
-      pathname.startsWith(item.href + "/"),
+      item.href && item.href !== "/quan-ly" && pathname.startsWith(item.href + "/"),
   );
   return prefixed?.label ?? "";
 }
 
-/**
- * Nút thu gọn/mở rộng sidebar nằm ở đáy sidebar (không phải trong header) —
- * chỉ có ý nghĩa ở desktop (chế độ collapsible="icon"), ẩn trên mobile vì
- * sidebar mobile là Sheet bật/tắt qua hamburger trong header.
- */
-function SidebarCollapseToggle() {
-  const { state, toggleSidebar } = useSidebar();
-  const collapsed = state === "collapsed";
-
+function SidebarLogo({ collapsed }: { collapsed: boolean }) {
   return (
-    <SidebarMenuItem className="hidden md:block">
-      <SidebarMenuButton
-        onClick={toggleSidebar}
-        tooltip={collapsed ? "Mở rộng" : "Thu gọn"}
-        className="group-data-[collapsible=icon]:justify-center"
-      >
-        {collapsed ? <PanelLeftOpen /> : <PanelLeftClose />}
-        <span>Thu gọn</span>
-      </SidebarMenuButton>
-    </SidebarMenuItem>
+    <Flex
+      h="56px"
+      align="center"
+      justify={collapsed ? "center" : "flex-start"}
+      px={collapsed ? 0 : 4}
+      flexShrink={0}
+      borderBottomWidth="1px"
+      borderColor="border"
+    >
+      <Flex asChild align="center" gap={2}>
+        <Link href="/quan-ly" aria-label="Về trang tổng quan">
+          <Flex
+            align="center"
+            justify="center"
+            boxSize="6"
+            rounded="l1"
+            bg="colorPalette.solid"
+            color="colorPalette.contrast"
+            colorPalette="gray"
+            fontSize="xs"
+            fontWeight="bold"
+            flexShrink={0}
+          >
+            G
+          </Flex>
+          {!collapsed && (
+            <Text fontWeight="semibold" fontSize="sm" whiteSpace="nowrap">
+              Goimon
+            </Text>
+          )}
+        </Link>
+      </Flex>
+    </Flex>
   );
 }
 
-/**
- * Trigger mở sidebar (Sheet) trên mobile — dùng icon hamburger 3 gạch quen
- * thuộc thay vì icon panel mặc định của SidebarTrigger (không override được
- * icon đó qua props vì bị hardcode trong component gốc).
- */
-function MobileSidebarTrigger() {
-  const { toggleSidebar } = useSidebar();
+function SidebarCollapseToggle({
+  collapsed,
+  onToggle,
+}: {
+  collapsed: boolean;
+  onToggle: () => void;
+}) {
+  const button = (
+    <Flex
+      align="center"
+      justify={collapsed ? "center" : "flex-start"}
+      gap={2.5}
+      px={3}
+      py="6px"
+      mx={2}
+      rounded="l2"
+      cursor="pointer"
+      h="36px"
+      color="fg.muted"
+      _hover={{ bg: "bg.muted", color: "fg" }}
+      transition="background 0.15s, color 0.15s"
+      onClick={onToggle}
+    >
+      {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+      {!collapsed && <Text fontSize="sm">Thu gọn</Text>}
+    </Flex>
+  );
 
   return (
-    <Button
+    <Box borderTopWidth="1px" borderColor="border" py={2} display={{ base: "none", md: "block" }}>
+      {collapsed ? (
+        <Tooltip content="Mở rộng" positioning={{ placement: "right" }}>
+          {button}
+        </Tooltip>
+      ) : (
+        button
+      )}
+    </Box>
+  );
+}
+
+function SidebarNav({
+  nav,
+  collapsed,
+  onNavigate,
+}: {
+  nav: NavItem[];
+  collapsed: boolean;
+  onNavigate?: () => void;
+}) {
+  return (
+    <Box flex={1} overflowY="auto" overflowX="hidden" py={2}>
+      {nav.map((item) => (
+        <Box key={item.key} my="1px">
+          <AdminSidebarItem item={item} collapsed={collapsed} onNavigate={onNavigate} />
+        </Box>
+      ))}
+    </Box>
+  );
+}
+
+function SidebarContent({
+  nav,
+  collapsed,
+  onToggle,
+  onNavigate,
+}: {
+  nav: NavItem[];
+  collapsed: boolean;
+  onToggle?: () => void;
+  onNavigate?: () => void;
+}) {
+  return (
+    <Flex direction="column" h="full" w="full" bg="bg">
+      <SidebarLogo collapsed={collapsed} />
+      <SidebarNav nav={nav} collapsed={collapsed} onNavigate={onNavigate} />
+      {onToggle && <SidebarCollapseToggle collapsed={collapsed} onToggle={onToggle} />}
+    </Flex>
+  );
+}
+
+function MobileHeaderTrigger({ onOpen }: { onOpen: () => void }) {
+  return (
+    <IconButton
+      aria-label="Mở menu"
       variant="ghost"
-      size="icon"
-      className="md:hidden"
-      onClick={toggleSidebar}
+      size="sm"
+      display={{ base: "flex", md: "none" }}
+      onClick={onOpen}
     >
       <Menu />
-      <span className="sr-only">Mở menu</span>
-    </Button>
+    </IconButton>
   );
 }
 
@@ -97,48 +175,75 @@ export function AdminShell({
   const nav = filterNavByRole(ADMIN_NAV, user.role);
   const title = findActiveLabel(nav, pathname);
 
-  return (
-    <SidebarProvider defaultOpen={false}>
-      <Sidebar collapsible="icon">
-        <SidebarHeader className="h-14 flex-row items-center justify-center border-b">
-          <Link
-            href="/quan-ly"
-            className="flex w-full items-center gap-2 overflow-hidden px-1 font-semibold group-data-[collapsible=icon]:justify-center"
-          >
-            <span className="hidden size-6 shrink-0 items-center justify-center rounded bg-primary text-xs text-primary-foreground group-data-[collapsible=icon]:flex">
-              G
-            </span>
-            <span className="truncate group-data-[collapsible=icon]:hidden">
-              Goimon
-            </span>
-          </Link>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {nav.map((item) => (
-                  <AdminSidebarItem key={item.key} item={item} />
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-        <SidebarFooter>
-          <SidebarMenu>
-            <SidebarCollapseToggle />
-          </SidebarMenu>
-        </SidebarFooter>
-      </Sidebar>
+  const [collapsed, setCollapsed] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-      <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-          <MobileSidebarTrigger />
-          <span className="flex-1 truncate text-sm font-medium">{title}</span>
+  return (
+    <Flex h="100dvh" bg="bg">
+      {/* Desktop sidebar */}
+      <Box
+        display={{ base: "none", md: "flex" }}
+        flexShrink={0}
+        h="full"
+        w={collapsed ? SIDEBAR_COLLAPSED_W : SIDEBAR_W}
+        borderRightWidth="1px"
+        borderColor="border"
+        transition="width 0.2s ease"
+        overflow="hidden"
+      >
+        <SidebarContent
+          nav={nav}
+          collapsed={collapsed}
+          onToggle={() => setCollapsed((c) => !c)}
+        />
+      </Box>
+
+      {/* Mobile drawer */}
+      <DrawerRoot
+        open={mobileOpen}
+        placement="start"
+        onOpenChange={(e) => setMobileOpen(e.open)}
+      >
+        <DrawerContent maxW="240px" p={0}>
+          <VisuallyHidden>
+            <DrawerTitle>Menu điều hướng</DrawerTitle>
+          </VisuallyHidden>
+          <DrawerBody p={0}>
+            <SidebarContent
+              nav={nav}
+              collapsed={false}
+              onNavigate={() => setMobileOpen(false)}
+            />
+          </DrawerBody>
+        </DrawerContent>
+      </DrawerRoot>
+
+      {/* Main content */}
+      <Flex flex={1} direction="column" h="full" minW={0} overflowY="auto">
+        <Flex
+          as="header"
+          h="56px"
+          align="center"
+          gap={3}
+          px={4}
+          flexShrink={0}
+          borderBottomWidth="1px"
+          borderColor="border"
+          position="sticky"
+          top={0}
+          bg="bg"
+          zIndex={10}
+        >
+          <MobileHeaderTrigger onOpen={() => setMobileOpen(true)} />
+          <Text flex={1} fontSize="sm" fontWeight="medium" lineClamp={1}>
+            {title}
+          </Text>
           <NavUser user={user} />
-        </header>
-        <main className="flex flex-1 flex-col p-4 md:p-6">{children}</main>
-      </SidebarInset>
-    </SidebarProvider>
+        </Flex>
+        <Box as="main" flex={1} p={{ base: 4, md: 6 }}>
+          {children}
+        </Box>
+      </Flex>
+    </Flex>
   );
 }

@@ -1,20 +1,19 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button, Input, Stack } from "@chakra-ui/react";
 
-import { Button } from "~/components/ui/button";
 import {
-  Dialog,
+  DialogBody,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogRoot,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { Field, FieldError, FieldGroup, FieldLabel } from "~/components/ui/field";
-import { Input } from "~/components/ui/input";
+import { Field } from "~/components/ui/field";
 import { Switch } from "~/components/ui/switch";
-import { toast } from "~/components/ui/toast";
+import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
 import type { Printer } from "~/modules/printer/domain/printer.entity";
 
@@ -101,7 +100,7 @@ export function PrinterFormDialog({
 
     mutation
       .then(() => {
-        toast.add({
+        toaster.create({
           title: isEdit ? "Đã cập nhật máy in" : "Đã thêm máy in",
           type: "success",
         });
@@ -109,7 +108,7 @@ export function PrinterFormDialog({
         void utils.printer.list.invalidate();
       })
       .catch((error: unknown) => {
-        toast.add({
+        toaster.create({
           title: "Có lỗi xảy ra",
           description: error instanceof Error ? error.message : undefined,
           type: "error",
@@ -118,76 +117,65 @@ export function PrinterFormDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogRoot open={open} onOpenChange={(e) => onOpenChange(e.open)}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{isEdit ? "Sửa máy in" : "Thêm máy in"}</DialogTitle>
-          <DialogDescription>
-            {isEdit
-              ? "Cập nhật thông tin máy in."
-              : "Nhập thông tin máy in mới."}
-          </DialogDescription>
         </DialogHeader>
 
-        <FieldGroup>
-          <Field data-invalid={!!errors.name}>
-            <FieldLabel htmlFor="printer-name">Tên máy in</FieldLabel>
-            <Input
-              id="printer-name"
-              value={form.name}
-              aria-invalid={!!errors.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            />
-            <FieldError>{errors.name}</FieldError>
-          </Field>
+        <DialogBody>
+          <Stack gap={4}>
+            <Field label="Tên máy in" invalid={!!errors.name} errorText={errors.name}>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              />
+            </Field>
 
-          <Field data-invalid={!!errors.ipAddress}>
-            <FieldLabel htmlFor="printer-ip">Địa chỉ IP</FieldLabel>
-            <Input
-              id="printer-ip"
-              placeholder="192.168.1.100"
-              value={form.ipAddress}
-              aria-invalid={!!errors.ipAddress}
-              onChange={(e) => setForm((f) => ({ ...f, ipAddress: e.target.value }))}
-            />
-            <FieldError>{errors.ipAddress}</FieldError>
-          </Field>
+            <Field
+              label="Địa chỉ IP"
+              invalid={!!errors.ipAddress}
+              errorText={errors.ipAddress}
+            >
+              <Input
+                placeholder="192.168.1.100"
+                value={form.ipAddress}
+                onChange={(e) => setForm((f) => ({ ...f, ipAddress: e.target.value }))}
+              />
+            </Field>
 
-          <Field data-invalid={!!errors.port}>
-            <FieldLabel htmlFor="printer-port">Cổng</FieldLabel>
-            <Input
-              id="printer-port"
-              type="number"
-              min={1}
-              max={65535}
-              value={form.port}
-              aria-invalid={!!errors.port}
-              onChange={(e) => setForm((f) => ({ ...f, port: e.target.value }))}
-            />
-            <FieldError>{errors.port}</FieldError>
-          </Field>
+            <Field label="Cổng" invalid={!!errors.port} errorText={errors.port}>
+              <Input
+                type="number"
+                min={1}
+                max={65535}
+                value={form.port}
+                onChange={(e) => setForm((f) => ({ ...f, port: e.target.value }))}
+              />
+            </Field>
 
-          <Field orientation="horizontal">
-            <FieldLabel htmlFor="printer-active">Đang hoạt động</FieldLabel>
-            <Switch
-              id="printer-active"
-              checked={form.isActive}
-              onCheckedChange={(checked) =>
-                setForm((f) => ({ ...f, isActive: checked }))
-              }
-            />
-          </Field>
-        </FieldGroup>
+            <Field orientation="horizontal">
+              <Switch
+                checked={form.isActive}
+                onCheckedChange={(details) =>
+                  setForm((f) => ({ ...f, isActive: details.checked }))
+                }
+              >
+                Đang hoạt động
+              </Switch>
+            </Field>
+          </Stack>
+        </DialogBody>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Huỷ
           </Button>
-          <Button onClick={handleSubmit} disabled={isPending}>
+          <Button onClick={handleSubmit} loading={isPending}>
             {isEdit ? "Lưu" : "Thêm"}
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+    </DialogRoot>
   );
 }

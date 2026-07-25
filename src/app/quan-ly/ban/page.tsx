@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Skeleton } from "~/components/ui/skeleton";
 
 import { api, HydrateClient } from "~/trpc/server";
 import type { TableStatus } from "~/modules/table/domain/restaurant-table.entity";
@@ -23,20 +24,15 @@ export default async function BanPage({
       ? (statusParam as TableStatus)
       : undefined;
 
+  // Prefetch song song trên server — tránh waterfall khi client hydrate.
   void api.table.list.prefetch({ page, pageSize: PAGE_SIZE, areaId, status });
   void api.table.listAreas.prefetch();
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
-      <HydrateClient>
-        <Suspense fallback={<TableListSkeleton />}>
-          <TableList page={page} areaId={areaId} status={status} />
-        </Suspense>
-      </HydrateClient>
-    </div>
+    <HydrateClient>
+      <Suspense fallback={<Skeleton h={96} rounded="l3" />}>
+        <TableList page={page} areaId={areaId} status={status} />
+      </Suspense>
+    </HydrateClient>
   );
-}
-
-function TableListSkeleton() {
-  return <div className="h-96 animate-pulse rounded-lg border bg-muted/30" />;
 }

@@ -3,24 +3,17 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { keepPreviousData } from "@tanstack/react-query";
+import { Button, Stack } from "@chakra-ui/react";
 import { Plus } from "lucide-react";
+import { StatusDot } from "~/components/ui/status-dot";
 
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
 import {
   ListViewTable,
   type ListViewColumn,
 } from "~/components/data-table/list-view-table";
 import { ListViewPagination } from "~/components/data-table/list-view-pagination";
 import { ListViewToolbar } from "~/components/data-table/list-view-toolbar";
+import { FilterSelect } from "~/components/data-table/filter-select";
 import { api } from "~/trpc/react";
 import type {
   RestaurantTable,
@@ -62,27 +55,22 @@ export function TableList({
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const columns: ListViewColumn<RestaurantTable>[] = [
-    {
-      key: "id",
-      header: "ID",
-      cell: (row) => row.id,
-      className: "w-16 text-muted-foreground",
-    },
+    { key: "id", header: "ID", cell: (row) => row.id, width: "4rem" },
     { key: "name", header: "Tên bàn", cell: (row) => row.name },
     { key: "area", header: "Khu vực", cell: (row) => row.areaName },
     {
       key: "status",
       header: "Trạng thái",
       cell: (row) => (
-        <Badge variant={row.status === "available" ? "secondary" : "default"}>
+        <StatusDot color={row.status === "available" ? "green.500" : "orange.500"}>
           {STATUS_LABEL[row.status]}
-        </Badge>
+        </StatusDot>
       ),
     },
     {
       key: "actions",
       header: "",
-      className: "w-12",
+      width: "3rem",
       cell: (row) => (
         <TableRowActions
           item={row}
@@ -101,6 +89,8 @@ export function TableList({
     status?: TableStatus;
   }) => {
     const search = new URLSearchParams();
+    // Dùng "in" thay vì "??" — phải phân biệt được "không truyền areaId/status"
+    // (giữ filter hiện tại) với "truyền areaId/status: undefined" (xoá filter).
     const nextAreaId = "areaId" in params ? params.areaId : areaId;
     const nextStatus = "status" in params ? params.status : status;
     if (nextAreaId) search.set("areaId", String(nextAreaId));
@@ -110,7 +100,7 @@ export function TableList({
   };
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <Stack gap={4}>
       <ListViewToolbar
         end={
           <Button
@@ -119,12 +109,14 @@ export function TableList({
               setDialogOpen(true);
             }}
           >
-            <Plus data-icon="inline-start" />
+            <Plus size={16} />
             Thêm bàn
           </Button>
         }
       >
-        <Select
+        <FilterSelect
+          width="12rem"
+          placeholder="Khu vực"
           value={areaId ? String(areaId) : ALL_AREAS}
           onValueChange={(value) =>
             router.push(
@@ -134,29 +126,15 @@ export function TableList({
               }),
             )
           }
-        >
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Khu vực">
-              {(value: string) =>
-                !value || value === ALL_AREAS
-                  ? "Tất cả khu vực"
-                  : (areas.find((a) => String(a.id) === value)?.name ?? value)
-              }
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value={ALL_AREAS}>Tất cả khu vực</SelectItem>
-              {areas.map((a) => (
-                <SelectItem key={a.id} value={String(a.id)}>
-                  {a.name}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+          options={[
+            { value: ALL_AREAS, label: "Tất cả khu vực" },
+            ...areas.map((a) => ({ value: String(a.id), label: a.name })),
+          ]}
+        />
 
-        <Select
+        <FilterSelect
+          width="12rem"
+          placeholder="Trạng thái"
           value={status ?? ALL_STATUS}
           onValueChange={(value) =>
             router.push(
@@ -166,24 +144,12 @@ export function TableList({
               }),
             )
           }
-        >
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Trạng thái">
-              {(value: string) =>
-                !value || value === ALL_STATUS
-                  ? "Tất cả trạng thái"
-                  : (STATUS_LABEL[value as TableStatus] ?? value)
-              }
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value={ALL_STATUS}>Tất cả trạng thái</SelectItem>
-              <SelectItem value="available">Trống</SelectItem>
-              <SelectItem value="occupied">Đang phục vụ</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+          options={[
+            { value: ALL_STATUS, label: "Tất cả trạng thái" },
+            { value: "available", label: "Trống" },
+            { value: "occupied", label: "Đang phục vụ" },
+          ]}
+        />
       </ListViewToolbar>
 
       <ListViewTable
@@ -206,6 +172,6 @@ export function TableList({
         areas={areas}
         item={editingItem}
       />
-    </div>
+    </Stack>
   );
 }

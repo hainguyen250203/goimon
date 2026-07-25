@@ -1,27 +1,25 @@
 "use client";
 
 import { useState } from "react";
+import { Button, IconButton } from "@chakra-ui/react";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "~/components/ui/alert-dialog";
-import { Button } from "~/components/ui/button";
+  DialogBody,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogRoot,
+  DialogTitle,
+} from "~/components/ui/dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
-import { toast } from "~/components/ui/toast";
+  MenuContent,
+  MenuItem,
+  MenuItemGroup,
+  MenuRoot,
+  MenuTrigger,
+} from "~/components/ui/menu";
+import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
 import type { Printer } from "~/modules/printer/domain/printer.entity";
 
@@ -36,60 +34,60 @@ export function PrinterRowActions({
   const utils = api.useUtils();
   const remove = api.printer.delete.useMutation({
     onSuccess: () => {
-      toast.add({ title: "Đã xoá máy in", type: "success" });
+      toaster.create({ title: "Đã xoá máy in", type: "success" });
       void utils.printer.list.invalidate();
     },
     onError: (error) => {
-      toast.add({ title: "Không thể xoá", description: error.message, type: "error" });
+      toaster.create({ title: "Không thể xoá", description: error.message, type: "error" });
     },
   });
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button variant="ghost" size="icon" aria-label="Thao tác">
-              <MoreHorizontal />
-            </Button>
-          }
-        />
-        <DropdownMenuContent align="end">
-          <DropdownMenuGroup>
-            <DropdownMenuItem onClick={() => onEdit(item)}>
-              <Pencil data-icon="inline-start" />
+      <MenuRoot positioning={{ placement: "bottom-end" }}>
+        <MenuTrigger asChild>
+          <IconButton variant="ghost" size="sm" aria-label="Thao tác">
+            <MoreHorizontal size={16} />
+          </IconButton>
+        </MenuTrigger>
+        <MenuContent minW="10rem">
+          <MenuItemGroup>
+            <MenuItem value="edit" onClick={() => onEdit(item)}>
+              <Pencil size={16} />
               Sửa
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => setConfirmOpen(true)}
-            >
-              <Trash2 data-icon="inline-start" />
+            </MenuItem>
+            <MenuItem value="delete" color="fg.error" onClick={() => setConfirmOpen(true)}>
+              <Trash2 size={16} />
               Xoá
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            </MenuItem>
+          </MenuItemGroup>
+        </MenuContent>
+      </MenuRoot>
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Xoá máy in "{item.name}"?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Hành động này không thể hoàn tác.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Huỷ</AlertDialogCancel>
-            <AlertDialogAction
+      <DialogRoot
+        role="alertdialog"
+        open={confirmOpen}
+        onOpenChange={(e) => setConfirmOpen(e.open)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xoá máy in &quot;{item.name}&quot;?</DialogTitle>
+          </DialogHeader>
+          <DialogBody>Hành động này không thể hoàn tác.</DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+              Huỷ
+            </Button>
+            <Button
+              colorPalette="red"
               onClick={() => remove.mutate({ id: item.id })}
-              disabled={remove.isPending}
+              loading={remove.isPending}
             >
               Xoá
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </DialogRoot>
     </>
   );
 }

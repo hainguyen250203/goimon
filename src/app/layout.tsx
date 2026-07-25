@@ -2,10 +2,10 @@ import "~/styles/globals.css";
 
 import { type Metadata } from "next";
 import { Be_Vietnam_Pro } from "next/font/google";
-import { ThemeProvider } from "next-themes";
 
-import { TooltipProvider } from "~/components/ui/tooltip";
-import { Toaster } from "~/components/ui/toast";
+import { Provider } from "~/components/ui/provider";
+import { EmotionRegistry } from "~/components/ui/emotion-registry";
+import { Toaster } from "~/components/ui/toaster";
 import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
@@ -28,17 +28,18 @@ export default function RootLayout({
   return (
     <html
       lang="vi"
-      className={`${beVietnamPro.variable}`}
+      className={beVietnamPro.variable}
       suppressHydrationWarning
     >
       <body>
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <TRPCReactProvider>
-            <TooltipProvider>
-              <Toaster>{children}</Toaster>
-            </TooltipProvider>
-          </TRPCReactProvider>
-        </ThemeProvider>
+        <EmotionRegistry>
+          <Provider defaultTheme="system" enableSystem>
+            <TRPCReactProvider>
+              {children}
+              <Toaster />
+            </TRPCReactProvider>
+          </Provider>
+        </EmotionRegistry>
       </body>
     </html>
   );

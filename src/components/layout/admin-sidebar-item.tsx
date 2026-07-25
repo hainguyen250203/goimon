@@ -2,78 +2,61 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { Flex, Text } from "@chakra-ui/react";
 
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "~/components/ui/collapsible";
-import {
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
-} from "~/components/ui/sidebar";
-
+import { Tooltip } from "~/components/ui/tooltip";
 import type { NavItem } from "./nav-config";
 
 function isItemActive(item: NavItem, pathname: string): boolean {
-  if (item.href) {
-    if (pathname === item.href) return true;
-    if (item.pathPrefix && pathname.startsWith(item.pathPrefix + "/"))
-      return true;
-  }
-  return item.children?.some((child) => isItemActive(child, pathname)) ?? false;
+  if (!item.href) return false;
+  if (pathname === item.href) return true;
+  if (item.pathPrefix && pathname.startsWith(item.pathPrefix + "/")) return true;
+  return false;
 }
 
-export function AdminSidebarItem({ item }: { item: NavItem }) {
+export function AdminSidebarItem({
+  item,
+  collapsed,
+  onNavigate,
+}: {
+  item: NavItem;
+  collapsed: boolean;
+  onNavigate?: () => void;
+}) {
   const pathname = usePathname();
   const active = isItemActive(item, pathname);
+  const Icon = item.icon;
 
-  if (!item.children || item.children.length === 0) {
-    return (
-      <SidebarMenuItem>
-        <SidebarMenuButton
-          render={<Link href={item.href ?? "#"} />}
-          isActive={active}
-          tooltip={item.label}
-        >
-          {item.icon ? <item.icon /> : null}
-          <span>{item.label}</span>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-    );
-  }
+  const row = (
+    <Flex
+      align="center"
+      gap={2.5}
+      px={3}
+      py="6px"
+      mx={2}
+      rounded="l2"
+      cursor="pointer"
+      h="36px"
+      justify={collapsed ? "center" : "flex-start"}
+      color={active ? "fg" : "fg.muted"}
+      bg={active ? "bg.muted" : "transparent"}
+      fontWeight={active ? "medium" : "normal"}
+      _hover={{ bg: "bg.muted", color: "fg" }}
+      transition="background 0.15s, color 0.15s"
+      asChild
+    >
+      <Link href={item.href ?? "#"} onClick={onNavigate}>
+        {Icon ? <Icon size={18} /> : null}
+        {!collapsed && <Text fontSize="sm">{item.label}</Text>}
+      </Link>
+    </Flex>
+  );
+
+  if (!collapsed) return row;
 
   return (
-    <Collapsible defaultOpen={active} className="group/collapsible">
-      <SidebarMenuItem>
-        <CollapsibleTrigger
-          render={
-            <SidebarMenuButton isActive={active} tooltip={item.label}>
-              {item.icon ? <item.icon /> : null}
-              <span>{item.label}</span>
-              <ChevronRight className="ml-auto transition-transform group-data-[panel-open]/collapsible:rotate-90" />
-            </SidebarMenuButton>
-          }
-        />
-        <CollapsibleContent>
-          <SidebarMenuSub>
-            {item.children.map((child) => (
-              <SidebarMenuSubItem key={child.key}>
-                <SidebarMenuSubButton
-                  render={<Link href={child.href ?? "#"} />}
-                  isActive={isItemActive(child, pathname)}
-                >
-                  <span>{child.label}</span>
-                </SidebarMenuSubButton>
-              </SidebarMenuSubItem>
-            ))}
-          </SidebarMenuSub>
-        </CollapsibleContent>
-      </SidebarMenuItem>
-    </Collapsible>
+    <Tooltip content={item.label} positioning={{ placement: "right" }}>
+      {row}
+    </Tooltip>
   );
 }

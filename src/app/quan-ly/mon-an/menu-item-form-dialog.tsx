@@ -1,28 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button, Input, Stack } from "@chakra-ui/react";
 
-import { Button } from "~/components/ui/button";
 import {
-  Dialog,
+  DialogBody,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogRoot,
   DialogTitle,
 } from "~/components/ui/dialog";
-import { Field, FieldError, FieldGroup, FieldLabel } from "~/components/ui/field";
-import { Input } from "~/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
+import { Field } from "~/components/ui/field";
 import { Switch } from "~/components/ui/switch";
-import { toast } from "~/components/ui/toast";
+import { FilterSelect } from "~/components/data-table/filter-select";
+import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
 import type { MenuItem } from "~/modules/menu/domain/menu-item.entity";
 import type { CategoryOption } from "~/modules/menu/domain/menu-item.repository";
@@ -105,7 +97,7 @@ export function MenuItemFormDialog({
 
     mutation
       .then(() => {
-        toast.add({
+        toaster.create({
           title: isEdit ? "Đã cập nhật món ăn" : "Đã thêm món ăn",
           type: "success",
         });
@@ -113,7 +105,7 @@ export function MenuItemFormDialog({
         void utils.menu.list.invalidate();
       })
       .catch((error: unknown) => {
-        toast.add({
+        toaster.create({
           title: "Có lỗi xảy ra",
           description: error instanceof Error ? error.message : undefined,
           type: "error",
@@ -122,100 +114,73 @@ export function MenuItemFormDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogRoot open={open} onOpenChange={(e) => onOpenChange(e.open)}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{isEdit ? "Sửa món ăn" : "Thêm món ăn"}</DialogTitle>
-          <DialogDescription>
-            {isEdit
-              ? "Cập nhật thông tin món ăn."
-              : "Nhập thông tin món ăn mới."}
-          </DialogDescription>
         </DialogHeader>
 
-        <FieldGroup>
-          <Field data-invalid={!!errors.name}>
-            <FieldLabel htmlFor="menu-item-name">Tên món</FieldLabel>
-            <Input
-              id="menu-item-name"
-              value={form.name}
-              aria-invalid={!!errors.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            />
-            <FieldError>{errors.name}</FieldError>
-          </Field>
+        <DialogBody>
+          <Stack gap={4}>
+            <Field label="Tên món" invalid={!!errors.name} errorText={errors.name}>
+              <Input
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+              />
+            </Field>
 
-          <Field data-invalid={!!errors.categoryId}>
-            <FieldLabel htmlFor="menu-item-category">Danh mục</FieldLabel>
-            <Select
-              value={form.categoryId}
-              onValueChange={(value) => setForm((f) => ({ ...f, categoryId: value ?? "" }))}
-            >
-              <SelectTrigger id="menu-item-category" aria-invalid={!!errors.categoryId}>
-                <SelectValue placeholder="Chọn danh mục">
-                  {(value: string) =>
-                    categories.find((c) => String(c.id) === value)?.name ?? "Chọn danh mục"
-                  }
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <FieldError>{errors.categoryId}</FieldError>
-          </Field>
+            <Field label="Danh mục" invalid={!!errors.categoryId} errorText={errors.categoryId}>
+              <FilterSelect
+                width="full"
+                placeholder="Chọn danh mục"
+                value={form.categoryId}
+                onValueChange={(value) => setForm((f) => ({ ...f, categoryId: value }))}
+                options={categories.map((c) => ({ value: String(c.id), label: c.name }))}
+              />
+            </Field>
 
-          <Field data-invalid={!!errors.price}>
-            <FieldLabel htmlFor="menu-item-price">Giá (đ)</FieldLabel>
-            <Input
-              id="menu-item-price"
-              type="number"
-              min={0}
-              value={form.price}
-              aria-invalid={!!errors.price}
-              onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
-            />
-            <FieldError>{errors.price}</FieldError>
-          </Field>
+            <Field label="Giá (đ)" invalid={!!errors.price} errorText={errors.price}>
+              <Input
+                type="number"
+                min={0}
+                value={form.price}
+                onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
+              />
+            </Field>
 
-          <Field orientation="horizontal">
-            <FieldLabel htmlFor="menu-item-available">Còn hàng</FieldLabel>
-            <Switch
-              id="menu-item-available"
-              checked={form.isAvailable}
-              onCheckedChange={(checked) =>
-                setForm((f) => ({ ...f, isAvailable: checked }))
-              }
-            />
-          </Field>
+            <Field orientation="horizontal">
+              <Switch
+                checked={form.isAvailable}
+                onCheckedChange={(details) =>
+                  setForm((f) => ({ ...f, isAvailable: details.checked }))
+                }
+              >
+                Còn hàng
+              </Switch>
+            </Field>
 
-          <Field orientation="horizontal">
-            <FieldLabel htmlFor="menu-item-published">Hiển thị trong menu</FieldLabel>
-            <Switch
-              id="menu-item-published"
-              checked={form.isPublished}
-              onCheckedChange={(checked) =>
-                setForm((f) => ({ ...f, isPublished: checked }))
-              }
-            />
-          </Field>
-        </FieldGroup>
+            <Field orientation="horizontal">
+              <Switch
+                checked={form.isPublished}
+                onCheckedChange={(details) =>
+                  setForm((f) => ({ ...f, isPublished: details.checked }))
+                }
+              >
+                Hiển thị trong menu
+              </Switch>
+            </Field>
+          </Stack>
+        </DialogBody>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Huỷ
           </Button>
-          <Button onClick={handleSubmit} disabled={isPending}>
+          <Button onClick={handleSubmit} loading={isPending}>
             {isEdit ? "Lưu" : "Thêm"}
           </Button>
         </DialogFooter>
       </DialogContent>
-    </Dialog>
+    </DialogRoot>
   );
 }

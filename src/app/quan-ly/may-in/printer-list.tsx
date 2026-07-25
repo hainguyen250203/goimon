@@ -3,24 +3,17 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { keepPreviousData } from "@tanstack/react-query";
+import { Button, Stack } from "@chakra-ui/react";
 import { Plus } from "lucide-react";
 
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
 import {
   ListViewTable,
   type ListViewColumn,
 } from "~/components/data-table/list-view-table";
 import { ListViewPagination } from "~/components/data-table/list-view-pagination";
 import { ListViewToolbar } from "~/components/data-table/list-view-toolbar";
+import { FilterSelect } from "~/components/data-table/filter-select";
+import { StatusDot } from "~/components/ui/status-dot";
 import { api } from "~/trpc/react";
 import type { Printer } from "~/modules/printer/domain/printer.entity";
 import { PrinterFormDialog } from "./printer-form-dialog";
@@ -57,12 +50,7 @@ export function PrinterList({
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const columns: ListViewColumn<Printer>[] = [
-    {
-      key: "id",
-      header: "ID",
-      cell: (row) => row.id,
-      className: "w-16 text-muted-foreground",
-    },
+    { key: "id", header: "ID", cell: (row) => row.id, width: "4rem" },
     { key: "name", header: "Tên máy in", cell: (row) => row.name },
     { key: "ipAddress", header: "Địa chỉ IP", cell: (row) => row.ipAddress },
     { key: "port", header: "Cổng", cell: (row) => row.port },
@@ -70,15 +58,15 @@ export function PrinterList({
       key: "isActive",
       header: "Trạng thái",
       cell: (row) => (
-        <Badge variant={row.isActive ? "secondary" : "outline"}>
+        <StatusDot color={row.isActive ? "green.500" : "gray.400"}>
           {row.isActive ? "Đang hoạt động" : "Ngừng hoạt động"}
-        </Badge>
+        </StatusDot>
       ),
     },
     {
       key: "actions",
       header: "",
-      className: "w-12",
+      width: "3rem",
       cell: (row) => (
         <PrinterRowActions
           item={row}
@@ -103,7 +91,7 @@ export function PrinterList({
   };
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <Stack gap={4}>
       <ListViewToolbar
         end={
           <Button
@@ -112,14 +100,16 @@ export function PrinterList({
               setDialogOpen(true);
             }}
           >
-            <Plus data-icon="inline-start" />
+            <Plus size={16} />
             Thêm máy in
           </Button>
         }
       >
-        <Select
+        <FilterSelect
+          width="14rem"
+          placeholder="Trạng thái"
           value={statusToParam(isActive)}
-          onValueChange={(value) => {
+          onValueChange={(value) =>
             router.push(
               buildHref({
                 page: 1,
@@ -130,28 +120,14 @@ export function PrinterList({
                       ? false
                       : undefined,
               }),
-            );
-          }}
-        >
-          <SelectTrigger className="w-56">
-            <SelectValue placeholder="Trạng thái">
-              {(value: string) =>
-                value === "active"
-                  ? "Đang hoạt động"
-                  : value === "inactive"
-                    ? "Ngừng hoạt động"
-                    : "Tất cả trạng thái"
-              }
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value={ALL_STATUS}>Tất cả trạng thái</SelectItem>
-              <SelectItem value="active">Đang hoạt động</SelectItem>
-              <SelectItem value="inactive">Ngừng hoạt động</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+            )
+          }
+          options={[
+            { value: ALL_STATUS, label: "Tất cả trạng thái" },
+            { value: "active", label: "Đang hoạt động" },
+            { value: "inactive", label: "Ngừng hoạt động" },
+          ]}
+        />
       </ListViewToolbar>
 
       <ListViewTable
@@ -173,6 +149,6 @@ export function PrinterList({
         onOpenChange={setDialogOpen}
         item={editingItem}
       />
-    </div>
+    </Stack>
   );
 }

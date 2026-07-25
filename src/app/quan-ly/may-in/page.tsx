@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Skeleton } from "~/components/ui/skeleton";
 
 import { api, HydrateClient } from "~/trpc/server";
 import { PrinterList } from "./printer-list";
@@ -19,16 +20,10 @@ export default async function MayInPage({
   void api.printer.list.prefetch({ page, pageSize: PAGE_SIZE, isActive });
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
-      <HydrateClient>
-        <Suspense fallback={<PrinterListSkeleton />}>
-          <PrinterList page={page} isActive={isActive} />
-        </Suspense>
-      </HydrateClient>
-    </div>
+    <HydrateClient>
+      <Suspense fallback={<Skeleton h={96} rounded="l3" />}>
+        <PrinterList page={page} isActive={isActive} />
+      </Suspense>
+    </HydrateClient>
   );
-}
-
-function PrinterListSkeleton() {
-  return <div className="h-96 animate-pulse rounded-lg border bg-muted/30" />;
 }

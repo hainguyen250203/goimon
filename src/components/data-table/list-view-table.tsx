@@ -1,15 +1,8 @@
 import { Inbox } from "lucide-react";
+import { Table } from "@chakra-ui/react";
 
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "~/components/ui/table";
+import { EmptyState } from "~/components/ui/empty-state";
 import { Skeleton } from "~/components/ui/skeleton";
-import { cn } from "~/lib/utils";
 
 /**
  * Cấu hình 1 cột — tham khảo cấu trúc `ListViewColumn` của
@@ -20,7 +13,8 @@ export type ListViewColumn<T> = {
   key: string;
   header: React.ReactNode;
   cell: (row: T) => React.ReactNode;
-  className?: string;
+  width?: string;
+  textAlign?: "left" | "right" | "center";
 };
 
 export function ListViewTable<T>({
@@ -37,53 +31,63 @@ export function ListViewTable<T>({
   emptyMessage?: string;
 }) {
   return (
-    <div className="overflow-x-auto rounded-lg border">
-      <Table>
-        <TableHeader>
-          <TableRow>
+    <Table.ScrollArea rounded="l3" borderWidth="1px">
+      <Table.Root size="sm" variant="line" interactive>
+        <Table.Header>
+          <Table.Row bg="bg.subtle">
             {columns.map((column) => (
-              <TableHead key={column.key} className={column.className}>
+              <Table.ColumnHeader
+                key={column.key}
+                width={column.width}
+                textAlign={column.textAlign}
+                color="fg.muted"
+                fontWeight="semibold"
+                px={4}
+                py={2}
+              >
                 {column.header}
-              </TableHead>
+              </Table.ColumnHeader>
             ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
           {isLoading ? (
             Array.from({ length: 5 }).map((_, i) => (
-              <TableRow key={i}>
+              <Table.Row key={i}>
                 {columns.map((column) => (
-                  <TableCell key={column.key}>
-                    <Skeleton className="h-4 w-full max-w-40" />
-                  </TableCell>
+                  <Table.Cell key={column.key} px={4} py={2}>
+                    <Skeleton h={4} w="full" maxW="40" />
+                  </Table.Cell>
                 ))}
-              </TableRow>
+              </Table.Row>
             ))
           ) : !data || data.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={columns.length}
-                className="h-40 text-center"
-              >
-                <div className="flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                  <Inbox className="size-8" />
-                  <span className="text-sm">{emptyMessage}</span>
-                </div>
-              </TableCell>
-            </TableRow>
+            <Table.Row>
+              <Table.Cell colSpan={columns.length} px={4} py={10}>
+                <EmptyState
+                  icon={<Inbox size={28} />}
+                  title={emptyMessage}
+                />
+              </Table.Cell>
+            </Table.Row>
           ) : (
             data.map((row) => (
-              <TableRow key={rowKey(row)}>
+              <Table.Row key={rowKey(row)}>
                 {columns.map((column) => (
-                  <TableCell key={column.key} className={cn(column.className)}>
+                  <Table.Cell
+                    key={column.key}
+                    textAlign={column.textAlign}
+                    px={4}
+                    py={1.5}
+                  >
                     {column.cell(row)}
-                  </TableCell>
+                  </Table.Cell>
                 ))}
-              </TableRow>
+              </Table.Row>
             ))
           )}
-        </TableBody>
-      </Table>
-    </div>
+        </Table.Body>
+      </Table.Root>
+    </Table.ScrollArea>
   );
 }

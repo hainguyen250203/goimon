@@ -3,7 +3,7 @@
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 
-import { ToggleGroup, ToggleGroupItem } from "~/components/ui/toggle-group";
+import { SegmentedControl } from "~/components/ui/segmented-control";
 
 const THEME_OPTIONS = [
   { value: "system", icon: Monitor, label: "Theo hệ thống" },
@@ -16,21 +16,16 @@ export function ThemeToggle() {
   const current = theme ?? "system";
 
   return (
-    <ToggleGroup
-      value={[current]}
-      onValueChange={(value) => {
-        const next = value[0];
-        if (next) setTheme(next);
-      }}
-      variant="outline"
+    <SegmentedControl
       size="sm"
-      spacing={0}
-    >
-      {THEME_OPTIONS.map(({ value, icon: Icon, label }) => (
-        <ToggleGroupItem key={value} value={value} aria-label={label}>
-          <Icon />
-        </ToggleGroupItem>
-      ))}
-    </ToggleGroup>
+      value={current}
+      onValueChange={(details) => {
+        if (details.value) setTheme(details.value);
+      }}
+      items={THEME_OPTIONS.map(({ value, icon: Icon, label }) => ({
+        value,
+        label: <Icon size={16} aria-label={label} />,
+      }))}
+    />
   );
 }

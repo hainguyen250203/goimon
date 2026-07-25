@@ -1,27 +1,25 @@
 "use client";
 
 import { useState } from "react";
+import { Button, IconButton } from "@chakra-ui/react";
 import { MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "~/components/ui/alert-dialog";
-import { Button } from "~/components/ui/button";
+  DialogBody,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogRoot,
+  DialogTitle,
+} from "~/components/ui/dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
-import { toast } from "~/components/ui/toast";
+  MenuContent,
+  MenuItem,
+  MenuItemGroup,
+  MenuRoot,
+  MenuTrigger,
+} from "~/components/ui/menu";
+import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
 import type { RestaurantTable } from "~/modules/table/domain/restaurant-table.entity";
 
@@ -36,61 +34,63 @@ export function TableRowActions({
   const utils = api.useUtils();
   const remove = api.table.delete.useMutation({
     onSuccess: () => {
-      toast.add({ title: "Đã xoá bàn", type: "success" });
+      toaster.create({ title: "Đã xoá bàn", type: "success" });
       void utils.table.list.invalidate();
     },
     onError: (error) => {
-      toast.add({ title: "Không thể xoá", description: error.message, type: "error" });
+      toaster.create({ title: "Không thể xoá", description: error.message, type: "error" });
     },
   });
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button variant="ghost" size="icon" aria-label="Thao tác">
-              <MoreHorizontal />
-            </Button>
-          }
-        />
-        <DropdownMenuContent align="end">
-          <DropdownMenuGroup>
-            <DropdownMenuItem onClick={() => onEdit(item)}>
-              <Pencil data-icon="inline-start" />
+      <MenuRoot positioning={{ placement: "bottom-end" }}>
+        <MenuTrigger asChild>
+          <IconButton variant="ghost" size="sm" aria-label="Thao tác">
+            <MoreHorizontal size={16} />
+          </IconButton>
+        </MenuTrigger>
+        <MenuContent minW="10rem">
+          <MenuItemGroup>
+            <MenuItem value="edit" onClick={() => onEdit(item)}>
+              <Pencil size={16} />
               Sửa
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => setConfirmOpen(true)}
-            >
-              <Trash2 data-icon="inline-start" />
+            </MenuItem>
+            <MenuItem value="delete" color="fg.error" onClick={() => setConfirmOpen(true)}>
+              <Trash2 size={16} />
               Xoá
-            </DropdownMenuItem>
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            </MenuItem>
+          </MenuItemGroup>
+        </MenuContent>
+      </MenuRoot>
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Xoá bàn "{item.name}"?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Hành động này không thể hoàn tác. Nếu bàn đã có lịch sử đơn
-              hàng, hệ thống sẽ báo không thể xoá.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Huỷ</AlertDialogCancel>
-            <AlertDialogAction
+      <DialogRoot
+        role="alertdialog"
+        open={confirmOpen}
+        onOpenChange={(e) => setConfirmOpen(e.open)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Xoá bàn &quot;{item.name}&quot;?</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            Hành động này không thể hoàn tác. Nếu bàn đã có lịch sử đơn
+            hàng, hệ thống sẽ báo không thể xoá.
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
+              Huỷ
+            </Button>
+            <Button
+              colorPalette="red"
               onClick={() => remove.mutate({ id: item.id })}
-              disabled={remove.isPending}
+              loading={remove.isPending}
             >
               Xoá
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </DialogRoot>
     </>
   );
 }

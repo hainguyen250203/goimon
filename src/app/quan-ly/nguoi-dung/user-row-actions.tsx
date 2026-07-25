@@ -1,47 +1,35 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Button, IconButton } from "@chakra-ui/react";
 import { MoreHorizontal, ShieldBan, ShieldCheck, UserCog } from "lucide-react";
 
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "~/components/ui/alert-dialog";
-import { Button } from "~/components/ui/button";
-import {
-  Dialog,
+  DialogBody,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
+  DialogRoot,
   DialogTitle,
 } from "~/components/ui/dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "~/components/ui/dropdown-menu";
-import { Field, FieldLabel } from "~/components/ui/field";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
-import { toast } from "~/components/ui/toast";
+  MenuContent,
+  MenuItem,
+  MenuItemGroup,
+  MenuRoot,
+  MenuTrigger,
+} from "~/components/ui/menu";
+import { Field } from "~/components/ui/field";
+import { FilterSelect } from "~/components/data-table/filter-select";
+import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
 import type { UserAccount, UserRole } from "~/modules/user/domain/user-account.entity";
-import { ROLE_LABEL } from "./user-list";
+import { ROLE_LABEL } from "./role-label";
+
+const ROLE_OPTIONS = (Object.keys(ROLE_LABEL) as UserRole[]).map((value) => ({
+  value,
+  label: ROLE_LABEL[value],
+}));
 
 /**
  * Không có khái niệm "xoá" tài khoản hợp lý ở đây (order.createdBy tham
@@ -57,12 +45,12 @@ export function UserRowActions({ user }: { user: UserAccount }) {
 
   const setRole = api.user.setRole.useMutation({
     onSuccess: () => {
-      toast.add({ title: "Đã đổi vai trò", type: "success" });
+      toaster.create({ title: "Đã đổi vai trò", type: "success" });
       setRoleDialogOpen(false);
       void utils.user.list.invalidate();
     },
     onError: (error) => {
-      toast.add({
+      toaster.create({
         title: "Không thể đổi vai trò",
         description: error.message,
         type: "error",
@@ -72,11 +60,12 @@ export function UserRowActions({ user }: { user: UserAccount }) {
 
   const ban = api.user.ban.useMutation({
     onSuccess: () => {
-      toast.add({ title: "Đã cấm người dùng", type: "success" });
+      toaster.create({ title: "Đã cấm người dùng", type: "success" });
+      setBanConfirmOpen(false);
       void utils.user.list.invalidate();
     },
     onError: (error) => {
-      toast.add({
+      toaster.create({
         title: "Không thể cấm",
         description: error.message,
         type: "error",
@@ -86,11 +75,11 @@ export function UserRowActions({ user }: { user: UserAccount }) {
 
   const unban = api.user.unban.useMutation({
     onSuccess: () => {
-      toast.add({ title: "Đã bỏ cấm người dùng", type: "success" });
+      toaster.create({ title: "Đã bỏ cấm người dùng", type: "success" });
       void utils.user.list.invalidate();
     },
     onError: (error) => {
-      toast.add({
+      toaster.create({
         title: "Không thể bỏ cấm",
         description: error.message,
         type: "error",
@@ -104,106 +93,95 @@ export function UserRowActions({ user }: { user: UserAccount }) {
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button variant="ghost" size="icon" aria-label="Thao tác">
-              <MoreHorizontal />
-            </Button>
-          }
-        />
-        <DropdownMenuContent align="end">
-          <DropdownMenuGroup>
-            <DropdownMenuItem onClick={() => setRoleDialogOpen(true)}>
-              <UserCog data-icon="inline-start" />
+      <MenuRoot positioning={{ placement: "bottom-end" }}>
+        <MenuTrigger asChild>
+          <IconButton variant="ghost" size="sm" aria-label="Thao tác">
+            <MoreHorizontal size={16} />
+          </IconButton>
+        </MenuTrigger>
+        <MenuContent minW="10rem">
+          <MenuItemGroup>
+            <MenuItem value="role" onClick={() => setRoleDialogOpen(true)}>
+              <UserCog size={16} />
               Đổi vai trò
-            </DropdownMenuItem>
+            </MenuItem>
             {user.banned ? (
-              <DropdownMenuItem onClick={() => unban.mutate({ userId: user.id })}>
-                <ShieldCheck data-icon="inline-start" />
+              <MenuItem value="unban" onClick={() => unban.mutate({ userId: user.id })}>
+                <ShieldCheck size={16} />
                 Bỏ cấm
-              </DropdownMenuItem>
+              </MenuItem>
             ) : (
-              <DropdownMenuItem
-                variant="destructive"
+              <MenuItem
+                value="ban"
+                color="fg.error"
                 onClick={() => setBanConfirmOpen(true)}
               >
-                <ShieldBan data-icon="inline-start" />
+                <ShieldBan size={16} />
                 Cấm
-              </DropdownMenuItem>
+              </MenuItem>
             )}
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+          </MenuItemGroup>
+        </MenuContent>
+      </MenuRoot>
 
-      <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
+      <DialogRoot open={roleDialogOpen} onOpenChange={(e) => setRoleDialogOpen(e.open)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Đổi vai trò cho &quot;{user.name}&quot;</DialogTitle>
-            <DialogDescription>
-              Chọn vai trò mới cho người dùng này.
-            </DialogDescription>
           </DialogHeader>
-
-          <Field>
-            <FieldLabel htmlFor="row-role">Vai trò</FieldLabel>
-            <Select
-              value={selectedRole}
-              onValueChange={(value) =>
-                setSelectedRole((value ?? "user") as UserRole)
-              }
-            >
-              <SelectTrigger id="row-role">
-                <SelectValue placeholder="Chọn vai trò">
-                  {(value: string) =>
-                    ROLE_LABEL[value as UserRole] ?? "Chọn vai trò"
-                  }
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem value="user">Nhân viên</SelectItem>
-                  <SelectItem value="manager">Quản lý</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </Field>
-
+          <DialogBody>
+            <Field label="Vai trò">
+              <FilterSelect
+                width="full"
+                placeholder="Chọn vai trò"
+                value={selectedRole}
+                onValueChange={(value) => setSelectedRole(value as UserRole)}
+                options={ROLE_OPTIONS}
+              />
+            </Field>
+          </DialogBody>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRoleDialogOpen(false)}>
               Huỷ
             </Button>
             <Button
               onClick={() => setRole.mutate({ userId: user.id, role: selectedRole })}
-              disabled={setRole.isPending || selectedRole === user.role}
+              loading={setRole.isPending}
+              disabled={selectedRole === user.role}
             >
               Lưu
             </Button>
           </DialogFooter>
         </DialogContent>
-      </Dialog>
+      </DialogRoot>
 
-      <AlertDialog open={banConfirmOpen} onOpenChange={setBanConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Cấm người dùng &quot;{user.name}&quot;?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Người dùng bị cấm sẽ không thể đăng nhập vào hệ thống cho đến
-              khi được bỏ cấm.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Huỷ</AlertDialogCancel>
-            <AlertDialogAction
+      <DialogRoot
+        role="alertdialog"
+        open={banConfirmOpen}
+        onOpenChange={(e) => setBanConfirmOpen(e.open)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cấm người dùng &quot;{user.name}&quot;?</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            Người dùng bị cấm sẽ không thể đăng nhập vào hệ thống cho đến khi
+            được bỏ cấm.
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBanConfirmOpen(false)}>
+              Huỷ
+            </Button>
+            <Button
+              colorPalette="red"
               onClick={() => ban.mutate({ userId: user.id })}
-              disabled={ban.isPending}
+              loading={ban.isPending}
             >
               Cấm
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </DialogRoot>
     </>
   );
 }

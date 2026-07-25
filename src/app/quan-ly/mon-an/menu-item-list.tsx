@@ -3,24 +3,17 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { keepPreviousData } from "@tanstack/react-query";
+import { Button, Stack } from "@chakra-ui/react";
 import { Plus } from "lucide-react";
 
-import { Badge } from "~/components/ui/badge";
-import { Button } from "~/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
 import {
   ListViewTable,
   type ListViewColumn,
 } from "~/components/data-table/list-view-table";
 import { ListViewPagination } from "~/components/data-table/list-view-pagination";
 import { ListViewToolbar } from "~/components/data-table/list-view-toolbar";
+import { FilterSelect } from "~/components/data-table/filter-select";
+import { StatusDot } from "~/components/ui/status-dot";
 import { api } from "~/trpc/react";
 import type { MenuItem } from "~/modules/menu/domain/menu-item.entity";
 import { MenuItemFormDialog } from "./menu-item-form-dialog";
@@ -56,42 +49,37 @@ export function MenuItemList({
   const [dialogOpen, setDialogOpen] = useState(false);
 
   const columns: ListViewColumn<MenuItem>[] = [
-    {
-      key: "id",
-      header: "ID",
-      cell: (row) => row.id,
-      className: "w-16 text-muted-foreground",
-    },
+    { key: "id", header: "ID", cell: (row) => row.id, width: "4rem" },
     { key: "name", header: "Tên món", cell: (row) => row.name },
     { key: "category", header: "Danh mục", cell: (row) => row.categoryName },
     {
       key: "price",
       header: "Giá",
       cell: (row) => formatVnd(row.price),
-      className: "text-right",
+      textAlign: "right",
     },
     {
       key: "isAvailable",
       header: "Tồn kho",
       cell: (row) => (
-        <Badge variant={row.isAvailable ? "secondary" : "outline"}>
+        <StatusDot color={row.isAvailable ? "green.500" : "gray.400"}>
           {row.isAvailable ? "Còn hàng" : "Hết hàng"}
-        </Badge>
+        </StatusDot>
       ),
     },
     {
       key: "isPublished",
       header: "Hiển thị",
       cell: (row) => (
-        <Badge variant={row.isPublished ? "secondary" : "outline"}>
+        <StatusDot color={row.isPublished ? "green.500" : "gray.400"}>
           {row.isPublished ? "Đang bán" : "Đã ẩn"}
-        </Badge>
+        </StatusDot>
       ),
     },
     {
       key: "actions",
       header: "",
-      className: "w-12",
+      width: "3rem",
       cell: (row) => (
         <MenuItemRowActions
           item={row}
@@ -115,7 +103,7 @@ export function MenuItemList({
   };
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <Stack gap={4}>
       <ListViewToolbar
         end={
           <Button
@@ -124,43 +112,28 @@ export function MenuItemList({
               setDialogOpen(true);
             }}
           >
-            <Plus data-icon="inline-start" />
+            <Plus size={16} />
             Thêm món ăn
           </Button>
         }
       >
-        <Select
+        <FilterSelect
+          width="14rem"
+          placeholder="Danh mục"
           value={categoryId ? String(categoryId) : ALL_CATEGORIES}
-          onValueChange={(value) => {
+          onValueChange={(value) =>
             router.push(
               buildHref({
                 page: 1,
                 categoryId: value === ALL_CATEGORIES ? undefined : Number(value),
               }),
-            );
-          }}
-        >
-          <SelectTrigger className="w-56">
-            <SelectValue placeholder="Danh mục">
-              {(value: string) =>
-                !value || value === ALL_CATEGORIES
-                  ? "Tất cả danh mục"
-                  : (categories.find((c) => String(c.id) === value)?.name ??
-                    value)
-              }
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value={ALL_CATEGORIES}>Tất cả danh mục</SelectItem>
-              {categories.map((c) => (
-                <SelectItem key={c.id} value={String(c.id)}>
-                  {c.name}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+            )
+          }
+          options={[
+            { value: ALL_CATEGORIES, label: "Tất cả danh mục" },
+            ...categories.map((c) => ({ value: String(c.id), label: c.name })),
+          ]}
+        />
       </ListViewToolbar>
 
       <ListViewTable
@@ -183,6 +156,6 @@ export function MenuItemList({
         categories={categories}
         item={editingItem}
       />
-    </div>
+    </Stack>
   );
 }

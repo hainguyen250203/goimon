@@ -2,22 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { keepPreviousData } from "@tanstack/react-query";
+import { Stack, Text } from "@chakra-ui/react";
+import { StatusDot } from "~/components/ui/status-dot";
 
-import { Badge } from "~/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui/select";
 import {
   ListViewTable,
   type ListViewColumn,
 } from "~/components/data-table/list-view-table";
 import { ListViewPagination } from "~/components/data-table/list-view-pagination";
 import { ListViewToolbar } from "~/components/data-table/list-view-toolbar";
+import { FilterSelect } from "~/components/data-table/filter-select";
 import { api } from "~/trpc/react";
 import type {
   OrderListItem,
@@ -34,20 +28,25 @@ const STATUS_LABEL: Record<OrderStatus, string> = {
   cancelled: "Đã huỷ",
 };
 
-const STATUS_BADGE_VARIANT: Record<
-  OrderStatus,
-  "outline" | "secondary" | "default" | "destructive"
-> = {
-  open: "outline",
-  printed: "secondary",
-  paid: "default",
-  cancelled: "destructive",
+const STATUS_DOT_COLOR: Record<OrderStatus, string> = {
+  open: "gray.400",
+  printed: "blue.500",
+  paid: "green.500",
+  cancelled: "red.500",
 };
 
 const PAYMENT_METHOD_LABEL: Record<string, string> = {
   cash: "Tiền mặt",
   transfer: "Chuyển khoản",
 };
+
+const STATUS_OPTIONS = [
+  { value: ALL_STATUS, label: "Tất cả trạng thái" },
+  { value: "open", label: STATUS_LABEL.open },
+  { value: "printed", label: STATUS_LABEL.printed },
+  { value: "paid", label: STATUS_LABEL.paid },
+  { value: "cancelled", label: STATUS_LABEL.cancelled },
+];
 
 function formatVnd(amount: number) {
   return new Intl.NumberFormat("vi-VN").format(amount) + "đ";
@@ -64,37 +63,41 @@ const columns: ListViewColumn<OrderListItem>[] = [
   {
     key: "id",
     header: "ID",
-    cell: (row) => row.id,
-    className: "w-16 text-muted-foreground",
+    cell: (row) => (
+      <Text color="fg.muted">{row.id}</Text>
+    ),
+    width: "4rem",
   },
   {
     key: "table",
     header: "Bàn",
     cell: (row) => (
-      <div className="flex flex-col">
-        <span>{row.tableName}</span>
-        <span className="text-xs text-muted-foreground">{row.areaName}</span>
-      </div>
+      <Stack gap={0}>
+        <Text>{row.tableName}</Text>
+        <Text fontSize="xs" color="fg.muted">
+          {row.areaName}
+        </Text>
+      </Stack>
     ),
   },
   {
     key: "status",
     header: "Trạng thái",
     cell: (row) => (
-      <Badge variant={STATUS_BADGE_VARIANT[row.status]}>
+      <StatusDot color={STATUS_DOT_COLOR[row.status]}>
         {STATUS_LABEL[row.status]}
-      </Badge>
+      </StatusDot>
     ),
   },
   {
     key: "totalAmount",
     header: "Tổng tiền",
     cell: (row) => (row.totalAmount != null ? formatVnd(row.totalAmount) : "—"),
-    className: "text-right",
+    textAlign: "right",
   },
   {
     key: "paymentMethod",
-    header: "Thanh toán",
+    header: "Phương thức TT",
     cell: (row) =>
       row.paymentMethod ? PAYMENT_METHOD_LABEL[row.paymentMethod] : "—",
   },
@@ -138,9 +141,11 @@ export function OrderList({
   };
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <Stack gap={4}>
       <ListViewToolbar>
-        <Select
+        <FilterSelect
+          width="14rem"
+          placeholder="Trạng thái"
           value={status ?? ALL_STATUS}
           onValueChange={(value) =>
             router.push(
@@ -150,26 +155,8 @@ export function OrderList({
               }),
             )
           }
-        >
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Trạng thái">
-              {(value: string) =>
-                !value || value === ALL_STATUS
-                  ? "Tất cả trạng thái"
-                  : (STATUS_LABEL[value as OrderStatus] ?? value)
-              }
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value={ALL_STATUS}>Tất cả trạng thái</SelectItem>
-              <SelectItem value="open">Đang mở</SelectItem>
-              <SelectItem value="printed">Đã in bill</SelectItem>
-              <SelectItem value="paid">Đã thanh toán</SelectItem>
-              <SelectItem value="cancelled">Đã huỷ</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
+          options={STATUS_OPTIONS}
+        />
       </ListViewToolbar>
 
       <ListViewTable
@@ -185,6 +172,6 @@ export function OrderList({
         total={total}
         buildHref={(p) => buildHref({ page: p })}
       />
-    </div>
+    </Stack>
   );
 }

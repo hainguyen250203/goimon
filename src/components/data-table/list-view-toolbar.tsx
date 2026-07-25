@@ -1,10 +1,12 @@
+import { Flex } from "@chakra-ui/react";
+
 /**
  * Thanh filter/toolbar nằm ngay trên bảng — không dùng sidebar/panel riêng
  * vì số lượng cột filter còn ít (theo yêu cầu). Chỉ là 1 flex row chứa các
  * control filter cụ thể của từng trang (Select, Input...), không tự định
  * nghĩa config filter tổng quát vì mỗi trang có nhu cầu filter khác nhau.
- * `end` là slot phải (vd: số lượng kết quả, nút hành động) để toolbar không
- * bị trống một bên khi chỉ có filter.
+ * `end` là slot phải (nút hành động như "Thêm...") để toolbar không bị
+ * trống một bên khi chỉ có filter.
  */
 export function ListViewToolbar({
   children,
@@ -14,13 +16,15 @@ export function ListViewToolbar({
   end?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <div className="flex flex-wrap items-center gap-2">{children}</div>
+    <Flex align="center" justify="space-between" gap={2} wrap="wrap">
+      <Flex align="center" gap={2} wrap="wrap">
+        {children}
+      </Flex>
       {end ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Flex align="center" gap={2}>
           {end}
-        </div>
+        </Flex>
       ) : null}
-    </div>
+    </Flex>
   );
 }
