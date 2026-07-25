@@ -5,6 +5,7 @@ import { Be_Vietnam_Pro } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 
 import { TooltipProvider } from "~/components/ui/tooltip";
+import { Toaster } from "~/components/ui/toast";
 import { TRPCReactProvider } from "~/trpc/react";
 
 export const metadata: Metadata = {
@@ -33,7 +34,9 @@ export default function RootLayout({
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <TRPCReactProvider>
-            <TooltipProvider>{children}</TooltipProvider>
+            <TooltipProvider>
+              <Toaster>{children}</Toaster>
+            </TooltipProvider>
           </TRPCReactProvider>
         </ThemeProvider>
       </body>

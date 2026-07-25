@@ -3,15 +3,24 @@ import {
   createTRPCRouter,
   publicProcedure,
 } from "~/server/api/trpc";
+import { menuRouter } from "~/modules/menu/menu.router";
+import { tableRouter } from "~/modules/table/table.router";
+import { printerRouter } from "~/modules/printer/printer.router";
+import { userRouter } from "~/modules/user/user.router";
+import { orderRouter } from "~/modules/order/order.router";
 
 /**
  * This is the primary router for your server.
  *
  * All routers added in /api/routers should be manually added here.
- * TODO: mỗi module tự thêm router của mình vào đây (vd: order: orderRouter).
  */
 export const appRouter = createTRPCRouter({
   health: publicProcedure.query(() => ({ ok: true })),
+  menu: menuRouter,
+  table: tableRouter,
+  printer: printerRouter,
+  user: userRouter,
+  order: orderRouter,
 });
 
 // export type definition of API

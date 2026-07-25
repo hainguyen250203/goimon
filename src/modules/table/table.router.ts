@@ -1,0 +1,83 @@
+import { z } from "zod";
+import { TRPCError } from "@trpc/server";
+
+import { managerProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { listAreaOptions } from "./application/list-area-options.usecase";
+import { listTables } from "./application/list-tables.usecase";
+import { createTable } from "./application/create-table.usecase";
+import { updateTable } from "./application/update-table.usecase";
+import { deleteTable } from "./application/delete-table.usecase";
+import { restaurantTableDrizzleRepository } from "./infrastructure/restaurant-table.drizzle-repository";
+import { logActivity } from "~/modules/activity-log/log-activity";
+
+// Xem menu.router.ts — drizzle-zod@0.8 sinh schema kiểu zod/v4, không
+// .extend() tương thích được với `z` classic nên viết tay thay vì sinh.
+const tableInputSchema = z.object({
+  name: z.string().min(1, "Tên bàn không được để trống"),
+  areaId: z.number().int().positive(),
+  status: z.enum(["available", "occupied"]),
+});
+
+export const tableRouter = createTRPCRouter({
+  list: managerProcedure
+    .input(
+      z.object({
+        page: z.number().int().min(1).default(1),
+        pageSize: z.number().int().min(1).max(100).default(20),
+        areaId: z.number().int().positive().optional(),
+        status: z.enum(["available", "occupied"]).optional(),
+      }),
+    )
+    .query(({ input }) => listTables(restaurantTableDrizzleRepository, input)),
+
+  listAreas: managerProcedure.query(() =>
+    listAreaOptions(restaurantTableDrizzleRepository),
+  ),
+
+  create: managerProcedure
+    .input(tableInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const item = await createTable(restaurantTableDrizzleRepository, input);
+      await logActivity({
+        actorId: ctx.session.user.id,
+        action: "create",
+        entityType: "table",
+        entityId: String(item.id),
+        metadata: { name: item.name },
+      });
+      return item;
+    }),
+
+  update: managerProcedure
+    .input(tableInputSchema.extend({ id: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      const item = await updateTable(restaurantTableDrizzleRepository, input);
+      await logActivity({
+        actorId: ctx.session.user.id,
+        action: "update",
+        entityType: "table",
+        entityId: String(item.id),
+        metadata: { name: item.name },
+      });
+      return item;
+    }),
+
+  delete: managerProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await deleteTable(restaurantTableDrizzleRepository, input.id);
+      } catch (error) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: error instanceof Error ? error.message : "Xoá thất bại.",
+        });
+      }
+      await logActivity({
+        actorId: ctx.session.user.id,
+        action: "delete",
+        entityType: "table",
+        entityId: String(input.id),
+      });
+    }),
+});

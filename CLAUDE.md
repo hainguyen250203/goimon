@@ -13,6 +13,7 @@ Hệ thống POS quản lý nhà hàng: order món, tạo hóa đơn, in bill, x
 - **UI**: shadcn/ui + Tailwind CSS.
 - **Database**: PostgreSQL + Drizzle ORM.
 - **Validation**: Zod, kết hợp `drizzle-zod` để sinh schema từ table (không tự tay viết lại schema Zod trùng với schema DB).
+  - Ngoại lệ: `drizzle-zod@0.8` sinh schema kiểu `zod/v4`, không `.extend()`/`.omit()` tương thích với `z` (zod v3 classic) mà cả app dùng — kể cả khi trỏ `zodInstance` về `z` qua `createSchemaFactory`. Với input CRUD cần `.extend()` (vd: thêm `id` cho update), viết tay `z.object({...})` thay vì sinh từ drizzle-zod.
 - **State**:
   - Zustand **chỉ** cho client/UI state (ví dụ: giỏ order đang chọn trên UI trước khi submit, trạng thái mở/đóng dialog, tab đang active).
   - Server state (data từ DB) do tRPC + TanStack Query đảm nhiệm.
@@ -29,6 +30,11 @@ Hệ thống POS quản lý nhà hàng: order món, tạo hóa đơn, in bill, x
   - `addItem()/updateItem()/removeItem()`: nếu đang `printed` thì tự động quay về `open` (phải in lại mới thanh toán được).
   - `confirmPayment(staffId)`: chỉ hợp lệ khi đang `printed` → `paid`, ghi lại `paidConfirmedBy` và `paidConfirmedAt`. Gọi khi không phải `printed` phải throw domain error, không đổi state. Không có trạng thái nào tự động chuyển thành `paid`.
   - `cancel()`: hợp lệ từ `open` hoặc `printed` → `cancelled`.
+
+## Route guard & trang danh sách
+
+- `/quan-ly/layout.tsx` chỉ chặn role `user` (đẩy sang `/goi-mon`), không phân biệt `manager` vs `admin`. Route admin-only (vd: `nguoi-dung`, `bao-cao`) phải tự check `session.user.role !== "admin"` và `redirect("/quan-ly")` ngay trong `page.tsx` — nếu không, `manager` vẫn vào được UI nhưng mọi gọi tRPC (`adminProcedure`) đều FORBIDDEN, kẹt loading vô thời hạn thay vì bị chặn rõ ràng.
+- Trang danh sách có phân trang/filter: dùng `useQuery` + `placeholderData: keepPreviousData` (KHÔNG `useSuspenseQuery`) cho query đó — Suspense không có khái niệm giữ data cũ trong lúc fetch data mới. Điều hướng phân trang/filter phải qua `router.push` (client-side), không dùng `<a href>` thô — gây full page reload, nháy trắng màn hình.
 
 ## Quy tắc tổ chức code
 
