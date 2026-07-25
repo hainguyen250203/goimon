@@ -1,0 +1,278 @@
+import {
+  EmptyOrderError,
+  InvalidOrderStatusTransitionError,
+  OrderItemNotFoundError,
+} from "./order.errors";
+import type { OrderStatus, PaymentMethod } from "./order-status";
+
+/**
+ * `id: null` nghĩa là dòng món chưa được persist (mới thêm trong memory,
+ * infrastructure sẽ INSERT khi save()). Có id thật thì infrastructure sẽ
+ * UPDATE/DELETE tương ứng khi diff với DB.
+ */
+export type OrderLineItem = {
+  id: number | null;
+  menuItemId: number;
+  itemName: string;
+  unitPrice: number;
+  quantity: number;
+  note: string | null;
+};
+
+export type DiscountType = "percent" | "fixed";
+
+/** Snapshot khuyến mãi tại thời điểm áp dụng — không đổi khi promotion gốc bị sửa/xoá sau đó. */
+export type OrderPromotion = {
+  id: number;
+  name: string;
+  discountType: DiscountType;
+  discountValue: number;
+};
+
+export type OrderProps = {
+  id: number | null;
+  tableId: number;
+  status: OrderStatus;
+  createdBy: string;
+  note: string | null;
+  totalAmount: number | null;
+  promotion: OrderPromotion | null;
+  printedAt: Date | null;
+  paymentMethod: PaymentMethod | null;
+  paidConfirmedBy: string | null;
+  paidConfirmedAt: Date | null;
+  createdAt: Date;
+  items: OrderLineItem[];
+};
+
+const OPEN_STATUSES = new Set<OrderStatus>(["open", "printed"]);
+
+/** DTO thuần cho client — không lộ instance/method của entity qua tRPC. */
+export type OrderDetail = {
+  id: number;
+  tableId: number;
+  status: OrderStatus;
+  note: string | null;
+  subtotal: number;
+  promotion: OrderPromotion | null;
+  discountAmount: number;
+  payableAmount: number;
+  totalAmount: number | null;
+  printedAt: Date | null;
+  paymentMethod: PaymentMethod | null;
+  paidConfirmedAt: Date | null;
+  createdAt: Date;
+  items: OrderLineItem[];
+};
+
+/**
+ * Entity nghiệp vụ đầy đủ của order — khác `OrderListItem` (read model chỉ
+ * phục vụ trang danh sách hiển thị). Mọi thay đổi trạng thái diễn ra trên
+ * entity trong memory, application layer gọi repository.save() để persist
+ * — đúng flow chuẩn trong CLAUDE.md.
+ */
+export class Order {
+  readonly id: number | null;
+  readonly tableId: number;
+  status: OrderStatus;
+  readonly createdBy: string;
+  note: string | null;
+  totalAmount: number | null;
+  promotion: OrderPromotion | null;
+  printedAt: Date | null;
+  paymentMethod: PaymentMethod | null;
+  paidConfirmedBy: string | null;
+  paidConfirmedAt: Date | null;
+  readonly createdAt: Date;
+  items: OrderLineItem[];
+
+  constructor(props: OrderProps) {
+    this.id = props.id;
+    this.tableId = props.tableId;
+    this.status = props.status;
+    this.createdBy = props.createdBy;
+    this.note = props.note;
+    this.totalAmount = props.totalAmount;
+    this.promotion = props.promotion;
+    this.printedAt = props.printedAt;
+    this.paymentMethod = props.paymentMethod;
+    this.paidConfirmedBy = props.paidConfirmedBy;
+    this.paidConfirmedAt = props.paidConfirmedAt;
+    this.createdAt = props.createdAt;
+    this.items = props.items;
+  }
+
+  static open(tableId: number, createdBy: string): Order {
+    return new Order({
+      id: null,
+      tableId,
+      status: "open",
+      createdBy,
+      note: null,
+      totalAmount: null,
+      promotion: null,
+      printedAt: null,
+      paymentMethod: null,
+      paidConfirmedBy: null,
+      paidConfirmedAt: null,
+      createdAt: new Date(),
+      items: [],
+    });
+  }
+
+  get subtotal(): number {
+    return this.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  }
+
+  /** Số tiền được giảm — không bao giờ vượt quá subtotal, dù % hay số tiền cố định. */
+  get discountAmount(): number {
+    if (!this.promotion) return 0;
+    const subtotal = this.subtotal;
+    if (this.promotion.discountType === "percent") {
+      return Math.min(Math.round((subtotal * this.promotion.discountValue) / 100), subtotal);
+    }
+    return Math.min(this.promotion.discountValue, subtotal);
+  }
+
+  /** Số tiền khách thực trả sau khuyến mãi — không bao giờ âm. */
+  get payableAmount(): number {
+    return Math.max(this.subtotal - this.discountAmount, 0);
+  }
+
+  private assertMutable() {
+    if (!OPEN_STATUSES.has(this.status)) {
+      throw new InvalidOrderStatusTransitionError(
+        `Không thể sửa món khi đơn đã ở trạng thái "${this.status}".`,
+      );
+    }
+  }
+
+  /** Sửa món (thêm/sửa/xoá) khi đang "printed" thì tự quay về "open" — phải in lại mới thanh toán được. */
+  private backToOpenIfPrinted() {
+    if (this.status === "printed") this.status = "open";
+  }
+
+  addItem(
+    menuItem: { id: number; name: string; price: number },
+    quantity: number,
+    note?: string | null,
+  ) {
+    this.assertMutable();
+    if (quantity <= 0) return;
+    // Gộp vào dòng đã có nếu cùng món + cùng ghi chú, tránh nhiều dòng trùng nhau.
+    const existing = this.items.find(
+      (item) => item.menuItemId === menuItem.id && (item.note ?? null) === (note ?? null),
+    );
+    if (existing) {
+      existing.quantity += quantity;
+    } else {
+      this.items.push({
+        id: null,
+        menuItemId: menuItem.id,
+        itemName: menuItem.name,
+        unitPrice: menuItem.price,
+        quantity,
+        note: note ?? null,
+      });
+    }
+    this.backToOpenIfPrinted();
+  }
+
+  updateItemQuantity(itemId: number, quantity: number) {
+    this.assertMutable();
+    const item = this.items.find((i) => i.id === itemId);
+    if (!item) throw new OrderItemNotFoundError(itemId);
+    if (quantity <= 0) {
+      this.removeItem(itemId);
+      return;
+    }
+    item.quantity = quantity;
+    this.backToOpenIfPrinted();
+  }
+
+  updateItemNote(itemId: number, note: string | null) {
+    this.assertMutable();
+    const item = this.items.find((i) => i.id === itemId);
+    if (!item) throw new OrderItemNotFoundError(itemId);
+    item.note = note;
+    this.backToOpenIfPrinted();
+  }
+
+  removeItem(itemId: number) {
+    this.assertMutable();
+    const index = this.items.findIndex((i) => i.id === itemId);
+    if (index === -1) throw new OrderItemNotFoundError(itemId);
+    this.items.splice(index, 1);
+    this.backToOpenIfPrinted();
+  }
+
+  /** Đổi khuyến mãi (thêm mới hoặc thay khuyến mãi đang áp dụng) — như sửa món, in "printed" thì quay lại "open". */
+  applyPromotion(promotion: OrderPromotion) {
+    this.assertMutable();
+    this.promotion = promotion;
+    this.backToOpenIfPrinted();
+  }
+
+  removePromotion() {
+    this.assertMutable();
+    this.promotion = null;
+    this.backToOpenIfPrinted();
+  }
+
+  /** open→printed hoặc printed→printed (in lại) — tính lại totalAmount (đã trừ khuyến mãi), set printedAt. */
+  printBill() {
+    if (!OPEN_STATUSES.has(this.status)) {
+      throw new InvalidOrderStatusTransitionError(
+        `Không thể in bill khi đơn đã ở trạng thái "${this.status}".`,
+      );
+    }
+    if (this.items.length === 0) throw new EmptyOrderError();
+    this.totalAmount = this.payableAmount;
+    this.printedAt = new Date();
+    this.status = "printed";
+  }
+
+  /** Chỉ hợp lệ khi đang "printed" → "paid". */
+  confirmPayment(staffId: string, paymentMethod: PaymentMethod) {
+    if (this.status !== "printed") {
+      throw new InvalidOrderStatusTransitionError(
+        `Chỉ xác nhận thanh toán được khi đơn đã in bill (đang ở trạng thái "${this.status}").`,
+      );
+    }
+    this.status = "paid";
+    this.paymentMethod = paymentMethod;
+    this.paidConfirmedBy = staffId;
+    this.paidConfirmedAt = new Date();
+  }
+
+  /** Hợp lệ từ "open" hoặc "printed" → "cancelled". */
+  cancel() {
+    if (!OPEN_STATUSES.has(this.status)) {
+      throw new InvalidOrderStatusTransitionError(
+        `Không thể huỷ đơn đã ở trạng thái "${this.status}".`,
+      );
+    }
+    this.status = "cancelled";
+  }
+
+  /** entity id chỉ null trước khi persist lần đầu — sau save() luôn có id thật. */
+  toDetail(): OrderDetail {
+    if (this.id === null) throw new Error("Order chưa được lưu, không thể tạo DTO.");
+    return {
+      id: this.id,
+      tableId: this.tableId,
+      status: this.status,
+      note: this.note,
+      subtotal: this.subtotal,
+      promotion: this.promotion,
+      discountAmount: this.discountAmount,
+      payableAmount: this.payableAmount,
+      totalAmount: this.totalAmount,
+      printedAt: this.printedAt,
+      paymentMethod: this.paymentMethod,
+      paidConfirmedAt: this.paidConfirmedAt,
+      createdAt: this.createdAt,
+      items: this.items,
+    };
+  }
+}

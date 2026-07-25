@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
-import { managerProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { managerProcedure, userProcedure, createTRPCRouter } from "~/server/api/trpc";
 import { listAreaOptions } from "./application/list-area-options.usecase";
 import { listTables } from "./application/list-tables.usecase";
 import { createTable } from "./application/create-table.usecase";
@@ -30,9 +30,10 @@ export const tableRouter = createTRPCRouter({
     )
     .query(({ input }) => listTables(restaurantTableDrizzleRepository, input)),
 
-  listAreas: managerProcedure.query(() =>
-    listAreaOptions(restaurantTableDrizzleRepository),
-  ),
+  // userProcedure (không phải managerProcedure): màn hình gọi món (/goi-mon,
+  // vai trò "user") cũng cần danh sách khu vực để chọn bàn — xem chỉ danh
+  // sách id+name, không phải hành động quản trị nên không cần chặn ở mức manager.
+  listAreas: userProcedure.query(() => listAreaOptions(restaurantTableDrizzleRepository)),
 
   create: managerProcedure
     .input(tableInputSchema)

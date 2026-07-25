@@ -96,6 +96,11 @@ const columns: ListViewColumn<OrderListItem>[] = [
     textAlign: "right",
   },
   {
+    key: "promotionName",
+    header: "Khuyến mãi",
+    cell: (row) => row.promotionName ?? "—",
+  },
+  {
     key: "paymentMethod",
     header: "Phương thức TT",
     cell: (row) =>

@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
-import { managerProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { managerProcedure, userProcedure, createTRPCRouter } from "~/server/api/trpc";
 import { listCategoryOptions } from "./application/list-category-options.usecase";
 import { listMenuItems } from "./application/list-menu-items.usecase";
+import { listForOrdering } from "./application/list-for-ordering.usecase";
 import { createMenuItem } from "./application/create-menu-item.usecase";
 import { updateMenuItem } from "./application/update-menu-item.usecase";
 import { deleteMenuItem } from "./application/delete-menu-item.usecase";
@@ -35,6 +36,11 @@ export const menuRouter = createTRPCRouter({
 
   listCategories: managerProcedure.query(() =>
     listCategoryOptions(menuItemDrizzleRepository),
+  ),
+
+  /** Cho màn hình gọi món (/goi-mon) — mọi nhân viên đã đăng nhập đều gọi được. */
+  listForOrdering: userProcedure.query(() =>
+    listForOrdering(menuItemDrizzleRepository),
   ),
 
   create: managerProcedure

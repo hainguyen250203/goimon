@@ -119,4 +119,23 @@ export const restaurantTableDrizzleRepository: RestaurantTableRepository = {
       throw error;
     }
   },
+
+  async setStatus(id: number, status: TableStatus): Promise<void> {
+    await db.update(restaurantTable).set({ status }).where(eq(restaurantTable.id, id));
+  },
+
+  async listAll(): Promise<RestaurantTable[]> {
+    const rows = await db
+      .select({
+        id: restaurantTable.id,
+        name: restaurantTable.name,
+        areaId: restaurantTable.areaId,
+        areaName: area.name,
+        status: restaurantTable.status,
+      })
+      .from(restaurantTable)
+      .leftJoin(area, eq(restaurantTable.areaId, area.id))
+      .orderBy(asc(area.name), asc(restaurantTable.name));
+    return rows.map(toEntity);
+  },
 };

@@ -8,6 +8,7 @@ import { tableRouter } from "~/modules/table/table.router";
 import { printerRouter } from "~/modules/printer/printer.router";
 import { userRouter } from "~/modules/user/user.router";
 import { orderRouter } from "~/modules/order/order.router";
+import { promotionRouter } from "~/modules/promotion/promotion.router";
 
 /**
  * This is the primary router for your server.
@@ -21,6 +22,7 @@ export const appRouter = createTRPCRouter({
   printer: printerRouter,
   user: userRouter,
   order: orderRouter,
+  promotion: promotionRouter,
 });
 
 // export type definition of API

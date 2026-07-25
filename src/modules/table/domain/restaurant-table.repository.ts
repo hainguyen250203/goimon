@@ -33,4 +33,11 @@ export interface RestaurantTableRepository {
   update(params: UpdateTableParams): Promise<RestaurantTable>;
   /** Xoá thật (hard delete). Throw nếu bàn đã từng có order (foreign_key_violation). */
   remove(id: number): Promise<void>;
+  /** Đổi trạng thái bàn (available/occupied) — module order gọi khi mở/đóng order, không phải CRUD admin. */
+  setStatus(id: number, status: TableStatus): Promise<void>;
+  /** Toàn bộ bàn, mọi khu vực, không phân trang — cho màn hình chọn bàn gọi món
+   * (order module tự ghép thêm thông tin order đang hoạt động, xem
+   * list-tables-for-ordering.usecase.ts — tránh table module phải import
+   * schema của order module, gây circular import giữa 2 module). */
+  listAll(): Promise<RestaurantTable[]>;
 }

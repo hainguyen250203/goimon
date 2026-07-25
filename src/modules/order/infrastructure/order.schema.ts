@@ -14,6 +14,7 @@ import {
 import { restaurantTable } from "~/modules/table/infrastructure/table.schema";
 import { menuItem } from "~/modules/menu/infrastructure/menu.schema";
 import { user } from "~/server/better-auth/schema";
+import { discountTypeEnum, promotion } from "~/modules/promotion/infrastructure/promotion.schema";
 
 // Không có entity "invoice" riêng — order tự mang vòng đời thanh toán:
 // open (đang gọi món) -> printed (đã in bill, chờ thanh toán) -> paid / cancelled.
@@ -44,8 +45,18 @@ export const order = pgTable(
       .notNull()
       .references(() => user.id),
     note: text("note"),
-    // Chốt tại lần in bill gần nhất; null khi order chưa từng được in.
+    // Chốt tại lần in bill gần nhất (đã trừ khuyến mãi nếu có); null khi order chưa từng được in.
     totalAmount: integer("total_amount"),
+    // Khuyến mãi đang áp dụng — snapshot tên/loại/giá trị giảm tại thời điểm
+    // áp dụng, không đổi khi promotion gốc bị sửa/xoá sau đó (giống cách
+    // order_items snapshot itemName/unitPrice). promotionId chỉ để truy vết,
+    // "set null" khi promotion gốc bị xoá — không phá dữ liệu đơn cũ.
+    promotionId: integer("promotion_id").references(() => promotion.id, {
+      onDelete: "set null",
+    }),
+    promotionName: varchar("promotion_name", { length: 100 }),
+    promotionDiscountType: discountTypeEnum("promotion_discount_type"),
+    promotionDiscountValue: integer("promotion_discount_value"),
     printedAt: timestamp("printed_at"),
     // Chỉ là nhãn ghi lại lúc confirmPayment, không tích hợp cổng thanh toán.
     paymentMethod: paymentMethodEnum("payment_method"),
@@ -128,6 +139,10 @@ export const orderRelations = relations(order, ({ one, many }) => ({
   createdByUser: one(user, {
     fields: [order.createdBy],
     references: [user.id],
+  }),
+  appliedPromotion: one(promotion, {
+    fields: [order.promotionId],
+    references: [promotion.id],
   }),
   items: many(orderItem),
   events: many(orderEvent),

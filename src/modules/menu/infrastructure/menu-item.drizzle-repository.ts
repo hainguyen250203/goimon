@@ -1,4 +1,4 @@
-import { asc, count, eq } from "drizzle-orm";
+import { asc, count, eq, inArray } from "drizzle-orm";
 
 import { db } from "~/server/db";
 import { isForeignKeyViolation } from "~/lib/db-errors";
@@ -94,6 +94,42 @@ export const menuItemDrizzleRepository: MenuItemRepository = {
       .where(eq(category.isActive, true))
       .orderBy(asc(category.name));
     return rows;
+  },
+
+  async listForOrdering(): Promise<MenuItem[]> {
+    const rows = await db
+      .select({
+        id: menuItem.id,
+        name: menuItem.name,
+        categoryId: menuItem.categoryId,
+        categoryName: category.name,
+        price: menuItem.price,
+        isAvailable: menuItem.isAvailable,
+        isPublished: menuItem.isPublished,
+      })
+      .from(menuItem)
+      .leftJoin(category, eq(menuItem.categoryId, category.id))
+      .where(eq(menuItem.isPublished, true))
+      .orderBy(asc(category.name), asc(menuItem.name));
+    return rows.map(toEntity);
+  },
+
+  async findByIds(ids: number[]): Promise<MenuItem[]> {
+    if (ids.length === 0) return [];
+    const rows = await db
+      .select({
+        id: menuItem.id,
+        name: menuItem.name,
+        categoryId: menuItem.categoryId,
+        categoryName: category.name,
+        price: menuItem.price,
+        isAvailable: menuItem.isAvailable,
+        isPublished: menuItem.isPublished,
+      })
+      .from(menuItem)
+      .leftJoin(category, eq(menuItem.categoryId, category.id))
+      .where(inArray(menuItem.id, ids));
+    return rows.map(toEntity);
   },
 
   async create(params: CreateMenuItemParams): Promise<MenuItem> {

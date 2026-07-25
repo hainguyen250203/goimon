@@ -30,6 +30,12 @@ export interface MenuItemRepository {
   list(params: ListMenuItemsParams): Promise<ListMenuItemsResult>;
   /** Chỉ id+name cho filter dropdown — không phải CRUD Category đầy đủ. */
   listCategoryOptions(): Promise<CategoryOption[]>;
+  /** Toàn bộ món đang hiển thị (isPublished=true), không phân trang — cho
+   * màn hình gọi món chọn món. Món hết hàng (isAvailable=false) vẫn trả về
+   * để UI hiện mờ/disable "Hết món" thay vì ẩn hẳn. */
+  listForOrdering(): Promise<MenuItem[]>;
+  /** Tra cứu theo id — order module dùng để lấy tên/giá thật (không tin client) khi thêm món vào đơn. */
+  findByIds(ids: number[]): Promise<MenuItem[]>;
   create(params: CreateMenuItemParams): Promise<MenuItem>;
   update(params: UpdateMenuItemParams): Promise<MenuItem>;
   /** Xoá thật (hard delete). Throw nếu món đã từng nằm trong order_items

@@ -3,6 +3,7 @@ import {
   BarChart3,
   ClipboardList,
   LayoutDashboard,
+  Percent,
   Printer,
   Table2,
   Users,
@@ -54,6 +55,13 @@ export const ADMIN_NAV: NavItem[] = [
     label: "Máy in",
     icon: Printer,
     href: "/quan-ly/may-in",
+    minRole: "manager",
+  },
+  {
+    key: "promotion",
+    label: "Khuyến mãi",
+    icon: Percent,
+    href: "/quan-ly/khuyen-mai",
     minRole: "manager",
   },
   {

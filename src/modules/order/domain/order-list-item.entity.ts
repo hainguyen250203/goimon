@@ -1,5 +1,8 @@
-export type OrderStatus = "open" | "printed" | "paid" | "cancelled";
-export type PaymentMethod = "cash" | "transfer";
+// Nguồn thật của 2 type này là order-status.ts (dùng chung với order.entity.ts
+// — entity nghiệp vụ đầy đủ). Re-export ở đây để các nơi đã import từ
+// order-list-item.entity.ts (trang danh sách) không phải đổi lại.
+import type { OrderStatus, PaymentMethod } from "./order-status";
+export type { OrderStatus, PaymentMethod };
 
 /**
  * Read model cho trang danh sách đơn hàng (chỉ hiển thị). KHÔNG phải entity
@@ -13,6 +16,7 @@ export type OrderListItem = {
   areaName: string;
   status: OrderStatus;
   totalAmount: number | null;
+  promotionName: string | null;
   paymentMethod: PaymentMethod | null;
   createdByName: string;
   createdAt: Date;
