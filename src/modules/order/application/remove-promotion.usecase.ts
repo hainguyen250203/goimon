@@ -13,13 +13,19 @@ export async function removePromotion(
   const orderEntity = await repository.findById(params.orderId);
   if (!orderEntity) throw new Error("Không tìm thấy đơn hàng.");
 
+  // Snapshot khuyến mãi TRƯỚC khi gỡ — giống promotion_applied, ghi rõ đã gỡ
+  // khuyến mãi nào thay vì chỉ ghi "đã gỡ" chung chung không rõ nội dung.
+  const removedPromotion = orderEntity.promotion;
   orderEntity.removePromotion();
 
   const saved = await repository.save(orderEntity);
-  await repository.recordEvent({
-    orderId: saved.id!,
-    actorId: params.actorId,
-    eventType: "promotion_removed",
-  });
+  if (removedPromotion) {
+    await repository.recordEvent({
+      orderId: saved.id!,
+      actorId: params.actorId,
+      eventType: "promotion_removed",
+      payload: { promotionId: removedPromotion.id, name: removedPromotion.name },
+    });
+  }
   return saved;
 }

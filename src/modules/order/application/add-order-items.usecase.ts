@@ -6,6 +6,8 @@ import type { OrderRepository } from "../domain/order.repository";
 export type AddOrderItemsParams = {
   tableId: number;
   actorId: string;
+  /** Ca đang mở — gắn vào order mới nếu bàn chưa có order active. */
+  shiftId: number;
   items: { menuItemId: number; quantity: number; note?: string | null }[];
 };
 
@@ -32,7 +34,7 @@ export async function addOrderItems(
   let orderEntity = await orderRepository.findActiveByTableId(params.tableId);
   const isNewOrder = orderEntity === null;
   if (!orderEntity) {
-    orderEntity = Order.open(params.tableId, params.actorId);
+    orderEntity = Order.open(params.tableId, params.actorId, params.shiftId);
   }
 
   for (const line of params.items) {
@@ -53,16 +55,20 @@ export async function addOrderItems(
     await tableRepository.setStatus(params.tableId, "occupied");
   }
 
+  // Snapshot tên món thật vào payload + items_summary (text phẳng) — không
+  // suy ngược từ menuItemId lúc hiển thị lịch sử, vì menu item có thể đổi
+  // tên/bị xoá sau đó (giống cách order_items snapshot itemName/unitPrice).
+  const resolvedItems = params.items.map((i) => {
+    const menuItem = menuItemById.get(i.menuItemId)!;
+    return { itemName: menuItem.name, unitPrice: menuItem.price, quantity: i.quantity };
+  });
+
   await orderRepository.recordEvent({
     orderId: saved.id!,
     actorId: params.actorId,
     eventType: "items_added",
-    payload: {
-      items: params.items.map((i) => ({
-        menuItemId: i.menuItemId,
-        quantity: i.quantity,
-      })),
-    },
+    payload: { items: resolvedItems },
+    itemsSummary: resolvedItems.map((i) => `${i.itemName} ×${i.quantity}`).join(", "),
   });
 
   return saved;

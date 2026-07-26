@@ -6,35 +6,45 @@ import { user } from "~/server/better-auth/schema";
 import { Order, type OrderLineItem, type OrderPromotion } from "../domain/order.entity";
 import type {
   OrderListItem,
+  OrderListItemLine,
   OrderStatus,
   PaymentMethod,
 } from "../domain/order-list-item.entity";
 import type {
   ActiveOrderSummary,
+  ListOrderItemEventsParams,
+  ListOrderItemEventsResult,
   ListOrdersParams,
   ListOrdersResult,
   OrderRepository,
+  OrderTimelineEvent,
   RecordOrderEventParams,
+  ShiftSummary,
 } from "../domain/order.repository";
 import { order, orderEvent, orderItem } from "./order.schema";
 
-function toEntity(row: {
-  id: number;
-  tableName: string | null;
-  areaName: string | null;
-  status: OrderStatus;
-  totalAmount: number | null;
-  promotionName: string | null;
-  paymentMethod: PaymentMethod | null;
-  createdByName: string | null;
-  createdAt: Date;
-  printedAt: Date | null;
-  paidConfirmedAt: Date | null;
-}): OrderListItem {
+function toEntity(
+  row: {
+    id: number;
+    tableName: string | null;
+    areaName: string | null;
+    shiftId: number | null;
+    status: OrderStatus;
+    totalAmount: number | null;
+    promotionName: string | null;
+    paymentMethod: PaymentMethod | null;
+    createdByName: string | null;
+    createdAt: Date;
+    printedAt: Date | null;
+    paidConfirmedAt: Date | null;
+  },
+  items: OrderListItemLine[],
+): OrderListItem {
   return {
     id: row.id,
     tableName: row.tableName ?? "",
     areaName: row.areaName ?? "",
+    shiftId: row.shiftId,
     status: row.status,
     totalAmount: row.totalAmount,
     promotionName: row.promotionName,
@@ -43,6 +53,7 @@ function toEntity(row: {
     createdAt: row.createdAt,
     printedAt: row.printedAt,
     paidConfirmedAt: row.paidConfirmedAt,
+    items,
   };
 }
 
@@ -74,6 +85,7 @@ function toOrderEntity(row: OrderRow, itemRows: OrderItemRow[]): Order {
   return new Order({
     id: row.id,
     tableId: row.tableId,
+    shiftId: row.shiftId,
     status: row.status,
     createdBy: row.createdBy,
     note: row.note,
@@ -102,9 +114,35 @@ async function loadOrder(
 }
 
 export const orderDrizzleRepository: OrderRepository = {
-  async list({ page, pageSize, status }: ListOrdersParams): Promise<ListOrdersResult> {
+  async list({
+    page,
+    pageSize,
+    status,
+    search,
+    shiftId,
+    createdBy,
+  }: ListOrdersParams): Promise<ListOrdersResult> {
     const offset = (page - 1) * pageSize;
-    const where = status ? eq(order.status, status) : undefined;
+    const conditions = [];
+    if (status) conditions.push(eq(order.status, status));
+    if (shiftId) conditions.push(eq(order.shiftId, shiftId));
+    if (createdBy) conditions.push(eq(order.createdBy, createdBy));
+
+    const trimmedSearch = search?.trim();
+    if (trimmedSearch) {
+      // Lọc đơn có ít nhất 1 món khớp tên (không dấu) — cần extension
+      // unaccent (npm run db:extensions).
+      const matchingOrders = await db
+        .selectDistinct({ orderId: orderItem.orderId })
+        .from(orderItem)
+        .where(sql`unaccent(${orderItem.itemName}) ilike unaccent(${`%${trimmedSearch}%`})`);
+      const matchingOrderIds = matchingOrders.map((r) => r.orderId);
+      if (matchingOrderIds.length === 0) {
+        return { items: [], total: 0 };
+      }
+      conditions.push(inArray(order.id, matchingOrderIds));
+    }
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
 
     const [rows, totalRows] = await Promise.all([
       db
@@ -112,6 +150,7 @@ export const orderDrizzleRepository: OrderRepository = {
           id: order.id,
           tableName: restaurantTable.name,
           areaName: area.name,
+          shiftId: order.shiftId,
           status: order.status,
           totalAmount: order.totalAmount,
           promotionName: order.promotionName,
@@ -132,8 +171,34 @@ export const orderDrizzleRepository: OrderRepository = {
       db.select({ value: count() }).from(order).where(where),
     ]);
 
+    const orderIds = rows.map((r) => r.id);
+    const itemRows =
+      orderIds.length > 0
+        ? await db
+            .select({
+              orderId: orderItem.orderId,
+              id: orderItem.id,
+              itemName: orderItem.itemName,
+              unitPrice: orderItem.unitPrice,
+              quantity: orderItem.quantity,
+            })
+            .from(orderItem)
+            .where(inArray(orderItem.orderId, orderIds))
+        : [];
+    const itemsByOrderId = new Map<number, OrderListItemLine[]>();
+    for (const item of itemRows) {
+      const list = itemsByOrderId.get(item.orderId) ?? [];
+      list.push({
+        id: item.id,
+        itemName: item.itemName,
+        unitPrice: item.unitPrice,
+        quantity: item.quantity,
+      });
+      itemsByOrderId.set(item.orderId, list);
+    }
+
     return {
-      items: rows.map(toEntity),
+      items: rows.map((row) => toEntity(row, itemsByOrderId.get(row.id) ?? [])),
       total: totalRows[0]?.value ?? 0,
     };
   },
@@ -164,6 +229,7 @@ export const orderDrizzleRepository: OrderRepository = {
     return db.transaction(async (tx) => {
       const values = {
         tableId: orderEntity.tableId,
+        shiftId: orderEntity.shiftId,
         status: orderEntity.status,
         createdBy: orderEntity.createdBy,
         note: orderEntity.note,
@@ -242,6 +308,7 @@ export const orderDrizzleRepository: OrderRepository = {
         return new Order({
           id: orderId,
           tableId: orderEntity.tableId,
+          shiftId: orderEntity.shiftId,
           status: orderEntity.status,
           createdBy: orderEntity.createdBy,
           note: orderEntity.note,
@@ -267,6 +334,7 @@ export const orderDrizzleRepository: OrderRepository = {
       actorId: params.actorId,
       eventType: params.eventType,
       payload: params.payload ?? null,
+      itemsSummary: params.itemsSummary ?? null,
     });
   },
 
@@ -285,5 +353,93 @@ export const orderDrizzleRepository: OrderRepository = {
       .where(inArray(order.status, ["open", "printed"]))
       .groupBy(order.id, order.tableId, order.createdAt);
     return rows;
+  },
+
+  async getShiftSummary(shiftId: number): Promise<ShiftSummary> {
+    const [row] = await db
+      .select({
+        orderCount: count(),
+        totalRevenue: sql<number>`coalesce(sum(${order.totalAmount}), 0)`.mapWith(Number),
+      })
+      .from(order)
+      .where(and(eq(order.shiftId, shiftId), eq(order.status, "paid")));
+    return { orderCount: row?.orderCount ?? 0, totalRevenue: row?.totalRevenue ?? 0 };
+  },
+
+  async listOrderItemEvents({
+    page,
+    pageSize,
+    search,
+    actorId,
+  }: ListOrderItemEventsParams): Promise<ListOrderItemEventsResult> {
+    const offset = (page - 1) * pageSize;
+    const trimmedSearch = search?.trim();
+    const conditions = [inArray(orderEvent.eventType, ["items_added", "items_removed"])];
+    if (actorId) conditions.push(eq(orderEvent.actorId, actorId));
+    if (trimmedSearch) {
+      conditions.push(
+        sql`unaccent(${orderEvent.itemsSummary}) ilike unaccent(${`%${trimmedSearch}%`})`,
+      );
+    }
+    const where = and(...conditions);
+
+    const [rows, totalRows] = await Promise.all([
+      db
+        .select({
+          id: orderEvent.id,
+          eventType: orderEvent.eventType,
+          tableName: restaurantTable.name,
+          actorName: user.name,
+          payload: orderEvent.payload,
+          createdAt: orderEvent.createdAt,
+        })
+        .from(orderEvent)
+        .innerJoin(order, eq(orderEvent.orderId, order.id))
+        .innerJoin(restaurantTable, eq(order.tableId, restaurantTable.id))
+        .innerJoin(user, eq(orderEvent.actorId, user.id))
+        .where(where)
+        .orderBy(desc(orderEvent.createdAt))
+        .limit(pageSize)
+        .offset(offset),
+      db.select({ value: count() }).from(orderEvent).where(where),
+    ]);
+
+    return {
+      items: rows.map((row) => ({
+        id: row.id,
+        eventType: row.eventType as "items_added" | "items_removed",
+        tableName: row.tableName ?? "",
+        actorName: row.actorName ?? "",
+        items: Array.isArray((row.payload as { items?: unknown })?.items)
+          ? ((row.payload as { items: { itemName: string; quantity: number; unitPrice: number }[] })
+              .items)
+          : [],
+        createdAt: row.createdAt,
+      })),
+      total: totalRows[0]?.value ?? 0,
+    };
+  },
+
+  async getOrderTimeline(orderId: number): Promise<OrderTimelineEvent[]> {
+    const rows = await db
+      .select({
+        id: orderEvent.id,
+        eventType: orderEvent.eventType,
+        actorName: user.name,
+        payload: orderEvent.payload,
+        createdAt: orderEvent.createdAt,
+      })
+      .from(orderEvent)
+      .innerJoin(user, eq(orderEvent.actorId, user.id))
+      .where(eq(orderEvent.orderId, orderId))
+      .orderBy(desc(orderEvent.createdAt));
+
+    return rows.map((row) => ({
+      id: row.id,
+      eventType: row.eventType,
+      actorName: row.actorName ?? "",
+      payload: row.payload,
+      createdAt: row.createdAt,
+    }));
   },
 };

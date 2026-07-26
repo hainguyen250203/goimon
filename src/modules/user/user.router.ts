@@ -5,6 +5,7 @@ import { adminProcedure, createTRPCRouter } from "~/server/api/trpc";
 import { listUsers } from "./application/list-users.usecase";
 import { createUser } from "./application/create-user.usecase";
 import { setUserRole } from "./application/set-user-role.usecase";
+import { setUserPassword } from "./application/set-user-password.usecase";
 import { banUser } from "./application/ban-user.usecase";
 import { unbanUser } from "./application/unban-user.usecase";
 import { userBetterAuthRepository } from "./infrastructure/user.betterauth-repository";
@@ -120,5 +121,26 @@ export const userRouter = createTRPCRouter({
         entityId: updated.id,
       });
       return updated;
+    }),
+
+  setPassword: adminProcedure
+    .input(
+      z.object({
+        userId: z.string().min(1),
+        newPassword: z.string().min(8, "Mật khẩu tối thiểu 8 ký tự"),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await setUserPassword(userBetterAuthRepository, {
+        ...input,
+        headers: ctx.headers,
+      });
+      // Không log mật khẩu vào metadata activity log dù là mật khẩu mới.
+      await logActivity({
+        actorId: ctx.session.user.id,
+        action: "set_password",
+        entityType: "user",
+        entityId: input.userId,
+      });
     }),
 });

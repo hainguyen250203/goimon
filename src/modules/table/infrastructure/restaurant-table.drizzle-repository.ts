@@ -4,11 +4,14 @@ import { db } from "~/server/db";
 import { isForeignKeyViolation } from "~/lib/db-errors";
 import type { RestaurantTable, TableStatus } from "../domain/restaurant-table.entity";
 import type {
+  Area,
   AreaOption,
+  CreateAreaParams,
   CreateTableParams,
   ListTablesParams,
   ListTablesResult,
   RestaurantTableRepository,
+  UpdateAreaParams,
   UpdateTableParams,
 } from "../domain/restaurant-table.repository";
 import { area, restaurantTable } from "./table.schema";
@@ -137,5 +140,32 @@ export const restaurantTableDrizzleRepository: RestaurantTableRepository = {
       .leftJoin(area, eq(restaurantTable.areaId, area.id))
       .orderBy(asc(area.name), asc(restaurantTable.name));
     return rows.map(toEntity);
+  },
+
+  async listAreasFull(): Promise<Area[]> {
+    return db.select().from(area).orderBy(asc(area.name));
+  },
+
+  async createArea(params: CreateAreaParams): Promise<Area> {
+    const [row] = await db.insert(area).values(params).returning();
+    if (!row) throw new Error("Tạo khu vực thất bại.");
+    return row;
+  },
+
+  async updateArea({ id, ...params }: UpdateAreaParams): Promise<Area> {
+    const [row] = await db.update(area).set(params).where(eq(area.id, id)).returning();
+    if (!row) throw new Error("Không tìm thấy khu vực.");
+    return row;
+  },
+
+  async removeArea(id: number): Promise<void> {
+    try {
+      await db.delete(area).where(eq(area.id, id));
+    } catch (error) {
+      if (isForeignKeyViolation(error)) {
+        throw new Error("Khu vực đang có bàn, không thể xoá — hãy ẩn thay vì xoá.");
+      }
+      throw error;
+    }
   },
 };

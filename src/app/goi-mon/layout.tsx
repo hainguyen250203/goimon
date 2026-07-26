@@ -20,13 +20,7 @@ export default async function GoiMonLayout({
       <Flex flex={1} direction="column" minH={0} overflow="hidden">
         {children}
       </Flex>
-      <BottomNav
-        user={{
-          name: session.user.name,
-          role: session.user.role ?? "user",
-          phoneNumber: session.user.phoneNumber,
-        }}
-      />
+      <BottomNav />
     </Flex>
   );
 }

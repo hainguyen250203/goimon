@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
   ClipboardList,
+  Clock,
   LayoutDashboard,
   Percent,
   Printer,
@@ -62,6 +63,13 @@ export const ADMIN_NAV: NavItem[] = [
     label: "Khuyến mãi",
     icon: Percent,
     href: "/quan-ly/khuyen-mai",
+    minRole: "manager",
+  },
+  {
+    key: "shift",
+    label: "Ca làm việc",
+    icon: Clock,
+    href: "/quan-ly/ca-lam-viec",
     minRole: "manager",
   },
   {

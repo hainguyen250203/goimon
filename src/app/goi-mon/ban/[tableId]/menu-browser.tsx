@@ -6,6 +6,7 @@ import { Box, Flex, Grid, IconButton, Input, Text } from "@chakra-ui/react";
 import { ArrowLeft, ChevronRight } from "lucide-react";
 
 import { api } from "~/trpc/react";
+import { stripDiacritics } from "~/lib/text";
 import {
   useOrderCartStore,
   getCartTotalAmount,
@@ -40,11 +41,14 @@ export function MenuBrowser({ tableId }: { tableId: number }) {
   }, [menuItems]);
 
   const filteredItems = useMemo(() => {
+    // Gõ không dấu (vd "ga") vẫn tìm ra món có dấu (vd "Gà") — bỏ dấu cả 2
+    // vế trước khi so khớp.
+    const normalizedSearch = stripDiacritics(search.toLowerCase());
     return menuItems.filter((item) => {
       if (selectedCategoryId !== ALL_CATEGORY && item.categoryId !== selectedCategoryId) {
         return false;
       }
-      return item.name.toLowerCase().includes(search.toLowerCase());
+      return stripDiacritics(item.name.toLowerCase()).includes(normalizedSearch);
     });
   }, [menuItems, selectedCategoryId, search]);
 

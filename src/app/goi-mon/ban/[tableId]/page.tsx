@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import { api, HydrateClient } from "~/trpc/server";
 import { Skeleton } from "~/components/ui/skeleton";
+import { ShiftGate } from "../../shift-gate";
 import { MenuBrowser } from "./menu-browser";
 
 export default async function TableOrderPage({
@@ -16,10 +17,14 @@ export default async function TableOrderPage({
   void api.order.listTablesForOrdering.prefetch();
 
   return (
-    <HydrateClient>
-      <Suspense fallback={<Skeleton h="full" rounded="none" />}>
-        <MenuBrowser tableId={tableId} />
-      </Suspense>
-    </HydrateClient>
+    <Suspense fallback={<Skeleton h="full" rounded="none" />}>
+      <ShiftGate>
+        <HydrateClient>
+          <Suspense fallback={<Skeleton h="full" rounded="none" />}>
+            <MenuBrowser tableId={tableId} />
+          </Suspense>
+        </HydrateClient>
+      </ShiftGate>
+    </Suspense>
   );
 }

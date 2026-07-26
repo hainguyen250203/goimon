@@ -45,10 +45,18 @@ export type UnbanUserParams = {
   headers: Headers;
 };
 
+export type SetUserPasswordParams = {
+  userId: string;
+  newPassword: string;
+  headers: Headers;
+};
+
 export interface UserRepository {
   list(params: ListUsersParams): Promise<ListUsersResult>;
   create(params: CreateUserParams): Promise<UserAccount>;
   setRole(params: SetUserRoleParams): Promise<UserAccount>;
   ban(params: BanUserParams): Promise<UserAccount>;
   unban(params: UnbanUserParams): Promise<UserAccount>;
+  /** Admin đặt lại mật khẩu cho user khác — không cần mật khẩu cũ (khác đổi mật khẩu tự thân). */
+  setPassword(params: SetUserPasswordParams): Promise<void>;
 }

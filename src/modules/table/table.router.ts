@@ -7,8 +7,17 @@ import { listTables } from "./application/list-tables.usecase";
 import { createTable } from "./application/create-table.usecase";
 import { updateTable } from "./application/update-table.usecase";
 import { deleteTable } from "./application/delete-table.usecase";
+import { listAreas } from "./application/list-areas.usecase";
+import { createArea } from "./application/create-area.usecase";
+import { updateArea } from "./application/update-area.usecase";
+import { deleteArea } from "./application/delete-area.usecase";
 import { restaurantTableDrizzleRepository } from "./infrastructure/restaurant-table.drizzle-repository";
 import { logActivity } from "~/modules/activity-log/log-activity";
+
+const areaInputSchema = z.object({
+  name: z.string().min(1, "Tên khu vực không được để trống"),
+  isActive: z.boolean(),
+});
 
 // Xem menu.router.ts — drizzle-zod@0.8 sinh schema kiểu zod/v4, không
 // .extend() tương thích được với `z` classic nên viết tay thay vì sinh.
@@ -78,6 +87,56 @@ export const tableRouter = createTRPCRouter({
         actorId: ctx.session.user.id,
         action: "delete",
         entityType: "table",
+        entityId: String(input.id),
+      });
+    }),
+
+  // Quản trị khu vực — dialog "Quản lý khu vực" ở /quan-ly/ban.
+  listAreasFull: managerProcedure.query(() => listAreas(restaurantTableDrizzleRepository)),
+
+  createArea: managerProcedure
+    .input(areaInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const item = await createArea(restaurantTableDrizzleRepository, input);
+      await logActivity({
+        actorId: ctx.session.user.id,
+        action: "create",
+        entityType: "area",
+        entityId: String(item.id),
+        metadata: { name: item.name },
+      });
+      return item;
+    }),
+
+  updateArea: managerProcedure
+    .input(areaInputSchema.extend({ id: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      const item = await updateArea(restaurantTableDrizzleRepository, input);
+      await logActivity({
+        actorId: ctx.session.user.id,
+        action: "update",
+        entityType: "area",
+        entityId: String(item.id),
+        metadata: { name: item.name },
+      });
+      return item;
+    }),
+
+  deleteArea: managerProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await deleteArea(restaurantTableDrizzleRepository, input.id);
+      } catch (error) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: error instanceof Error ? error.message : "Xoá thất bại.",
+        });
+      }
+      await logActivity({
+        actorId: ctx.session.user.id,
+        action: "delete",
+        entityType: "area",
         entityId: String(input.id),
       });
     }),

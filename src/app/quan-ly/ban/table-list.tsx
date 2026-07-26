@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { keepPreviousData } from "@tanstack/react-query";
 import { Button, Stack } from "@chakra-ui/react";
-import { Plus } from "lucide-react";
+import { Plus, Settings } from "lucide-react";
 import { StatusDot } from "~/components/ui/status-dot";
 
 import {
@@ -14,6 +14,8 @@ import {
 import { ListViewPagination } from "~/components/data-table/list-view-pagination";
 import { ListViewToolbar } from "~/components/data-table/list-view-toolbar";
 import { FilterSelect } from "~/components/data-table/filter-select";
+import { ManageListDialog } from "~/components/manage-list/manage-list-dialog";
+import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
 import type {
   RestaurantTable,
@@ -53,6 +55,32 @@ export function TableList({
 
   const [editingItem, setEditingItem] = useState<RestaurantTable | undefined>();
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  const utils = api.useUtils();
+  const [areaManagerOpen, setAreaManagerOpen] = useState(false);
+  const { data: areasFull } = api.table.listAreasFull.useQuery(undefined, {
+    enabled: areaManagerOpen,
+  });
+  const invalidateAreas = () => {
+    void utils.table.listAreasFull.invalidate();
+    void utils.table.listAreas.invalidate();
+    void utils.table.list.invalidate();
+  };
+  const createAreaMutation = api.table.createArea.useMutation({
+    onSuccess: invalidateAreas,
+    onError: (error) =>
+      toaster.create({ title: "Không thêm được khu vực", description: error.message, type: "error" }),
+  });
+  const updateAreaMutation = api.table.updateArea.useMutation({
+    onSuccess: invalidateAreas,
+    onError: (error) =>
+      toaster.create({ title: "Không cập nhật được khu vực", description: error.message, type: "error" }),
+  });
+  const deleteAreaMutation = api.table.deleteArea.useMutation({
+    onSuccess: invalidateAreas,
+    onError: (error) =>
+      toaster.create({ title: "Không xoá được khu vực", description: error.message, type: "error" }),
+  });
 
   const columns: ListViewColumn<RestaurantTable>[] = [
     { key: "id", header: "ID", cell: (row) => row.id, width: "4rem" },
@@ -103,15 +131,21 @@ export function TableList({
     <Stack gap={4}>
       <ListViewToolbar
         end={
-          <Button
-            onClick={() => {
-              setEditingItem(undefined);
-              setDialogOpen(true);
-            }}
-          >
-            <Plus size={16} />
-            Thêm bàn
-          </Button>
+          <>
+            <Button variant="outline" onClick={() => setAreaManagerOpen(true)}>
+              <Settings size={16} />
+              Quản lý khu vực
+            </Button>
+            <Button
+              onClick={() => {
+                setEditingItem(undefined);
+                setDialogOpen(true);
+              }}
+            >
+              <Plus size={16} />
+              Thêm bàn
+            </Button>
+          </>
         }
       >
         <FilterSelect
@@ -171,6 +205,27 @@ export function TableList({
         onOpenChange={setDialogOpen}
         areas={areas}
         item={editingItem}
+      />
+
+      <ManageListDialog
+        open={areaManagerOpen}
+        onOpenChange={setAreaManagerOpen}
+        title="Quản lý khu vực"
+        items={areasFull ?? []}
+        isMutating={
+          createAreaMutation.isPending || updateAreaMutation.isPending || deleteAreaMutation.isPending
+        }
+        onCreate={(name) => createAreaMutation.mutate({ name, isActive: true })}
+        onUpdate={(id, patch) => {
+          const current = areasFull?.find((a) => a.id === id);
+          if (!current) return;
+          updateAreaMutation.mutate({
+            id,
+            name: patch.name ?? current.name,
+            isActive: patch.isActive ?? current.isActive,
+          });
+        }}
+        onDelete={(id) => deleteAreaMutation.mutate({ id })}
       />
     </Stack>
   );

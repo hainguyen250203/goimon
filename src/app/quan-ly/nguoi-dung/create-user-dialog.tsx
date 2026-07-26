@@ -41,8 +41,8 @@ const ROLE_OPTIONS = (Object.keys(ROLE_LABEL) as UserRole[]).map((value) => ({
 
 /**
  * Chỉ có dialog tạo mới — không có dialog "sửa" đầy đủ vì tài khoản không
- * có dữ liệu hồ sơ nào khác đáng sửa ngoài vai trò (đổi vai trò dùng dialog
- * nhỏ riêng ở user-row-actions.tsx) và trạng thái cấm/bỏ cấm.
+ * có dữ liệu hồ sơ nào khác đáng sửa ngoài vai trò, mật khẩu, và trạng thái
+ * cấm/bỏ cấm (mỗi cái 1 dialog nhỏ riêng ở user-row-actions.tsx).
  */
 export function CreateUserDialog({
   open,

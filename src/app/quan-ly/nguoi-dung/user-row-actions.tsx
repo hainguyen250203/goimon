@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Button, IconButton } from "@chakra-ui/react";
-import { MoreHorizontal, ShieldBan, ShieldCheck, UserCog } from "lucide-react";
+import { KeyRound, MoreHorizontal, ShieldBan, ShieldCheck, UserCog } from "lucide-react";
 
 import {
   DialogBody,
@@ -25,6 +25,7 @@ import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
 import type { UserAccount, UserRole } from "~/modules/user/domain/user-account.entity";
 import { ROLE_LABEL } from "./role-label";
+import { ResetPasswordDialog } from "./reset-password-dialog";
 
 const ROLE_OPTIONS = (Object.keys(ROLE_LABEL) as UserRole[]).map((value) => ({
   value,
@@ -39,6 +40,7 @@ const ROLE_OPTIONS = (Object.keys(ROLE_LABEL) as UserRole[]).map((value) => ({
 export function UserRowActions({ user }: { user: UserAccount }) {
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [banConfirmOpen, setBanConfirmOpen] = useState(false);
+  const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole>(user.role);
 
   const utils = api.useUtils();
@@ -104,6 +106,10 @@ export function UserRowActions({ user }: { user: UserAccount }) {
             <MenuItem value="role" onClick={() => setRoleDialogOpen(true)}>
               <UserCog size={16} />
               Đổi vai trò
+            </MenuItem>
+            <MenuItem value="reset-password" onClick={() => setResetPasswordOpen(true)}>
+              <KeyRound size={16} />
+              Đặt lại mật khẩu
             </MenuItem>
             {user.banned ? (
               <MenuItem value="unban" onClick={() => unban.mutate({ userId: user.id })}>
@@ -182,6 +188,13 @@ export function UserRowActions({ user }: { user: UserAccount }) {
           </DialogFooter>
         </DialogContent>
       </DialogRoot>
+
+      <ResetPasswordDialog
+        open={resetPasswordOpen}
+        onOpenChange={setResetPasswordOpen}
+        userId={user.id}
+        userName={user.name}
+      />
     </>
   );
 }

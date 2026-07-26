@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { keepPreviousData } from "@tanstack/react-query";
 import { Button, Stack } from "@chakra-ui/react";
-import { Plus } from "lucide-react";
+import { Plus, Settings } from "lucide-react";
 
 import {
   ListViewTable,
@@ -13,7 +13,9 @@ import {
 import { ListViewPagination } from "~/components/data-table/list-view-pagination";
 import { ListViewToolbar } from "~/components/data-table/list-view-toolbar";
 import { FilterSelect } from "~/components/data-table/filter-select";
+import { ManageListDialog } from "~/components/manage-list/manage-list-dialog";
 import { StatusDot } from "~/components/ui/status-dot";
+import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
 import type { MenuItem } from "~/modules/menu/domain/menu-item.entity";
 import { MenuItemFormDialog } from "./menu-item-form-dialog";
@@ -47,6 +49,32 @@ export function MenuItemList({
 
   const [editingItem, setEditingItem] = useState<MenuItem | undefined>();
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  const utils = api.useUtils();
+  const [categoryManagerOpen, setCategoryManagerOpen] = useState(false);
+  const { data: categoriesFull } = api.menu.listCategoriesFull.useQuery(undefined, {
+    enabled: categoryManagerOpen,
+  });
+  const invalidateCategories = () => {
+    void utils.menu.listCategoriesFull.invalidate();
+    void utils.menu.listCategories.invalidate();
+    void utils.menu.list.invalidate();
+  };
+  const createCategoryMutation = api.menu.createCategory.useMutation({
+    onSuccess: invalidateCategories,
+    onError: (error) =>
+      toaster.create({ title: "Không thêm được danh mục", description: error.message, type: "error" }),
+  });
+  const updateCategoryMutation = api.menu.updateCategory.useMutation({
+    onSuccess: invalidateCategories,
+    onError: (error) =>
+      toaster.create({ title: "Không cập nhật được danh mục", description: error.message, type: "error" }),
+  });
+  const deleteCategoryMutation = api.menu.deleteCategory.useMutation({
+    onSuccess: invalidateCategories,
+    onError: (error) =>
+      toaster.create({ title: "Không xoá được danh mục", description: error.message, type: "error" }),
+  });
 
   const columns: ListViewColumn<MenuItem>[] = [
     { key: "id", header: "ID", cell: (row) => row.id, width: "4rem" },
@@ -106,15 +134,21 @@ export function MenuItemList({
     <Stack gap={4}>
       <ListViewToolbar
         end={
-          <Button
-            onClick={() => {
-              setEditingItem(undefined);
-              setDialogOpen(true);
-            }}
-          >
-            <Plus size={16} />
-            Thêm món ăn
-          </Button>
+          <>
+            <Button variant="outline" onClick={() => setCategoryManagerOpen(true)}>
+              <Settings size={16} />
+              Quản lý danh mục
+            </Button>
+            <Button
+              onClick={() => {
+                setEditingItem(undefined);
+                setDialogOpen(true);
+              }}
+            >
+              <Plus size={16} />
+              Thêm món ăn
+            </Button>
+          </>
         }
       >
         <FilterSelect
@@ -155,6 +189,29 @@ export function MenuItemList({
         onOpenChange={setDialogOpen}
         categories={categories}
         item={editingItem}
+      />
+
+      <ManageListDialog
+        open={categoryManagerOpen}
+        onOpenChange={setCategoryManagerOpen}
+        title="Quản lý danh mục"
+        items={categoriesFull ?? []}
+        isMutating={
+          createCategoryMutation.isPending ||
+          updateCategoryMutation.isPending ||
+          deleteCategoryMutation.isPending
+        }
+        onCreate={(name) => createCategoryMutation.mutate({ name, isActive: true })}
+        onUpdate={(id, patch) => {
+          const current = categoriesFull?.find((c) => c.id === id);
+          if (!current) return;
+          updateCategoryMutation.mutate({
+            id,
+            name: patch.name ?? current.name,
+            isActive: patch.isActive ?? current.isActive,
+          });
+        }}
+        onDelete={(id) => deleteCategoryMutation.mutate({ id })}
       />
     </Stack>
   );

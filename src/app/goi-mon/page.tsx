@@ -2,6 +2,7 @@ import { Suspense } from "react";
 
 import { api, HydrateClient } from "~/trpc/server";
 import { Skeleton } from "~/components/ui/skeleton";
+import { ShiftGate } from "./shift-gate";
 import { TableSelector } from "./table-selector";
 
 export default async function GoiMonPage({
@@ -16,10 +17,14 @@ export default async function GoiMonPage({
   void api.order.listTablesForOrdering.prefetch();
 
   return (
-    <HydrateClient>
-      <Suspense fallback={<Skeleton h="full" rounded="none" />}>
-        <TableSelector areaId={areaId} />
-      </Suspense>
-    </HydrateClient>
+    <Suspense fallback={<Skeleton h="full" rounded="none" />}>
+      <ShiftGate>
+        <HydrateClient>
+          <Suspense fallback={<Skeleton h="full" rounded="none" />}>
+            <TableSelector areaId={areaId} />
+          </Suspense>
+        </HydrateClient>
+      </ShiftGate>
+    </Suspense>
   );
 }

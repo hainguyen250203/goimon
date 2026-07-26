@@ -10,10 +10,18 @@ export type { OrderStatus, PaymentMethod };
  * entity đó sẽ được xây riêng ở order.entity.ts khi làm luồng gọi món/thanh
  * toán thật, theo đúng cấu trúc mẫu trong CLAUDE.md.
  */
+export type OrderListItemLine = {
+  id: number;
+  itemName: string;
+  unitPrice: number;
+  quantity: number;
+};
+
 export type OrderListItem = {
   id: number;
   tableName: string;
   areaName: string;
+  shiftId: number | null;
   status: OrderStatus;
   totalAmount: number | null;
   promotionName: string | null;
@@ -22,4 +30,5 @@ export type OrderListItem = {
   createdAt: Date;
   printedAt: Date | null;
   paidConfirmedAt: Date | null;
+  items: OrderListItemLine[];
 };

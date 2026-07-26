@@ -16,6 +16,20 @@ export type CategoryOption = {
   name: string;
 };
 
+/** Entity đầy đủ của danh mục — khác CategoryOption (chỉ id+name, dropdown active-only). */
+export type Category = {
+  id: number;
+  name: string;
+  isActive: boolean;
+};
+
+export type CreateCategoryParams = {
+  name: string;
+  isActive: boolean;
+};
+
+export type UpdateCategoryParams = CreateCategoryParams & { id: number };
+
 export type CreateMenuItemParams = {
   categoryId: number;
   name: string;
@@ -28,7 +42,7 @@ export type UpdateMenuItemParams = CreateMenuItemParams & { id: number };
 
 export interface MenuItemRepository {
   list(params: ListMenuItemsParams): Promise<ListMenuItemsResult>;
-  /** Chỉ id+name cho filter dropdown — không phải CRUD Category đầy đủ. */
+  /** Chỉ id+name, chỉ danh mục active — cho filter dropdown/form chọn danh mục. */
   listCategoryOptions(): Promise<CategoryOption[]>;
   /** Toàn bộ món đang hiển thị (isPublished=true), không phân trang — cho
    * màn hình gọi món chọn món. Món hết hàng (isAvailable=false) vẫn trả về
@@ -42,4 +56,12 @@ export interface MenuItemRepository {
    * (foreign_key_violation) — gọi nơi dùng nên hướng dẫn ẩn (isPublished)
    * thay vì xoá trong trường hợp đó. */
   remove(id: number): Promise<void>;
+
+  // --- Quản trị danh mục (Category) — dùng cho dialog "Quản lý danh mục" ở /quan-ly/mon-an ---
+  /** Toàn bộ danh mục (kể cả đang ẩn) — cho dialog quản lý, khác listCategoryOptions (chỉ active). */
+  listCategoriesFull(): Promise<Category[]>;
+  createCategory(params: CreateCategoryParams): Promise<Category>;
+  updateCategory(params: UpdateCategoryParams): Promise<Category>;
+  /** Xoá thật. Throw nếu còn món ăn thuộc danh mục này (foreign_key_violation). */
+  removeCategory(id: number): Promise<void>;
 }

@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Flex, IconButton, Separator, Stack, Text } from "@chakra-ui/react";
-import { LogOut, Settings } from "lucide-react";
+import { LogOut } from "lucide-react";
 
 import { Avatar } from "~/components/ui/avatar";
 import {
@@ -17,13 +16,15 @@ import { StatusDot } from "~/components/ui/status-dot";
 import { authClient } from "~/server/better-auth/client";
 import { ThemeToggle } from "./theme-toggle";
 
-const ROLE_LABEL: Record<string, string> = {
+// Export để store-view.tsx (tab "Cửa hàng" ở /goi-mon) dùng chung — cùng
+// thuộc phạm vi "layout chrome", tránh định nghĩa trùng lần thứ 3.
+export const ROLE_LABEL: Record<string, string> = {
   admin: "Admin",
   manager: "Quản lý",
   user: "Nhân viên",
 };
 
-const ROLE_DOT_COLOR: Record<string, string> = {
+export const ROLE_DOT_COLOR: Record<string, string> = {
   admin: "purple.500",
   manager: "blue.500",
   user: "gray.400",
@@ -69,17 +70,6 @@ export function NavUser({
             </Stack>
           </Flex>
         </Stack>
-
-        <Separator />
-
-        <MenuItemGroup>
-          <MenuItem value="settings" asChild>
-            <Link href="/quan-ly/tuy-chinh">
-              <Settings size={16} />
-              Tuỳ chỉnh tài khoản
-            </Link>
-          </MenuItem>
-        </MenuItemGroup>
 
         <Separator />
 

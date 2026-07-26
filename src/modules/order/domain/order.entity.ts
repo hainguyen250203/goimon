@@ -32,6 +32,7 @@ export type OrderPromotion = {
 export type OrderProps = {
   id: number | null;
   tableId: number;
+  shiftId: number | null;
   status: OrderStatus;
   createdBy: string;
   note: string | null;
@@ -74,6 +75,7 @@ export type OrderDetail = {
 export class Order {
   readonly id: number | null;
   readonly tableId: number;
+  readonly shiftId: number | null;
   status: OrderStatus;
   readonly createdBy: string;
   note: string | null;
@@ -89,6 +91,7 @@ export class Order {
   constructor(props: OrderProps) {
     this.id = props.id;
     this.tableId = props.tableId;
+    this.shiftId = props.shiftId;
     this.status = props.status;
     this.createdBy = props.createdBy;
     this.note = props.note;
@@ -102,10 +105,11 @@ export class Order {
     this.items = props.items;
   }
 
-  static open(tableId: number, createdBy: string): Order {
+  static open(tableId: number, createdBy: string, shiftId: number | null): Order {
     return new Order({
       id: null,
       tableId,
+      shiftId,
       status: "open",
       createdBy,
       note: null,
@@ -198,11 +202,16 @@ export class Order {
     this.backToOpenIfPrinted();
   }
 
+  /** Xoá hết món (đơn về 0 món) thì huỷ luôn đơn — bàn không thể "đang phục vụ" với đơn rỗng. */
   removeItem(itemId: number) {
     this.assertMutable();
     const index = this.items.findIndex((i) => i.id === itemId);
     if (index === -1) throw new OrderItemNotFoundError(itemId);
     this.items.splice(index, 1);
+    if (this.items.length === 0) {
+      this.status = "cancelled";
+      return;
+    }
     this.backToOpenIfPrinted();
   }
 

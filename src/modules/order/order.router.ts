@@ -1,11 +1,13 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
-import { managerProcedure, userProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { userProcedure, createTRPCRouter } from "~/server/api/trpc";
 import { menuItemDrizzleRepository } from "~/modules/menu/infrastructure/menu-item.drizzle-repository";
 import { restaurantTableDrizzleRepository } from "~/modules/table/infrastructure/restaurant-table.drizzle-repository";
 import { promotionDrizzleRepository } from "~/modules/promotion/infrastructure/promotion.drizzle-repository";
 import { listOrders } from "./application/list-orders.usecase";
+import { listOrderItemEvents } from "./application/list-order-item-events.usecase";
+import { getOrderTimeline } from "./application/get-order-timeline.usecase";
 import { listTablesForOrdering } from "./application/list-tables-for-ordering.usecase";
 import { getTableOrder } from "./application/get-table-order.usecase";
 import { addOrderItems } from "./application/add-order-items.usecase";
@@ -16,6 +18,7 @@ import { cancelOrder } from "./application/cancel-order.usecase";
 import { applyPromotion } from "./application/apply-promotion.usecase";
 import { removePromotion } from "./application/remove-promotion.usecase";
 import { orderDrizzleRepository } from "./infrastructure/order.drizzle-repository";
+import { shiftDrizzleRepository } from "~/modules/shift/infrastructure/shift.drizzle-repository";
 import {
   InvalidOrderStatusTransitionError,
   OrderItemNotFoundError,
@@ -42,17 +45,62 @@ async function runOrderAction<T extends Order>(action: () => Promise<T>) {
   }
 }
 
+// Mọi mutation của luồng gọi món đều cần ca đang mở — chặn ở đây (không chỉ
+// chặn UI) để phòng trường hợp gọi thẳng API. Trả về shiftId cho addItems
+// gắn vào order mới; các mutation khác chỉ cần chặn, không cần dùng giá trị.
+async function requireOpenShift(): Promise<number> {
+  const shift = await shiftDrizzleRepository.findOpen();
+  if (!shift?.id) {
+    throw new TRPCError({ code: "PRECONDITION_FAILED", message: "Ca làm việc chưa được mở." });
+  }
+  return shift.id;
+}
+
 export const orderRouter = createTRPCRouter({
-  // Trang Đơn hàng (admin, chỉ hiển thị).
-  list: managerProcedure
+  // Trang Đơn hàng (admin /quan-ly/don-hang, chỉ hiển thị) — cũng được trang
+  // Lịch sử đơn hàng ở /goi-mon/cua-hang tái dùng nên là userProcedure, không
+  // chỉ managerProcedure như trước. `search` lọc đơn có món khớp tên (không
+  // dấu, server-side) — dùng cho ô tìm kiếm ở trang Lịch sử đơn hàng.
+  // Role "user" (nhân viên) chỉ xem được đơn do chính mình tạo ở trang Lịch
+  // sử đơn hàng — manager/admin xem được toàn bộ (cả ở đây lẫn ở trang admin).
+  list: userProcedure
     .input(
       z.object({
         page: z.number().int().min(1).default(1),
         pageSize: z.number().int().min(1).max(100).default(20),
         status: z.enum(["open", "printed", "paid", "cancelled"]).optional(),
+        search: z.string().optional(),
+        shiftId: z.number().int().positive().optional(),
       }),
     )
-    .query(({ input }) => listOrders(orderDrizzleRepository, input)),
+    .query(({ ctx, input }) => {
+      const createdBy = ctx.session.user.role === "user" ? ctx.session.user.id : undefined;
+      return listOrders(orderDrizzleRepository, { ...input, createdBy });
+    }),
+
+  // Lịch sử gọi món (event "items_added"/"items_removed" trong order_events)
+  // — ai gọi/trả món gì, lúc nào, bàn nào. Khác list ở trên (đó là theo ĐƠN,
+  // cái này theo TỪNG LẦN gọi/trả món). Tìm không dấu server-side trên items_summary.
+  // Role "user" chỉ xem được hành động do chính mình thao tác (khác trang
+  // list ở trên lọc theo NGƯỜI TẠO ĐƠN — ở đây lọc theo NGƯỜI THAO TÁC event).
+  listOrderItemEvents: userProcedure
+    .input(
+      z.object({
+        page: z.number().int().min(1).default(1),
+        pageSize: z.number().int().min(1).max(100).default(20),
+        search: z.string().optional(),
+      }),
+    )
+    .query(({ ctx, input }) => {
+      const actorId = ctx.session.user.role === "user" ? ctx.session.user.id : undefined;
+      return listOrderItemEvents(orderDrizzleRepository, { ...input, actorId });
+    }),
+
+  // Toàn bộ timeline của 1 order cụ thể (gọi món, trả món, in bill, thanh
+  // toán, khuyến mãi, huỷ...) — trang lịch sử riêng của order đó ở /goi-mon.
+  getOrderTimeline: userProcedure
+    .input(z.object({ orderId: z.number().int().positive() }))
+    .query(({ input }) => getOrderTimeline(orderDrizzleRepository, input.orderId)),
 
   // Từ đây trở xuống: luồng gọi món (/goi-mon), mọi nhân viên đã đăng nhập đều gọi được.
   listTablesForOrdering: userProcedure.query(() =>
@@ -81,15 +129,17 @@ export const orderRouter = createTRPCRouter({
           .min(1),
       }),
     )
-    .mutation(({ ctx, input }) =>
-      runOrderAction(() =>
+    .mutation(async ({ ctx, input }) => {
+      const shiftId = await requireOpenShift();
+      return runOrderAction(() =>
         addOrderItems(orderDrizzleRepository, restaurantTableDrizzleRepository, menuItemDrizzleRepository, {
           tableId: input.tableId,
           actorId: ctx.session.user.id,
+          shiftId,
           items: input.items,
         }),
-      ),
-    ),
+      );
+    }),
 
   // UI gom sửa số lượng/xoá món cục bộ (màn Món đã gọi), gọi 1 lần khi bấm
   // "Xác nhận" thay vì lưu ngay mỗi lần bấm +/- — xem submitted-order-panel.tsx.
@@ -106,24 +156,26 @@ export const orderRouter = createTRPCRouter({
         removedItemIds: z.array(z.number().int().positive()).default([]),
       }),
     )
-    .mutation(({ ctx, input }) =>
-      runOrderAction(() =>
-        updateOrderItems(orderDrizzleRepository, {
+    .mutation(async ({ ctx, input }) => {
+      await requireOpenShift();
+      return runOrderAction(() =>
+        updateOrderItems(orderDrizzleRepository, restaurantTableDrizzleRepository, {
           orderId: input.orderId,
           actorId: ctx.session.user.id,
           changes: input.changes,
           removedItemIds: input.removedItemIds,
         }),
-      ),
-    ),
+      );
+    }),
 
   printBill: userProcedure
     .input(z.object({ orderId: z.number().int().positive() }))
-    .mutation(({ ctx, input }) =>
-      runOrderAction(() =>
-        printOrder(orderDrizzleRepository, { orderId: input.orderId, actorId: ctx.session.user.id }),
-      ),
-    ),
+    .mutation(async ({ input }) => {
+      await requireOpenShift();
+      return runOrderAction(() =>
+        printOrder(orderDrizzleRepository, { orderId: input.orderId }),
+      );
+    }),
 
   confirmPayment: userProcedure
     .input(
@@ -132,26 +184,28 @@ export const orderRouter = createTRPCRouter({
         paymentMethod: z.enum(["cash", "transfer"]),
       }),
     )
-    .mutation(({ ctx, input }) =>
-      runOrderAction(() =>
+    .mutation(async ({ ctx, input }) => {
+      await requireOpenShift();
+      return runOrderAction(() =>
         confirmPayment(orderDrizzleRepository, restaurantTableDrizzleRepository, {
           orderId: input.orderId,
           actorId: ctx.session.user.id,
           paymentMethod: input.paymentMethod,
         }),
-      ),
-    ),
+      );
+    }),
 
   cancel: userProcedure
     .input(z.object({ orderId: z.number().int().positive() }))
-    .mutation(({ ctx, input }) =>
-      runOrderAction(() =>
+    .mutation(async ({ ctx, input }) => {
+      await requireOpenShift();
+      return runOrderAction(() =>
         cancelOrder(orderDrizzleRepository, restaurantTableDrizzleRepository, {
           orderId: input.orderId,
           actorId: ctx.session.user.id,
         }),
-      ),
-    ),
+      );
+    }),
 
   applyPromotion: userProcedure
     .input(
@@ -160,24 +214,26 @@ export const orderRouter = createTRPCRouter({
         promotionId: z.number().int().positive(),
       }),
     )
-    .mutation(({ ctx, input }) =>
-      runOrderAction(() =>
+    .mutation(async ({ ctx, input }) => {
+      await requireOpenShift();
+      return runOrderAction(() =>
         applyPromotion(orderDrizzleRepository, promotionDrizzleRepository, {
           orderId: input.orderId,
           promotionId: input.promotionId,
           actorId: ctx.session.user.id,
         }),
-      ),
-    ),
+      );
+    }),
 
   removePromotion: userProcedure
     .input(z.object({ orderId: z.number().int().positive() }))
-    .mutation(({ ctx, input }) =>
-      runOrderAction(() =>
+    .mutation(async ({ ctx, input }) => {
+      await requireOpenShift();
+      return runOrderAction(() =>
         removePromotion(orderDrizzleRepository, {
           orderId: input.orderId,
           actorId: ctx.session.user.id,
         }),
-      ),
-    ),
+      );
+    }),
 });

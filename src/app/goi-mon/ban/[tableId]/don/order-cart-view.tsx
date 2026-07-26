@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Box, Flex, IconButton, Text } from "@chakra-ui/react";
-import { ArrowLeft, ChefHat, ClipboardCheck, Printer } from "lucide-react";
+import { ArrowLeft, ChefHat, ClipboardCheck, History, Printer } from "lucide-react";
 
 import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
@@ -22,6 +22,13 @@ export function OrderCartView({ tableId }: { tableId: number }) {
   const draftCount = useOrderCartStore((s) => s.draftCarts[tableId]?.length ?? 0);
 
   const [tab, setTab] = useState<Tab>(draftCount > 0 || !order ? "draft" : "submitted");
+
+  // Xoá hết món ở tab "Món đã gọi" thì đơn bị huỷ (xem removeItem() ở order
+  // entity) — order trả về null sau khi invalidate, tự chuyển về tab "Món
+  // đang gọi" để tránh nội dung trống trơn không rõ lý do.
+  useEffect(() => {
+    if (!order && tab === "submitted") setTab("draft");
+  }, [order, tab]);
 
   const hasSubmittedItems = !!order && order.items.length > 0;
 
@@ -61,6 +68,16 @@ export function OrderCartView({ tableId }: { tableId: number }) {
         <Text fontSize={{ base: "sm", lg: "md" }} fontWeight="semibold" flex={1}>
           {table?.name ?? `Bàn ${tableId}`}
         </Text>
+        {order && (
+          <IconButton
+            aria-label="Lịch sử đơn hàng"
+            size={{ base: "xs", lg: "sm" }}
+            variant="outline"
+            onClick={() => router.push(`/goi-mon/ban/${tableId}/don/lich-su?orderId=${order.id}`)}
+          >
+            <History />
+          </IconButton>
+        )}
         {order && (
           <IconButton
             aria-label="In hoá đơn"

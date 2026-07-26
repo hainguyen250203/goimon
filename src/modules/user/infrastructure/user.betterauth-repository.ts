@@ -5,6 +5,7 @@ import type {
   CreateUserParams,
   ListUsersParams,
   ListUsersResult,
+  SetUserPasswordParams,
   SetUserRoleParams,
   UnbanUserParams,
   UserRepository,
@@ -19,7 +20,7 @@ import type {
  * cơ chế so với các module khác (menu/table/printer dùng Drizzle thẳng).
  *
  * Shape các endpoint (`listUsers`, `createUser`, `setRole`, `banUser`,
- * `unbanUser`) verify trực tiếp từ
+ * `unbanUser`, `setUserPassword`) verify trực tiếp từ
  * node_modules/better-auth/dist/plugins/admin/admin.d.mts.
  */
 
@@ -137,5 +138,9 @@ export const userBetterAuthRepository: UserRepository = {
   async unban({ userId, headers }: UnbanUserParams): Promise<UserAccount> {
     const result = await auth.api.unbanUser({ body: { userId }, headers });
     return toEntity(result.user as RawUser);
+  },
+
+  async setPassword({ userId, newPassword, headers }: SetUserPasswordParams): Promise<void> {
+    await auth.api.setUserPassword({ body: { userId, newPassword }, headers });
   },
 };

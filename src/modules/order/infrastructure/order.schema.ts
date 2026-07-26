@@ -15,6 +15,7 @@ import { restaurantTable } from "~/modules/table/infrastructure/table.schema";
 import { menuItem } from "~/modules/menu/infrastructure/menu.schema";
 import { user } from "~/server/better-auth/schema";
 import { discountTypeEnum, promotion } from "~/modules/promotion/infrastructure/promotion.schema";
+import { shift } from "~/modules/shift/infrastructure/shift.schema";
 
 // Không có entity "invoice" riêng — order tự mang vòng đời thanh toán:
 // open (đang gọi món) -> printed (đã in bill, chờ thanh toán) -> paid / cancelled.
@@ -40,6 +41,9 @@ export const order = pgTable(
     tableId: integer("table_id")
       .notNull()
       .references(() => restaurantTable.id),
+    // Ca làm việc lúc mở đơn — chỉ 1 ca mở tại 1 thời điểm nên đơn nào cũng
+    // gắn được với đúng 1 ca (null cho đơn tạo trước khi có tính năng ca).
+    shiftId: integer("shift_id").references(() => shift.id),
     status: orderStatusEnum("status").notNull().default("open"),
     createdBy: text("created_by")
       .notNull()
@@ -121,6 +125,10 @@ export const orderEvent = pgTable(
       .references(() => user.id),
     eventType: varchar("event_type", { length: 50 }).notNull(),
     payload: jsonb("payload"),
+    // Snapshot tên món dạng text phẳng (vd "Gà nướng ×2, Phở bò ×1") — chỉ có
+    // ở event "items_added", dùng để hiển thị nhanh + tìm kiếm không dấu
+    // (unaccent) mà không phải parse payload JSON.
+    itemsSummary: text("items_summary"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (t) => [
@@ -143,6 +151,10 @@ export const orderRelations = relations(order, ({ one, many }) => ({
   appliedPromotion: one(promotion, {
     fields: [order.promotionId],
     references: [promotion.id],
+  }),
+  shift: one(shift, {
+    fields: [order.shiftId],
+    references: [shift.id],
   }),
   items: many(orderItem),
   events: many(orderEvent),

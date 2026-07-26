@@ -3,7 +3,6 @@ import type { OrderRepository } from "../domain/order.repository";
 
 export type PrintOrderParams = {
   orderId: number;
-  actorId: string;
 };
 
 /**
@@ -11,6 +10,10 @@ export type PrintOrderParams = {
  * CHƯA gọi máy in thật (cần thư viện `escpos` — xem package.json của
  * pos-be — và cấu hình IP máy in từ module Máy in). Việc đẩy lệnh in ESC/POS
  * thật sự để làm ở task riêng; usecase này chỉ đảm bảo state machine đúng.
+ *
+ * Không ghi order_event cho hành động này — in bill chỉ là bước trung gian
+ * để khách xem/thanh toán (đơn vẫn "open"/"printed", chưa có gì nghiệp vụ
+ * đáng audit), không phải 1 mốc đáng lưu vào lịch sử như gọi món/thanh toán.
  */
 export async function printOrder(
   repository: OrderRepository,
@@ -21,12 +24,5 @@ export async function printOrder(
 
   orderEntity.printBill();
 
-  const saved = await repository.save(orderEntity);
-  await repository.recordEvent({
-    orderId: saved.id!,
-    actorId: params.actorId,
-    eventType: "bill_printed",
-    payload: { totalAmount: saved.totalAmount },
-  });
-  return saved;
+  return repository.save(orderEntity);
 }

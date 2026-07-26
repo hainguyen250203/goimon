@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Box, Flex, IconButton, Text } from "@chakra-ui/react";
-import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ChefHat, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { DrawerBody, DrawerContent, DrawerRoot, DrawerTitle } from "~/components/ui/drawer";
 import { VisuallyHidden } from "@chakra-ui/react";
@@ -172,6 +172,7 @@ export function AdminShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const nav = filterNavByRole(ADMIN_NAV, user.role);
   const title = findActiveLabel(nav, pathname);
 
@@ -238,6 +239,16 @@ export function AdminShell({
           <Text flex={1} fontSize="sm" fontWeight="medium" lineClamp={1}>
             {title}
           </Text>
+          <Tooltip content="Sang trang gọi món">
+            <IconButton
+              aria-label="Sang trang gọi món"
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/goi-mon")}
+            >
+              <ChefHat size={18} />
+            </IconButton>
+          </Tooltip>
           <NavUser user={user} />
         </Flex>
         <Box as="main" flex={1} p={{ base: 4, md: 6 }}>

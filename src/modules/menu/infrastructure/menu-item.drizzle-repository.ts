@@ -1,14 +1,17 @@
 import { asc, count, eq, inArray } from "drizzle-orm";
 
-import { db } from "~/server/db";
 import { isForeignKeyViolation } from "~/lib/db-errors";
+import { db } from "~/server/db";
 import type { MenuItem } from "../domain/menu-item.entity";
 import type {
+  Category,
   CategoryOption,
+  CreateCategoryParams,
   CreateMenuItemParams,
   ListMenuItemsParams,
   ListMenuItemsResult,
   MenuItemRepository,
+  UpdateCategoryParams,
   UpdateMenuItemParams,
 } from "../domain/menu-item.repository";
 import { category, menuItem } from "./menu.schema";
@@ -151,6 +154,33 @@ export const menuItemDrizzleRepository: MenuItemRepository = {
         throw new Error(
           "Món ăn đã được dùng trong đơn hàng, không thể xoá — hãy ẩn thay vì xoá.",
         );
+      }
+      throw error;
+    }
+  },
+
+  async listCategoriesFull(): Promise<Category[]> {
+    return db.select().from(category).orderBy(asc(category.name));
+  },
+
+  async createCategory(params: CreateCategoryParams): Promise<Category> {
+    const [row] = await db.insert(category).values(params).returning();
+    if (!row) throw new Error("Tạo danh mục thất bại.");
+    return row;
+  },
+
+  async updateCategory({ id, ...params }: UpdateCategoryParams): Promise<Category> {
+    const [row] = await db.update(category).set(params).where(eq(category.id, id)).returning();
+    if (!row) throw new Error("Không tìm thấy danh mục.");
+    return row;
+  },
+
+  async removeCategory(id: number): Promise<void> {
+    try {
+      await db.delete(category).where(eq(category.id, id));
+    } catch (error) {
+      if (isForeignKeyViolation(error)) {
+        throw new Error("Danh mục đang có món ăn, không thể xoá — hãy ẩn thay vì xoá.");
       }
       throw error;
     }
