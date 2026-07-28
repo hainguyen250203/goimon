@@ -1,50 +1,49 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { keepPreviousData } from "@tanstack/react-query";
-import { Badge, Box, Button, Flex, Input, Stack, Text } from "@chakra-ui/react";
-import { Minus, Plus } from "lucide-react";
+import { Box, Button, Flex, Input, Stack, Text } from "@chakra-ui/react";
+import { Minus, Plus, Search } from "lucide-react";
 
 import { EmptyState } from "~/components/ui/empty-state";
+import { Skeleton } from "~/components/ui/skeleton";
 import { api } from "~/trpc/react";
+import { formatDateTime } from "~/lib/format-order";
 import type { OrderItemEventEntry } from "~/modules/order/domain/order.repository";
+import { usePaginationState, useDedupedList } from "../use-paginated-list";
 
 const PAGE_SIZE = 20;
-// Gõ xong đợi 300ms rồi mới gọi server — tránh bắn query mỗi lần gõ 1 ký tự.
-const SEARCH_DEBOUNCE_MS = 300;
-
-function formatDateTime(date: Date) {
-  return new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short" }).format(date);
-}
 
 function OrderItemEventCard({ entry }: { entry: OrderItemEventEntry }) {
   const isRemoved = entry.eventType === "items_removed";
+  const accent = isRemoved ? "red" : "green";
 
   return (
-    <Box bg="bg" p={{ base: 2, lg: 3 }} rounded="l2" borderWidth="1px" borderColor="border">
-      <Flex align="center" justify="space-between" mb={2}>
-        <Box>
-          <Text fontSize={{ base: "xs", lg: "sm" }} fontWeight="semibold">
+    <Box bg="bg" p={{ base: 3, lg: 4 }} rounded="l3" borderWidth="1px" borderColor="border">
+      <Flex justify="space-between" align="start" gap={3}>
+        <Stack gap={0.5} minW={0}>
+          <Text fontSize={{ base: "xs", lg: "sm" }} fontWeight="semibold" lineClamp={1}>
             {entry.tableName}
           </Text>
-          <Text fontSize="2xs" color="fg.muted">
+          <Text fontSize={{ base: "2xs", lg: "xs" }} color="fg.muted">
             {entry.actorName} · {formatDateTime(entry.createdAt)}
           </Text>
-        </Box>
-        <Badge size="sm" colorPalette={isRemoved ? "red" : "green"} variant="subtle">
-          {isRemoved ? <Minus size={12} /> : <Plus size={12} />}
-          {isRemoved ? "Đã trả món" : "Gọi món"}
-        </Badge>
+        </Stack>
+        <Flex align="center" gap={1} flexShrink={0} color={`${accent}.fg`}>
+          {isRemoved ? <Minus size={14} /> : <Plus size={14} />}
+          <Text fontSize={{ base: "2xs", lg: "xs" }} fontWeight="medium">
+            {isRemoved ? "Trả món" : "Gọi món"}
+          </Text>
+        </Flex>
       </Flex>
 
-      <Stack gap={0.5} pt={2} borderTopWidth="1px" borderColor="border">
+      <Stack gap={1} mt={3}>
         {entry.items.map((item, index) => (
-          <Flex key={index} justify="space-between">
-            <Text fontSize="xs" color={isRemoved ? "fg.error" : undefined}>
+          <Flex key={index} justify="space-between" gap={3}>
+            <Text fontSize={{ base: "xs", lg: "sm" }} color={isRemoved ? "red.fg" : "fg.muted"} lineClamp={1}>
               {item.itemName}
             </Text>
-            <Text fontSize="xs" color={isRemoved ? "fg.error" : "fg.muted"}>
-              {isRemoved ? "-" : "×"} {item.quantity}
+            <Text fontSize={{ base: "xs", lg: "sm" }} color={isRemoved ? "red.fg" : "fg.muted"} flexShrink={0}>
+              {isRemoved ? "−" : "×"} {item.quantity}
             </Text>
           </Flex>
         ))}
@@ -54,18 +53,7 @@ function OrderItemEventCard({ entry }: { entry: OrderItemEventEntry }) {
 }
 
 export function OrderItemEventsList() {
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [entries, setEntries] = useState<OrderItemEventEntry[]>([]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setSearch(searchInput.trim());
-      setPage(1);
-    }, SEARCH_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [searchInput]);
+  const { search, page, setPage, searchInput, setSearchInput } = usePaginationState();
 
   // Tìm kiếm chạy ở server (unaccent trên items_summary) — không giới hạn
   // theo dữ liệu đã tải sẵn ở client.
@@ -74,31 +62,40 @@ export function OrderItemEventsList() {
     { placeholderData: keepPreviousData },
   );
 
-  useEffect(() => {
-    if (!data) return;
-    // Phân trang theo offset — nếu có event mới chen vào giữa lúc đang tải
-    // thêm trang, trang sau có thể trả lại row đã có ở trang trước. Khử
-    // trùng theo id khi gộp để tránh hiện 2 lần cùng 1 event.
-    setEntries((prev) => {
-      if (page === 1) return data.items;
-      const existingIds = new Set(prev.map((e) => e.id));
-      return [...prev, ...data.items.filter((e) => !existingIds.has(e.id))];
-    });
-  }, [data, page]);
-
-  const hasMore = data ? entries.length < data.total : false;
+  const { items: entries, hasMore } = useDedupedList(data, page);
+  const isInitialLoading = !data && isFetching;
 
   return (
-    <Stack gap={{ base: 1.5, lg: 2 }}>
-      <Input
-        placeholder="Tìm món"
-        size={{ base: "xs", lg: "sm" }}
-        bg="bg"
-        value={searchInput}
-        onChange={(e) => setSearchInput(e.target.value)}
-      />
+    <Stack gap={3}>
+      <Box position="relative">
+        <Search
+          size={15}
+          style={{
+            position: "absolute",
+            left: 12,
+            top: "50%",
+            transform: "translateY(-50%)",
+            color: "var(--chakra-colors-fg-muted)",
+            pointerEvents: "none",
+          }}
+        />
+        <Input
+          placeholder="Tìm món"
+          size="sm"
+          bg="bg"
+          pl={8}
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+        />
+      </Box>
 
-      {entries.length === 0 && !isFetching ? (
+      {isInitialLoading ? (
+        <Stack gap={3}>
+          <Skeleton h="88px" rounded="l3" />
+          <Skeleton h="88px" rounded="l3" />
+          <Skeleton h="88px" rounded="l3" />
+        </Stack>
+      ) : entries.length === 0 ? (
         <Flex flex={1} align="center" justify="center" py={10}>
           <EmptyState title={search ? "Không tìm thấy món" : "Chưa có lịch sử gọi món"} />
         </Flex>

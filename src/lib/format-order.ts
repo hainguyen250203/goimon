@@ -29,3 +29,9 @@ export function formatDateTime(date: Date) {
     timeStyle: "short",
   }).format(date);
 }
+
+export function formatDiscount(promotion: { discountType: "percent" | "fixed"; discountValue: number }) {
+  return promotion.discountType === "percent"
+    ? `${promotion.discountValue}%`
+    : formatVnd(promotion.discountValue);
+}

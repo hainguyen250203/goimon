@@ -33,6 +33,12 @@ export const auth = betterAuth({
   session: { modelName: "sessions" },
   account: { modelName: "accounts" },
   verification: { modelName: "verifications" },
+  // Đổi prefix cookie khỏi mặc định "better-auth.*" — cookie session giờ là
+  // "goimon.session_token". proxy.ts phải truyền cùng cookiePrefix cho
+  // getSessionCookie() vì hàm đó không tự đọc config này từ instance `auth`.
+  advanced: {
+    cookiePrefix: "goimon",
+  },
   plugins: [
     admin({
       ac,

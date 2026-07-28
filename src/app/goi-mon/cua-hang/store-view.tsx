@@ -25,7 +25,7 @@ export function StoreView({
   };
 
   return (
-    <Box flex={1} minH={0} overflowY="auto" bg="bg.subtle" p={{ base: 3, lg: 4 }}>
+    <Box flex={1} minH={0} overflowY="auto" bg="bg.subtle" p={{ base: 2, lg: 3 }}>
       <Stack gap={3}>
         <Flex
           align="center"
@@ -33,7 +33,7 @@ export function StoreView({
           gap={3}
           bg="bg"
           p={{ base: 3, lg: 4 }}
-          rounded="l2"
+          rounded="l3"
           borderWidth="1px"
           borderColor="border"
         >
@@ -41,13 +41,15 @@ export function StoreView({
             <Avatar name={user.name} size="lg" />
             <Stack gap="1px">
               <Flex align="center" gap={2}>
-                <Text fontWeight="semibold">{user.name}</Text>
+                <Text fontSize={{ base: "sm", lg: "md" }} fontWeight="semibold">
+                  {user.name}
+                </Text>
                 <StatusDot color={ROLE_DOT_COLOR[user.role] ?? "gray.400"}>
                   {ROLE_LABEL[user.role] ?? user.role}
                 </StatusDot>
               </Flex>
               {user.phoneNumber && (
-                <Text fontSize="xs" color="fg.muted">
+                <Text fontSize={{ base: "2xs", lg: "xs" }} color="fg.muted">
                   {user.phoneNumber}
                 </Text>
               )}
@@ -59,9 +61,9 @@ export function StoreView({
           </Button>
         </Flex>
 
-        <Stack gap={0} bg="bg" rounded="l2" borderWidth="1px" borderColor="border" overflow="hidden">
+        <Stack gap={0} bg="bg" rounded="l3" borderWidth="1px" borderColor="border" overflow="hidden">
           <Flex align="center" justify="space-between" px={4} py={3}>
-            <Text fontSize="sm">Giao diện</Text>
+            <Text fontSize={{ base: "xs", lg: "sm" }}>Giao diện</Text>
             <ThemeToggle />
           </Flex>
           <Separator />
@@ -77,7 +79,7 @@ export function StoreView({
             onClick={() => router.push("/goi-mon/cua-hang/lich-su-don-hang")}
           >
             <ClipboardList size={16} />
-            <Text fontSize="sm">Lịch sử đơn hàng</Text>
+            <Text fontSize={{ base: "xs", lg: "sm" }}>Lịch sử đơn hàng</Text>
           </Flex>
           <Separator />
           <Flex
@@ -90,7 +92,7 @@ export function StoreView({
             onClick={() => router.push("/goi-mon/cua-hang/lich-su-goi-mon")}
           >
             <History size={16} />
-            <Text fontSize="sm">Lịch sử gọi món</Text>
+            <Text fontSize={{ base: "xs", lg: "sm" }}>Lịch sử gọi món</Text>
           </Flex>
           {canManage && (
             <>
@@ -105,7 +107,7 @@ export function StoreView({
                 onClick={() => router.push("/quan-ly")}
               >
                 <LayoutDashboard size={16} />
-                <Text fontSize="sm">Quản lý nhà hàng</Text>
+                <Text fontSize={{ base: "xs", lg: "sm" }}>Quản lý nhà hàng</Text>
               </Flex>
             </>
           )}

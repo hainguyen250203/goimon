@@ -15,10 +15,7 @@ import {
 import { StatusDot } from "~/components/ui/status-dot";
 import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
-
-function formatDateTime(date: Date) {
-  return new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short" }).format(date);
-}
+import { formatDateTime } from "~/lib/format-order";
 
 /**
  * Dòng "Ca làm việc" trong danh sách cài đặt của tab Cửa hàng — bấm vào mở
@@ -61,7 +58,7 @@ export function ShiftSection({ canManage }: { canManage: boolean }) {
       >
         <Flex align="center" gap={2}>
           <Clock size={16} />
-          <Text fontSize="sm">Ca làm việc</Text>
+          <Text fontSize={{ base: "xs", lg: "sm" }}>Ca làm việc</Text>
         </Flex>
         <StatusDot color={shift ? "green.500" : "gray.400"}>
           {shift ? "Đang mở" : "Chưa mở"}
@@ -77,8 +74,7 @@ export function ShiftSection({ canManage }: { canManage: boolean }) {
             {shift ? (
               <Text fontSize="sm" color="fg.muted">
                 Đang mở từ {formatDateTime(shift.startTime)}.
-                {canManage &&
-                  " Đóng ca sẽ chặn gọi món/thanh toán cho tới khi có ca mới; nếu còn bàn chưa thanh toán xong, hệ thống sẽ báo lỗi và không đóng được."}
+                {canManage && " Đóng ca sẽ chặn gọi món/thanh toán cho tới khi có ca mới."}
               </Text>
             ) : (
               <Text fontSize="sm" color="fg.muted">
@@ -88,16 +84,16 @@ export function ShiftSection({ canManage }: { canManage: boolean }) {
             )}
           </DialogBody>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
+            <Button size="md" variant="outline" onClick={() => setDialogOpen(false)}>
               Đóng
             </Button>
             {canManage &&
               (shift ? (
-                <Button colorPalette="red" onClick={() => closeShift.mutate()} loading={closeShift.isPending}>
+                <Button size="md" colorPalette="red" onClick={() => closeShift.mutate()} loading={closeShift.isPending}>
                   Đóng ca
                 </Button>
               ) : (
-                <Button colorPalette="blue" onClick={() => openShift.mutate()} loading={openShift.isPending}>
+                <Button size="md" colorPalette="blue" onClick={() => openShift.mutate()} loading={openShift.isPending}>
                   Mở ca
                 </Button>
               ))}

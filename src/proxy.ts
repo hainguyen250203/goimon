@@ -6,7 +6,7 @@ import type { NextRequest } from "next/server";
 // chưa đăng nhập. Phân quyền theo role vẫn phải check thật ở từng layout.tsx
 // (proxy không biết role vì role không nằm trong cookie).
 export function proxy(request: NextRequest) {
-  const sessionCookie = getSessionCookie(request);
+  const sessionCookie = getSessionCookie(request, { cookiePrefix: "goimon" });
 
   if (!sessionCookie) {
     return NextResponse.redirect(new URL("/login", request.url));

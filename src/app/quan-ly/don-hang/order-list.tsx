@@ -24,7 +24,7 @@ import {
   PAYMENT_METHOD_LABEL,
   STATUS_DOT_COLOR,
   STATUS_LABEL,
-} from "./format";
+} from "~/lib/format-order";
 import { OrderRowActions } from "./order-row-actions";
 
 const PAGE_SIZE = 20;

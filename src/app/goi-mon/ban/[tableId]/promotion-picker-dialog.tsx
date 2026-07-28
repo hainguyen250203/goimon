@@ -12,12 +12,7 @@ import {
 } from "~/components/ui/dialog";
 import { FilterSelect } from "~/components/data-table/filter-select";
 import { api } from "~/trpc/react";
-
-function formatDiscount(item: { discountType: "percent" | "fixed"; discountValue: number }) {
-  return item.discountType === "percent"
-    ? `${item.discountValue}%`
-    : `${new Intl.NumberFormat("vi-VN").format(item.discountValue)}đ`;
-}
+import { formatDiscount } from "~/lib/format-order";
 
 export function PromotionPickerDialog({
   open,
@@ -44,7 +39,7 @@ export function PromotionPickerDialog({
 
   return (
     <DialogRoot open={open} onOpenChange={(e) => onOpenChange(e.open)}>
-      <DialogContent>
+      <DialogContent maxW={{ base: "calc(100vw - 24px)", sm: "400px" }} mx="auto">
         <DialogHeader>
           <DialogTitle>Chọn khuyến mãi</DialogTitle>
         </DialogHeader>
@@ -64,10 +59,11 @@ export function PromotionPickerDialog({
           )}
         </DialogBody>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button size="md" variant="outline" onClick={() => onOpenChange(false)}>
             Huỷ
           </Button>
           <Button
+            size="md"
             colorPalette="blue"
             disabled={!selectedId}
             loading={isApplying}

@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { Flex, IconButton, Text } from "@chakra-ui/react";
 import { ArrowLeft } from "lucide-react";
 
-export function OrderTimelineHeader({ tableId }: { tableId: number }) {
+/** Header dùng chung cho mọi trang con (back + tiêu đề) trong luồng /goi-mon. */
+export function PageHeader({ title, backHref }: { title: string; backHref: string }) {
   const router = useRouter();
 
   return (
@@ -21,12 +22,12 @@ export function OrderTimelineHeader({ tableId }: { tableId: number }) {
         aria-label="Quay lại"
         size={{ base: "xs", lg: "sm" }}
         variant="ghost"
-        onClick={() => router.push(`/goi-mon/ban/${tableId}/don`)}
+        onClick={() => router.push(backHref)}
       >
-        <ArrowLeft />
+        <ArrowLeft size={16} />
       </IconButton>
       <Text fontSize={{ base: "sm", lg: "md" }} fontWeight="semibold">
-        Lịch sử đơn hàng
+        {title}
       </Text>
     </Flex>
   );

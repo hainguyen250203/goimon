@@ -15,6 +15,13 @@ export function BottomNav() {
   const isTableActive = pathname === "/goi-mon" || pathname.startsWith("/goi-mon/ban");
   const isStoreActive = pathname.startsWith("/goi-mon/cua-hang");
 
+  // Chỉ hiện ở 2 trang gốc thật sự là tab (chọn bàn / cửa hàng) — mọi trang
+  // con đã đi sâu 1 cấp (chọn món, giỏ/đơn, lịch sử...) tự có nút back riêng
+  // và thường đã có sẵn 1 thanh dính đáy khác, nên ẩn để đỡ chồng 2 thanh.
+  const isSubPage =
+    pathname.startsWith("/goi-mon/ban/") || pathname.startsWith("/goi-mon/cua-hang/");
+  if (isSubPage) return null;
+
   return (
     <Flex
       as="footer"

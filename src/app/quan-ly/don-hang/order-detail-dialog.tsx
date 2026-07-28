@@ -12,7 +12,7 @@ import {
 } from "~/components/ui/dialog";
 import { StatusDot } from "~/components/ui/status-dot";
 import type { OrderListItem } from "~/modules/order/domain/order-list-item.entity";
-import { formatDateTime, formatVnd, PAYMENT_METHOD_LABEL, STATUS_DOT_COLOR, STATUS_LABEL } from "./format";
+import { formatDateTime, formatVnd, PAYMENT_METHOD_LABEL, STATUS_DOT_COLOR, STATUS_LABEL } from "~/lib/format-order";
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (

@@ -5,10 +5,7 @@ import { useRouter } from "next/navigation";
 import { Box, Flex, Grid, Text } from "@chakra-ui/react";
 
 import { api } from "~/trpc/react";
-
-function formatVnd(amount: number) {
-  return new Intl.NumberFormat("vi-VN").format(amount) + "đ";
-}
+import { formatVnd } from "~/lib/format-order";
 
 function formatTime(date: Date) {
   return new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit" }).format(date);
@@ -57,7 +54,7 @@ export function TableSelector({ areaId }: { areaId?: number }) {
               minW={{ base: "64px", lg: "90px" }}
               px={{ base: 2, lg: 3 }}
               py={{ base: 1.5, lg: 2 }}
-              rounded="l2"
+              rounded="l3"
               textAlign="center"
               cursor="pointer"
               bg={active ? "colorPalette.subtle" : "bg.muted"}
@@ -80,8 +77,8 @@ export function TableSelector({ areaId }: { areaId?: number }) {
 
       <Box flex={1} overflowY="auto" p={{ base: 2, lg: 3 }}>
         <Grid
-          templateColumns={{ base: "repeat(3, 1fr)", sm: "repeat(4, 1fr)", md: "repeat(6, 1fr)" }}
-          gap={{ base: 2, lg: 3 }}
+          templateColumns={{ base: "repeat(4, 1fr)", sm: "repeat(5, 1fr)", md: "repeat(7, 1fr)" }}
+          gap={{ base: 1.5, lg: 2 }}
         >
           {filteredTables.map((table) => {
             const occupied = table.activeOrder !== null;
@@ -93,10 +90,10 @@ export function TableSelector({ areaId }: { areaId?: number }) {
                 align="center"
                 justify="center"
                 gap={0.5}
-                p={{ base: 1.5, lg: 2 }}
-                rounded="l2"
+                p={{ base: 1, lg: 1.5 }}
+                rounded="l3"
                 cursor="pointer"
-                colorPalette={occupied ? "teal" : "gray"}
+                colorPalette={occupied ? "blue" : "gray"}
                 bg={occupied ? "colorPalette.subtle" : "bg"}
                 borderWidth="1px"
                 borderColor={occupied ? "colorPalette.emphasized" : "border"}
@@ -104,7 +101,7 @@ export function TableSelector({ areaId }: { areaId?: number }) {
               >
                 <Text
                   fontSize={{ base: "xs", lg: "sm" }}
-                  fontWeight="medium"
+                  fontWeight="semibold"
                   color={occupied ? "colorPalette.fg" : "fg"}
                 >
                   {table.name}
@@ -114,7 +111,11 @@ export function TableSelector({ areaId }: { areaId?: number }) {
                     <Text fontSize={{ base: "2xs", lg: "xs" }} fontWeight="normal" color="colorPalette.fg">
                       {formatVnd(table.activeOrder.subtotal)}
                     </Text>
-                    <Text fontSize="2xs" color="colorPalette.fg" display={{ base: "none", sm: "block" }}>
+                    <Text
+                      fontSize={{ base: "2xs", lg: "xs" }}
+                      color="colorPalette.fg"
+                      display={{ base: "none", sm: "block" }}
+                    >
                       {formatTime(table.activeOrder.createdAt)}
                     </Text>
                   </>

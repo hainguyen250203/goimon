@@ -12,8 +12,8 @@ import {
   MenuTrigger,
 } from "~/components/ui/menu";
 import type { OrderListItem } from "~/modules/order/domain/order-list-item.entity";
+import { OrderHistoryDialog } from "~/components/order-timeline/order-history-dialog";
 import { OrderDetailDialog } from "./order-detail-dialog";
-import { OrderHistoryDialog } from "./order-history-dialog";
 
 export function OrderRowActions({ row }: { row: OrderListItem }) {
   const [detailOpen, setDetailOpen] = useState(false);

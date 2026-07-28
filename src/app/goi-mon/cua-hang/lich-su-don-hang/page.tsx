@@ -1,7 +1,7 @@
 import { Box, Flex } from "@chakra-ui/react";
 
 import { api, HydrateClient } from "~/trpc/server";
-import { HistoryHeader } from "../history-header";
+import { PageHeader } from "../../page-header";
 import { OrderHistoryList } from "./order-history-list";
 
 const PAGE_SIZE = 20;
@@ -11,10 +11,10 @@ export default function LichSuDonHangPage() {
 
   return (
     <Flex direction="column" flex={1} minH={0}>
-      <HistoryHeader title="Lịch sử đơn hàng" />
-      <Box flex={1} minH={0} overflowY="auto" bg="bg.subtle" p={{ base: 3, lg: 4 }}>
+      <PageHeader title="Lịch sử đơn hàng" backHref="/goi-mon/cua-hang" />
+      <Box flex={1} minH={0} overflowY="auto" bg="bg.subtle" p={{ base: 2, lg: 3 }}>
         <HydrateClient>
-          <OrderHistoryList enableSearch />
+          <OrderHistoryList />
         </HydrateClient>
       </Box>
     </Flex>

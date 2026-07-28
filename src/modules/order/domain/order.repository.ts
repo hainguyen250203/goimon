@@ -41,8 +41,9 @@ export type ShiftSummary = {
 
 /**
  * 1 dòng "gọi món"/"trả món" (event items_added hoặc items_removed) — cho
- * trang Lịch sử gọi món. Không gồm items_quantity_updated (sửa số lượng đơn
- * thuần) vì trang này chỉ quan tâm món được thêm mới hay bị trả lại.
+ * trang Lịch sử gọi món. Tăng/giảm số lượng món đã gọi cũng được ghi vào 2
+ * loại event này (phần chênh lệch), vì bản chất tăng/giảm số lượng chính là
+ * gọi thêm/trả bớt món — xem update-order-items.usecase.ts.
  */
 export type OrderItemEventEntry = {
   id: number;

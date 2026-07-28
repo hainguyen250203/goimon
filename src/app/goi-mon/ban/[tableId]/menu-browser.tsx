@@ -1,38 +1,27 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Box, Flex, Grid, IconButton, Input, Text } from "@chakra-ui/react";
-import { ArrowLeft, ChevronRight } from "lucide-react";
+import { Box, Flex, Grid, Input, Text } from "@chakra-ui/react";
 
 import { api } from "~/trpc/react";
 import { stripDiacritics } from "~/lib/text";
-import {
-  useOrderCartStore,
-  getCartTotalAmount,
-  getCartTotalItems,
-  EMPTY_DRAFT_ITEMS,
-} from "../../order-cart.store";
-
-function formatVnd(amount: number) {
-  return new Intl.NumberFormat("vi-VN").format(amount) + "đ";
-}
+import { formatVnd } from "~/lib/format-order";
+import { useOrderCartStore } from "../../order-cart.store";
 
 const ALL_CATEGORY = 0;
 
-export function MenuBrowser({ tableId }: { tableId: number }) {
-  const router = useRouter();
+/**
+ * Tab "Chọn món" trong trang gộp của 1 bàn — không còn header riêng (header
+ * dùng chung ở OrderTableView), không còn thanh "N món · Tạm tính" (dư thừa
+ * với tab "Đang gọi" đã hiện sẵn badge số món + tổng tiền ngay khi mở tab đó).
+ */
+export function MenuBrowserPanel({ tableId }: { tableId: number }) {
   const [menuItems] = api.menu.listForOrdering.useSuspenseQuery();
-  const [tables] = api.order.listTablesForOrdering.useSuspenseQuery();
-  const table = tables.find((t) => t.id === tableId);
 
   const [selectedCategoryId, setSelectedCategoryId] = useState(ALL_CATEGORY);
   const [search, setSearch] = useState("");
 
   const addItem = useOrderCartStore((s) => s.addItem);
-  const draftItems = useOrderCartStore((s) => s.draftCarts[tableId] ?? EMPTY_DRAFT_ITEMS);
-  const totalItems = getCartTotalItems(draftItems);
-  const totalAmount = getCartTotalAmount(draftItems);
 
   const categories = useMemo(() => {
     const map = new Map<number, string>();
@@ -55,49 +44,12 @@ export function MenuBrowser({ tableId }: { tableId: number }) {
   return (
     <Flex direction="column" flex={1} minH={0}>
       <Box flexShrink={0} bg="bg" borderBottomWidth="1px" borderColor="border" p={{ base: 2, lg: 3 }}>
-        <Flex align="center" gap={2} mb={{ base: 2, lg: 3 }}>
-          <IconButton
-            aria-label="Quay lại"
-            size={{ base: "xs", lg: "sm" }}
-            variant="ghost"
-            onClick={() => router.push("/goi-mon")}
-          >
-            <ArrowLeft />
-          </IconButton>
-          <Text fontSize={{ base: "sm", lg: "md" }} fontWeight="semibold">
-            {table?.name ?? `Bàn ${tableId}`}
-          </Text>
-        </Flex>
-
         <Input
           placeholder="Tìm món"
           size={{ base: "xs", lg: "sm" }}
-          mb={{ base: 2, lg: 3 }}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-
-        <Flex
-          bg="colorPalette.solid"
-          color="colorPalette.contrast"
-          colorPalette="blue"
-          p={{ base: 2, lg: 2.5 }}
-          rounded="l2"
-          align="center"
-          justify="space-between"
-          cursor="pointer"
-          onClick={() => router.push(`/goi-mon/ban/${tableId}/don`)}
-        >
-          <Text fontSize={{ base: "2xs", lg: "xs" }} fontWeight="medium">
-            {totalItems} món · Tạm tính
-          </Text>
-          <Flex align="center" gap={1}>
-            <Text fontSize={{ base: "xs", lg: "sm" }} fontWeight="bold">
-              {formatVnd(totalAmount)}
-            </Text>
-            <ChevronRight size={16} />
-          </Flex>
-        </Flex>
       </Box>
 
       <Flex flex={1} minH={0} overflow="hidden">
@@ -113,12 +65,10 @@ export function MenuBrowser({ tableId }: { tableId: number }) {
             <Box
               px={{ base: 1.5, lg: 2 }}
               py={{ base: 2, lg: 2.5 }}
-              rounded="l2"
+              rounded="l3"
               cursor="pointer"
               textAlign="center"
-              bg={selectedCategoryId === ALL_CATEGORY ? "bg" : "transparent"}
-              borderLeftWidth="3px"
-              borderLeftColor={selectedCategoryId === ALL_CATEGORY ? "blue.solid" : "transparent"}
+              bg={selectedCategoryId === ALL_CATEGORY ? "blue.subtle" : "transparent"}
               onClick={() => setSelectedCategoryId(ALL_CATEGORY)}
             >
               <Text
@@ -136,12 +86,10 @@ export function MenuBrowser({ tableId }: { tableId: number }) {
                   key={category.id}
                   px={{ base: 1.5, lg: 2 }}
                   py={{ base: 2, lg: 2.5 }}
-                  rounded="l2"
+                  rounded="l3"
                   cursor="pointer"
                   textAlign="center"
-                  bg={active ? "bg" : "transparent"}
-                  borderLeftWidth="3px"
-                  borderLeftColor={active ? "blue.solid" : "transparent"}
+                  bg={active ? "blue.subtle" : "transparent"}
                   onClick={() => setSelectedCategoryId(category.id)}
                 >
                   <Text
@@ -159,7 +107,7 @@ export function MenuBrowser({ tableId }: { tableId: number }) {
 
         <Box flex={1} overflowY="auto" p={{ base: 2, lg: 3 }}>
           <Grid
-            templateColumns={{ base: "repeat(3, 1fr)", sm: "repeat(4, 1fr)", md: "repeat(5, 1fr)" }}
+            templateColumns={{ base: "repeat(3, 1fr)", sm: "repeat(4, 1fr)", md: "repeat(5, 1fr)", lg: "repeat(6, 1fr)" }}
             gap={{ base: 1.5, lg: 2 }}
           >
             {filteredItems.map((item) => (
@@ -172,7 +120,7 @@ export function MenuBrowser({ tableId }: { tableId: number }) {
                 bg="bg"
                 borderWidth="1px"
                 borderColor="border"
-                rounded="l2"
+                rounded="l3"
                 p={{ base: 2, lg: 2.5 }}
                 cursor={item.isAvailable ? "pointer" : "not-allowed"}
                 opacity={item.isAvailable ? 1 : 0.5}
@@ -190,7 +138,7 @@ export function MenuBrowser({ tableId }: { tableId: number }) {
                     {formatVnd(item.price)}
                   </Text>
                   {!item.isAvailable && (
-                    <Text fontSize="2xs" color="red.fg" fontWeight="medium">
+                    <Text fontSize={{ base: "2xs", lg: "xs" }} color="red.fg" fontWeight="medium">
                       Hết món
                     </Text>
                   )}

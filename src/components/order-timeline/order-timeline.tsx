@@ -1,30 +1,24 @@
-import { Badge, Box, Flex, Stack, Text } from "@chakra-ui/react";
+import { Box, Circle, Flex, Stack, Text } from "@chakra-ui/react";
 import { Ban, ChefHat, CreditCard, Minus, Percent, X } from "lucide-react";
 
 import type { OrderTimelineEvent } from "~/modules/order/domain/order.repository";
+import { formatDateTime, formatVnd, PAYMENT_METHOD_LABEL } from "~/lib/format-order";
 
-const PAYMENT_METHOD_LABEL: Record<string, string> = {
-  cash: "Tiền mặt",
-  transfer: "Chuyển khoản",
-};
-
-function formatVnd(amount: number) {
-  return new Intl.NumberFormat("vi-VN").format(amount) + "đ";
-}
-
-function formatDateTime(date: Date) {
-  return new Intl.DateTimeFormat("vi-VN", { dateStyle: "short", timeStyle: "short" }).format(date);
-}
+type Accent = "green" | "red" | "gray";
 
 /**
  * Diễn giải payload JSON thô thành nhãn + chi tiết tiếng Việt theo eventType
  * — UI tự biết cách đọc từng loại event, repository chỉ trả payload thô.
  * Dùng chung cho cả trang lịch sử full-page (/goi-mon) lẫn dialog lịch sử ở
  * admin (/quan-ly/don-hang) — tránh lặp lại cách diễn giải 7 event_type.
+ *
+ * Màu chỉ dùng 3 tông (xanh = việc tích cực/hoàn tất, đỏ = việc bị đảo
+ * ngược/huỷ, xám = chỉnh sửa thông thường) thay vì 1 màu riêng cho mỗi loại
+ * — đủ để phân biệt nhanh mà không sặc sỡ.
  */
 function describeEvent(entry: OrderTimelineEvent): {
   icon: React.ReactNode;
-  color: string;
+  accent: Accent;
   label: string;
   detail: string[];
 } {
@@ -35,7 +29,7 @@ function describeEvent(entry: OrderTimelineEvent): {
       const items = (payload?.items as { itemName: string; quantity: number }[] | undefined) ?? [];
       return {
         icon: <ChefHat size={14} />,
-        color: "green",
+        accent: "green",
         label: "Gọi món",
         detail: items.map((i) => `${i.itemName} ×${i.quantity}`),
       };
@@ -44,7 +38,7 @@ function describeEvent(entry: OrderTimelineEvent): {
       const items = (payload?.items as { itemName: string; quantity: number }[] | undefined) ?? [];
       return {
         icon: <Minus size={14} />,
-        color: "red",
+        accent: "red",
         label: "Trả món",
         detail: items.map((i) => `${i.itemName} ×${i.quantity}`),
       };
@@ -56,7 +50,7 @@ function describeEvent(entry: OrderTimelineEvent): {
           | undefined) ?? [];
       return {
         icon: <ChefHat size={14} />,
-        color: "blue",
+        accent: "gray",
         label: "Sửa số lượng",
         detail: items.map((i) => `${i.itemName}: ${i.oldQuantity} → ${i.newQuantity}`),
       };
@@ -66,7 +60,7 @@ function describeEvent(entry: OrderTimelineEvent): {
       const paymentMethod = payload?.paymentMethod as string | undefined;
       return {
         icon: <CreditCard size={14} />,
-        color: "green",
+        accent: "green",
         label: "Xác nhận thanh toán",
         detail: [
           paymentMethod ? PAYMENT_METHOD_LABEL[paymentMethod] ?? paymentMethod : null,
@@ -78,7 +72,7 @@ function describeEvent(entry: OrderTimelineEvent): {
       const name = payload?.name as string | undefined;
       return {
         icon: <Percent size={14} />,
-        color: "orange",
+        accent: "gray",
         label: "Áp dụng khuyến mãi",
         detail: name ? [name] : [],
       };
@@ -87,42 +81,69 @@ function describeEvent(entry: OrderTimelineEvent): {
       const name = payload?.name as string | undefined;
       return {
         icon: <X size={14} />,
-        color: "gray",
+        accent: "gray",
         label: "Gỡ khuyến mãi",
         detail: name ? [name] : [],
       };
     }
     case "order_cancelled":
-      return { icon: <Ban size={14} />, color: "red", label: "Huỷ đơn", detail: [] };
+      return { icon: <Ban size={14} />, accent: "red", label: "Huỷ đơn", detail: [] };
     default:
-      return { icon: <ChefHat size={14} />, color: "gray", label: entry.eventType, detail: [] };
+      return { icon: <ChefHat size={14} />, accent: "gray", label: entry.eventType, detail: [] };
   }
 }
 
-export function TimelineEventCard({ entry }: { entry: OrderTimelineEvent }) {
-  const { icon, color, label, detail } = describeEvent(entry);
+/**
+ * 1 dòng trong timeline — chấm tròn + đường nối dọc để thấy rõ thứ tự thời
+ * gian giữa các event (thay vì các card rời rạc, dễ quan sát mạch sự kiện
+ * hơn). Chấm nhỏ, không có card bao quanh mỗi dòng để không bị quá cao.
+ */
+function OrderTimelineRow({ entry, isLast }: { entry: OrderTimelineEvent; isLast: boolean }) {
+  const { icon, accent, label, detail } = describeEvent(entry);
 
   return (
-    <Box bg="bg" p={{ base: 2, lg: 3 }} rounded="l2" borderWidth="1px" borderColor="border">
-      <Flex align="center" justify="space-between" mb={detail.length > 0 ? 2 : 0}>
-        <Badge size="sm" colorPalette={color} variant="subtle">
+    <Flex gap={3}>
+      <Stack align="center" gap={0} flexShrink={0}>
+        <Circle size="6" bg={`${accent}.subtle`} color={`${accent}.fg`} flexShrink={0}>
           {icon}
-          {label}
-        </Badge>
-        <Text fontSize="2xs" color="fg.muted">
-          {entry.actorName} · {formatDateTime(entry.createdAt)}
-        </Text>
-      </Flex>
+        </Circle>
+        {!isLast && <Box w="2px" flex={1} bg="border" my={1} />}
+      </Stack>
 
-      {detail.length > 0 && (
-        <Stack gap={0.5} pt={2} borderTopWidth="1px" borderColor="border">
-          {detail.map((line, index) => (
-            <Text key={index} fontSize="xs" color="fg.muted">
-              {line}
-            </Text>
-          ))}
-        </Stack>
-      )}
-    </Box>
+      <Box flex={1} minW={0} pb={isLast ? 0 : 4}>
+        <Flex justify="space-between" align="baseline" gap={2}>
+          <Text fontSize={{ base: "xs", lg: "sm" }} fontWeight="semibold" lineClamp={1}>
+            {label}
+          </Text>
+          <Text fontSize={{ base: "2xs", lg: "xs" }} color="fg.muted" flexShrink={0}>
+            {formatDateTime(entry.createdAt)}
+          </Text>
+        </Flex>
+
+        <Text fontSize={{ base: "2xs", lg: "xs" }} color="fg.muted" mt={0.5}>
+          {entry.actorName}
+        </Text>
+
+        {detail.length > 0 && (
+          <Stack gap={0.5} mt={1.5}>
+            {detail.map((line, i) => (
+              <Text key={i} fontSize={{ base: "xs", lg: "sm" }} color="fg.muted">
+                {line}
+              </Text>
+            ))}
+          </Stack>
+        )}
+      </Box>
+    </Flex>
+  );
+}
+
+export function OrderTimeline({ events }: { events: OrderTimelineEvent[] }) {
+  return (
+    <Stack gap={0}>
+      {events.map((entry, index) => (
+        <OrderTimelineRow key={entry.id} entry={entry} isLast={index === events.length - 1} />
+      ))}
+    </Stack>
   );
 }

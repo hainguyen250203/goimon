@@ -1,9 +1,9 @@
 import { Suspense } from "react";
 
 import { api, HydrateClient } from "~/trpc/server";
-import { Skeleton } from "~/components/ui/skeleton";
 import { ShiftGate } from "./shift-gate";
 import { TableSelector } from "./table-selector";
+import { TableSelectorSkeleton } from "./table-selector-skeleton";
 
 export default async function GoiMonPage({
   searchParams,
@@ -17,10 +17,10 @@ export default async function GoiMonPage({
   void api.order.listTablesForOrdering.prefetch();
 
   return (
-    <Suspense fallback={<Skeleton h="full" rounded="none" />}>
+    <Suspense fallback={<TableSelectorSkeleton />}>
       <ShiftGate>
         <HydrateClient>
-          <Suspense fallback={<Skeleton h="full" rounded="none" />}>
+          <Suspense fallback={<TableSelectorSkeleton />}>
             <TableSelector areaId={areaId} />
           </Suspense>
         </HydrateClient>

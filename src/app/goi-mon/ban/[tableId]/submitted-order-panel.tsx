@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Button, Flex, IconButton, Input, Stack, Text } from "@chakra-ui/react";
-import { Minus, Plus, Trash2, X } from "lucide-react";
+import { Box, Button, Flex, IconButton, Stack, Text } from "@chakra-ui/react";
+import { X } from "lucide-react";
 
 import {
   DialogBody,
@@ -17,17 +17,9 @@ import { EmptyState } from "~/components/ui/empty-state";
 import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
 import type { RouterOutputs } from "~/trpc/react";
+import { formatDiscount, formatVnd, PAYMENT_METHOD_LABEL } from "~/lib/format-order";
+import { OrderLineItemCard } from "./order-line-item-card";
 import { PromotionPickerDialog } from "./promotion-picker-dialog";
-
-function formatVnd(amount: number) {
-  return new Intl.NumberFormat("vi-VN").format(amount) + "đ";
-}
-
-function formatDiscount(promotion: { discountType: "percent" | "fixed"; discountValue: number }) {
-  return promotion.discountType === "percent"
-    ? `${promotion.discountValue}%`
-    : formatVnd(promotion.discountValue);
-}
 
 type Order = NonNullable<RouterOutputs["order"]["getTableOrder"]>;
 type OrderItems = Order["items"];
@@ -52,113 +44,9 @@ function itemsEqual(a: OrderItems, b: OrderItems) {
 }
 
 const PAYMENT_METHODS: { value: "cash" | "transfer"; label: string }[] = [
-  { value: "cash", label: "Tiền mặt" },
-  { value: "transfer", label: "Chuyển khoản" },
+  { value: "cash", label: PAYMENT_METHOD_LABEL.cash! },
+  { value: "transfer", label: PAYMENT_METHOD_LABEL.transfer! },
 ];
-
-function OrderItemRow({
-  item,
-  isBusy,
-  onQuantityChange,
-  onRemove,
-}: {
-  item: OrderItems[number];
-  isBusy: boolean;
-  onQuantityChange: (itemId: number, quantity: number) => void;
-  onRemove: (itemId: number) => void;
-}) {
-  const [quantityInput, setQuantityInput] = useState(String(item.quantity));
-
-  // Đồng bộ lại khi số lượng đổi từ nơi khác (nút +/-) — effect chỉ chạy khi
-  // item.quantity thực sự đổi, không đè lúc đang gõ dở.
-  useEffect(() => {
-    setQuantityInput(String(item.quantity));
-  }, [item.quantity]);
-
-  const commitQuantity = () => {
-    const parsed = Math.floor(Number(quantityInput));
-    if (!Number.isFinite(parsed) || parsed === item.quantity) {
-      setQuantityInput(String(item.quantity));
-      return;
-    }
-    if (parsed <= 0) {
-      onRemove(item.id!);
-      return;
-    }
-    onQuantityChange(item.id!, parsed);
-  };
-
-  return (
-    <Box bg="bg" p={{ base: 2, lg: 3 }} rounded="l2" borderWidth="1px" borderColor="border">
-      <Flex justify="space-between" align="start" mb={{ base: 1.5, lg: 2 }}>
-        <Box flex={1}>
-          <Text fontSize={{ base: "xs", lg: "sm" }} fontWeight="semibold">
-            {item.itemName}
-          </Text>
-          <Text fontSize="xs" color="blue.fg">
-            {formatVnd(item.unitPrice)} × {item.quantity}
-          </Text>
-          {item.note && (
-            <Text fontSize="2xs" color="fg.muted" fontStyle="italic" mt={1}>
-              Ghi chú: {item.note}
-            </Text>
-          )}
-        </Box>
-        <IconButton
-          size={{ base: "xs", lg: "sm" }}
-          variant="ghost"
-          colorPalette="red"
-          aria-label="Xoá món"
-          disabled={isBusy}
-          onClick={() => onRemove(item.id!)}
-        >
-          <Trash2 size={14} />
-        </IconButton>
-      </Flex>
-
-      <Flex align="center" justify="space-between">
-        <Flex align="center" gap={{ base: 1.5, lg: 2 }}>
-          <IconButton
-            size={{ base: "xs", lg: "sm" }}
-            variant="outline"
-            aria-label="Giảm số lượng"
-            disabled={isBusy || item.quantity <= 1}
-            onClick={() => onQuantityChange(item.id!, item.quantity - 1)}
-          >
-            <Minus size={13} />
-          </IconButton>
-          <Input
-            size={{ base: "xs", lg: "sm" }}
-            type="number"
-            min={1}
-            textAlign="center"
-            w={{ base: "40px", lg: "48px" }}
-            px={1}
-            disabled={isBusy}
-            value={quantityInput}
-            onChange={(e) => setQuantityInput(e.target.value)}
-            onBlur={commitQuantity}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") e.currentTarget.blur();
-            }}
-          />
-          <IconButton
-            size={{ base: "xs", lg: "sm" }}
-            variant="outline"
-            aria-label="Tăng số lượng"
-            disabled={isBusy}
-            onClick={() => onQuantityChange(item.id!, item.quantity + 1)}
-          >
-            <Plus size={13} />
-          </IconButton>
-        </Flex>
-        <Text fontSize={{ base: "sm", lg: "md" }} fontWeight="bold" color="blue.fg">
-          {formatVnd(item.unitPrice * item.quantity)}
-        </Text>
-      </Flex>
-    </Box>
-  );
-}
 
 export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order: Order }) {
   const router = useRouter();
@@ -173,11 +61,15 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
   // server gộp 1 lần khi bấm "Xác nhận". Mượt hơn hẳn optimistic update vì
   // không có round-trip nào trong lúc đang thao tác.
   const [localItems, setLocalItems] = useState<OrderItems>(order.items);
-  const [syncedOrderId, setSyncedOrderId] = useState(order.id);
-  if (order.id !== syncedOrderId) {
-    // Đổi sang đơn khác (đổi bàn) — reset state sửa dở, tránh áp nhầm đơn.
+  // So theo NỘI DUNG order.items (không phải order.id) — panel này giờ luôn
+  // nằm trong DOM để giữ vị trí cuộn khi đổi tab (không tự unmount/remount
+  // như trước nữa), nên phải tự phát hiện lúc order.items đổi thật (vd vừa
+  // gọi thêm món ở tab "Món đang gọi") để đồng bộ lại, không chỉ dựa vào đổi
+  // order.id (chỉ đổi khi sang bàn khác).
+  const [syncedItems, setSyncedItems] = useState<OrderItems>(order.items);
+  if (!itemsEqual(order.items, syncedItems)) {
     setLocalItems(order.items);
-    setSyncedOrderId(order.id);
+    setSyncedItems(order.items);
   }
   const isDirty = useMemo(() => !itemsEqual(localItems, order.items), [localItems, order.items]);
 
@@ -285,22 +177,26 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
   return (
     <Flex direction="column" flex={1} minH={0}>
       <Box flex={1} overflowY="auto" p={{ base: 2, lg: 3 }}>
-        <Stack gap={{ base: 1.5, lg: 2 }}>
+        <Stack gap={1.5}>
           {localItems.map((item) => (
-            <OrderItemRow
+            <OrderLineItemCard
               key={item.id!}
-              item={item}
-              isBusy={isBusy}
-              onQuantityChange={(itemId, quantity) =>
-                setLocalItems((items) => items.map((i) => (i.id === itemId ? { ...i, quantity } : i)))
+              name={item.itemName}
+              unitPrice={item.unitPrice}
+              quantity={item.quantity}
+              note={item.note}
+              editableNote={false}
+              disabled={isBusy}
+              onQuantityChange={(quantity) =>
+                setLocalItems((items) => items.map((i) => (i.id === item.id ? { ...i, quantity } : i)))
               }
-              onRemove={(itemId) => setLocalItems((items) => items.filter((i) => i.id !== itemId))}
+              onRemove={() => setLocalItems((items) => items.filter((i) => i.id !== item.id))}
             />
           ))}
         </Stack>
       </Box>
 
-      <Box flexShrink={0} bg="bg" borderTopWidth="1px" borderColor="border" p={{ base: 3, lg: 4 }}>
+      <Box flexShrink={0} bg="bg" borderTopWidth="1px" borderColor="border" p={{ base: 2.5, lg: 3 }}>
         <Flex justify="space-between" align="center" mb={1}>
           <Text fontSize={{ base: "xs", lg: "sm" }} color="fg.muted">
             Tạm tính
@@ -330,7 +226,7 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
             </Box>
             <Flex align="center" gap={1}>
               <Button
-                size="xs"
+                size={{ base: "xs", lg: "sm" }}
                 variant="ghost"
                 disabled={isBusy}
                 onClick={() => setPromotionPickerOpen(true)}
@@ -338,7 +234,7 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
                 Đổi
               </Button>
               <IconButton
-                size="xs"
+                size={{ base: "xs", lg: "sm" }}
                 variant="ghost"
                 colorPalette="red"
                 aria-label="Gỡ khuyến mãi"
@@ -355,7 +251,7 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
               Khuyến mãi
             </Text>
             <Button
-              size="xs"
+              size={{ base: "xs", lg: "sm" }}
               variant="outline"
               disabled={isBusy}
               onClick={() => setPromotionPickerOpen(true)}
@@ -365,20 +261,20 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
           </Flex>
         )}
 
-        <Flex justify="space-between" align="center" mb={{ base: 2, lg: 3 }}>
-          <Text fontSize={{ base: "sm", lg: "md" }} fontWeight="semibold">
+        <Flex justify="space-between" align="center" mb={2}>
+          <Text fontSize={{ base: "xs", lg: "sm" }} fontWeight="semibold">
             Cần thanh toán
           </Text>
-          <Text fontSize={{ base: "lg", lg: "xl" }} fontWeight="bold" color="blue.fg">
+          <Text fontSize={{ base: "md", lg: "lg" }} fontWeight="bold" color="blue.fg">
             {formatVnd(payableAmount)}
           </Text>
         </Flex>
-        <Flex gap={{ base: 2, lg: 3 }}>
+        <Flex gap={2}>
           <Button
             flex={1}
             variant="outline"
-            colorPalette="red"
-            size={{ base: "md", lg: "lg" }}
+            colorPalette={isDirty ? undefined : "red"}
+            size={{ base: "sm", lg: "md" }}
             disabled={isBusy}
             onClick={() => (isDirty ? handleDiscardChanges() : setCancelConfirmOpen(true))}
           >
@@ -387,7 +283,7 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
           <Button
             flex={1}
             colorPalette="blue"
-            size={{ base: "md", lg: "lg" }}
+            size={{ base: "sm", lg: "md" }}
             loading={updateItemsMutation.isPending}
             onClick={() => (isDirty ? handleConfirmChanges() : handleOpenPayment())}
           >
@@ -397,7 +293,7 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
       </Box>
 
       <DialogRoot open={paymentOpen} onOpenChange={(e) => setPaymentOpen(e.open)}>
-        <DialogContent>
+        <DialogContent maxW={{ base: "calc(100vw - 24px)", sm: "400px" }} mx="auto">
           <DialogHeader>
             <DialogTitle>Chọn phương thức thanh toán</DialogTitle>
           </DialogHeader>
@@ -430,10 +326,11 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
             </Stack>
           </DialogBody>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPaymentOpen(false)}>
+            <Button size="md" variant="outline" onClick={() => setPaymentOpen(false)}>
               Huỷ
             </Button>
             <Button
+              size="md"
               colorPalette="blue"
               onClick={handleConfirmPayment}
               loading={printBill.isPending || confirmPayment.isPending}
@@ -445,16 +342,16 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
       </DialogRoot>
 
       <DialogRoot role="alertdialog" open={cancelConfirmOpen} onOpenChange={(e) => setCancelConfirmOpen(e.open)}>
-        <DialogContent>
+        <DialogContent maxW={{ base: "calc(100vw - 24px)", sm: "360px" }} mx="auto">
           <DialogHeader>
             <DialogTitle>Huỷ đơn hàng của bàn này?</DialogTitle>
           </DialogHeader>
           <DialogBody>Toàn bộ món đã gọi sẽ bị huỷ. Hành động này không thể hoàn tác.</DialogBody>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCancelConfirmOpen(false)}>
+            <Button size="md" variant="outline" onClick={() => setCancelConfirmOpen(false)}>
               Đóng
             </Button>
-            <Button colorPalette="red" onClick={handleCancelOrder} loading={cancelOrder.isPending}>
+            <Button size="md" colorPalette="red" onClick={handleCancelOrder} loading={cancelOrder.isPending}>
               Huỷ đơn
             </Button>
           </DialogFooter>
