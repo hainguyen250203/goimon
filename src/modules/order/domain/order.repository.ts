@@ -83,6 +83,35 @@ export type OrderTimelineEvent = {
   createdAt: Date;
 };
 
+export type ListTableTransferEventsParams = {
+  page: number;
+  pageSize: number;
+  /** Chỉ event do người này thao tác — cùng quy tắc role "user" như listOrderItemEvents. */
+  actorId?: string;
+};
+
+/**
+ * 1 dòng "chuyển bàn" (table_changed) hoặc "chuyển món" (items_transferred_out)
+ * — cho trang Lịch sử (tab Chuyển bàn/món). Chỉ lấy items_transferred_out,
+ * KHÔNG lấy items_transferred_in — 1 lần chuyển ghi 2 event (1 trên đơn
+ * nguồn, 1 trên đơn đích), lấy cả 2 sẽ hiện trùng 2 dòng cho cùng 1 lần
+ * chuyển. `payload` giữ nguyên dạng thô, UI dùng lại describeEvent() của
+ * order-timeline.tsx để diễn giải — cùng cách hiển thị với dialog "Lịch sử đơn".
+ */
+export type TableTransferEventEntry = {
+  id: number;
+  eventType: "table_changed" | "items_transferred_out";
+  tableName: string;
+  actorName: string;
+  payload: unknown;
+  createdAt: Date;
+};
+
+export type ListTableTransferEventsResult = {
+  items: TableTransferEventEntry[];
+  total: number;
+};
+
 export interface OrderRepository {
   list(params: ListOrdersParams): Promise<ListOrdersResult>;
   /** Order đang "open" (chưa thanh toán/huỷ, có thể đã in bill hay chưa) của 1 bàn — tối đa 1 (DB có unique index đảm bảo). */
@@ -103,4 +132,8 @@ export interface OrderRepository {
   ): Promise<ListOrderItemEventsResult>;
   /** Toàn bộ timeline của 1 order cụ thể, mới nhất trước — cho trang lịch sử của order đó. */
   getOrderTimeline(orderId: number): Promise<OrderTimelineEvent[]>;
+  /** Lịch sử chuyển bàn/chuyển món (toàn nhà hàng), phân trang — cho trang Lịch sử, tab Chuyển bàn/món. */
+  listTableTransferEvents(
+    params: ListTableTransferEventsParams,
+  ): Promise<ListTableTransferEventsResult>;
 }

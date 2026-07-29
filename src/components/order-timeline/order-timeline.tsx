@@ -16,7 +16,8 @@ type Accent = "green" | "red" | "gray";
  * ngược/huỷ, xám = chỉnh sửa thông thường) thay vì 1 màu riêng cho mỗi loại
  * — đủ để phân biệt nhanh mà không sặc sỡ.
  */
-function describeEvent(entry: OrderTimelineEvent): {
+/** Export để trang Lịch sử (tab Chuyển bàn/món) tái dùng — cùng 1 cách diễn giải, khác cách hiển thị (list nhiều đơn thay vì timeline 1 đơn). */
+export function describeEvent(entry: OrderTimelineEvent): {
   icon: React.ReactNode;
   accent: Accent;
   label: string;

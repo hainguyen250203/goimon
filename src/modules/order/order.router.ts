@@ -7,6 +7,7 @@ import { restaurantTableDrizzleRepository } from "~/modules/table/infrastructure
 import { promotionDrizzleRepository } from "~/modules/promotion/infrastructure/promotion.drizzle-repository";
 import { listOrders } from "./application/list-orders.usecase";
 import { listOrderItemEvents } from "./application/list-order-item-events.usecase";
+import { listTableTransferEvents } from "./application/list-table-transfer-events.usecase";
 import { getOrderTimeline } from "./application/get-order-timeline.usecase";
 import { listTablesForOrdering } from "./application/list-tables-for-ordering.usecase";
 import { getTableOrder } from "./application/get-table-order.usecase";
@@ -102,6 +103,23 @@ export const orderRouter = createTRPCRouter({
     .query(({ ctx, input }) => {
       const actorId = ctx.session.user.role === "user" ? ctx.session.user.id : undefined;
       return listOrderItemEvents(orderDrizzleRepository, { ...input, actorId });
+    }),
+
+  // Lịch sử chuyển bàn ("table_changed") + chuyển món ("items_transferred_out")
+  // toàn nhà hàng — trang Lịch sử, tab Chuyển bàn/món. Không lấy
+  // "items_transferred_in" (bản ghi đối xứng ở đơn nhận, tránh hiện trùng 2
+  // dòng cho cùng 1 lần chuyển). Cùng quy tắc lọc theo actorId khi role "user"
+  // như listOrderItemEvents ở trên.
+  listTableTransferEvents: userProcedure
+    .input(
+      z.object({
+        page: z.number().int().min(1).default(1),
+        pageSize: z.number().int().min(1).max(100).default(20),
+      }),
+    )
+    .query(({ ctx, input }) => {
+      const actorId = ctx.session.user.role === "user" ? ctx.session.user.id : undefined;
+      return listTableTransferEvents(orderDrizzleRepository, { ...input, actorId });
     }),
 
   // Toàn bộ timeline của 1 order cụ thể (gọi món, trả món, in bill, thanh

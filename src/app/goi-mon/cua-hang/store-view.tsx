@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { Box, Button, Flex, Separator, Stack, Text } from "@chakra-ui/react";
-import { ClipboardList, History, LayoutDashboard, LogOut } from "lucide-react";
+import { History, LayoutDashboard, LogOut } from "lucide-react";
 
 import { Avatar } from "~/components/ui/avatar";
 import { StatusDot } from "~/components/ui/status-dot";
@@ -76,23 +76,10 @@ export function StoreView({
             py={3}
             cursor="pointer"
             _hover={{ bg: "bg.muted" }}
-            onClick={() => router.push("/goi-mon/cua-hang/lich-su-don-hang")}
-          >
-            <ClipboardList size={16} />
-            <Text fontSize={{ base: "xs", lg: "sm" }}>Lịch sử đơn hàng</Text>
-          </Flex>
-          <Separator />
-          <Flex
-            align="center"
-            gap={2}
-            px={4}
-            py={3}
-            cursor="pointer"
-            _hover={{ bg: "bg.muted" }}
-            onClick={() => router.push("/goi-mon/cua-hang/lich-su-goi-mon")}
+            onClick={() => router.push("/goi-mon/cua-hang/lich-su")}
           >
             <History size={16} />
-            <Text fontSize={{ base: "xs", lg: "sm" }}>Lịch sử gọi món</Text>
+            <Text fontSize={{ base: "xs", lg: "sm" }}>Lịch sử</Text>
           </Flex>
           {canManage && (
             <>

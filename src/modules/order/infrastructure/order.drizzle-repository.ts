@@ -16,6 +16,8 @@ import type {
   ListOrderItemEventsResult,
   ListOrdersParams,
   ListOrdersResult,
+  ListTableTransferEventsParams,
+  ListTableTransferEventsResult,
   OrderRepository,
   OrderTimelineEvent,
   RecordOrderEventParams,
@@ -439,5 +441,49 @@ export const orderDrizzleRepository: OrderRepository = {
       payload: row.payload,
       createdAt: row.createdAt,
     }));
+  },
+
+  async listTableTransferEvents({
+    page,
+    pageSize,
+    actorId,
+  }: ListTableTransferEventsParams): Promise<ListTableTransferEventsResult> {
+    const offset = (page - 1) * pageSize;
+    const conditions = [inArray(orderEvent.eventType, ["table_changed", "items_transferred_out"])];
+    if (actorId) conditions.push(eq(orderEvent.actorId, actorId));
+    const where = and(...conditions);
+
+    const [rows, totalRows] = await Promise.all([
+      db
+        .select({
+          id: orderEvent.id,
+          eventType: orderEvent.eventType,
+          tableName: restaurantTable.name,
+          actorName: user.name,
+          payload: orderEvent.payload,
+          createdAt: orderEvent.createdAt,
+        })
+        .from(orderEvent)
+        .innerJoin(order, eq(orderEvent.orderId, order.id))
+        .innerJoin(restaurantTable, eq(order.tableId, restaurantTable.id))
+        .innerJoin(user, eq(orderEvent.actorId, user.id))
+        .where(where)
+        .orderBy(desc(orderEvent.createdAt))
+        .limit(pageSize)
+        .offset(offset),
+      db.select({ value: count() }).from(orderEvent).where(where),
+    ]);
+
+    return {
+      items: rows.map((row) => ({
+        id: row.id,
+        eventType: row.eventType as "table_changed" | "items_transferred_out",
+        tableName: row.tableName ?? "",
+        actorName: row.actorName ?? "",
+        payload: row.payload,
+        createdAt: row.createdAt,
+      })),
+      total: totalRows[0]?.value ?? 0,
+    };
   },
 };
