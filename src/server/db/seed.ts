@@ -23,13 +23,12 @@ type SeedCategory = {
   products: SeedProduct[];
 };
 
-const SEED_USERS = [
-  { name: "Admin", phoneNumber: "0968916540", role: "admin" as const },
-  { name: "Quản lý", phoneNumber: "0968916541", role: "manager" as const },
-  { name: "Nhân viên", phoneNumber: "0968916542", role: "user" as const },
-];
+// Chỉ seed đúng 1 tài khoản admin — mật khẩu trùng số điện thoại (không
+// dùng mật khẩu chung yếu như trước) để không tạo tài khoản demo thừa/dễ
+// đoán trên môi trường không phải local dev.
+const SEED_USERS = [{ name: "Admin", phoneNumber: "0968916540", role: "admin" as const }];
 
-const SEED_USER_PASSWORD = "12345678";
+const SEED_USER_PASSWORD = "0968916540";
 
 // Khu 1..Khu 9 (20 bàn/khu, tên "K1 - B1"..) + Mang về (4 bàn đại diện cho
 // khách chờ mang đi, không cần đánh số nhiều như khu ngồi tại chỗ).

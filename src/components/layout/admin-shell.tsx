@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { Fragment, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRouter } from "nextjs-toploader/app";
@@ -45,20 +46,9 @@ function SidebarLogo({ collapsed }: { collapsed: boolean }) {
     >
       <Flex asChild align="center" gap={2}>
         <Link href="/quan-ly" aria-label="Về trang tổng quan">
-          <Flex
-            align="center"
-            justify="center"
-            boxSize="6"
-            rounded="l1"
-            bg="colorPalette.solid"
-            color="colorPalette.contrast"
-            colorPalette="gray"
-            fontSize="xs"
-            fontWeight="bold"
-            flexShrink={0}
-          >
-            G
-          </Flex>
+          <Box boxSize="6" rounded="l1" overflow="hidden" flexShrink={0}>
+            <Image src="/android-chrome-192x192.png" alt="Goimon" width={24} height={24} priority />
+          </Box>
           {!collapsed && (
             <Text fontWeight="semibold" fontSize="sm" whiteSpace="nowrap">
               Goimon
@@ -111,6 +101,27 @@ function SidebarCollapseToggle({
   );
 }
 
+// Nhãn nhóm — chữ hoa nhỏ + 1 đường kẻ mờ chiếm hết phần còn lại, đúng
+// pattern tham khảo từ alix-bo-frontend-v2 (components/admin/AdminSidebarItem.tsx).
+function GroupLabel({ label }: { label: string }) {
+  return (
+    <Flex align="center" gap={2} px={4} pt={3} pb={1}>
+      <Text
+        fontSize="xs"
+        fontWeight="medium"
+        color="fg.subtle"
+        letterSpacing="0.06em"
+        textTransform="uppercase"
+        lineHeight="1"
+        flexShrink={0}
+      >
+        {label}
+      </Text>
+      <Box flex={1} h="1px" bg="border" />
+    </Flex>
+  );
+}
+
 function SidebarNav({
   nav,
   collapsed,
@@ -122,11 +133,22 @@ function SidebarNav({
 }) {
   return (
     <Box flex={1} overflowY="auto" overflowX="hidden" py={2}>
-      {nav.map((item) => (
-        <Box key={item.key} my="1px">
-          <AdminSidebarItem item={item} collapsed={collapsed} onNavigate={onNavigate} />
-        </Box>
-      ))}
+      {nav.map((item, i) => {
+        // So group với item liền trước để biết đây có phải điểm BẮT ĐẦU 1
+        // nhóm mới không — chỉ hiện nhãn ở item đầu tiên của mỗi nhóm, không
+        // lặp lại nhãn cho từng item bên trong nhóm đó.
+        const prevGroup = i > 0 ? nav[i - 1]!.group : undefined;
+        const isFirstInGroup = item.group !== undefined && item.group !== prevGroup;
+        return (
+          <Fragment key={item.key}>
+            {isFirstInGroup && !collapsed && <GroupLabel label={item.group!} />}
+            {isFirstInGroup && collapsed && <Box h="1px" bg="border" mx={2} my={1} />}
+            <Box my="1px">
+              <AdminSidebarItem item={item} collapsed={collapsed} onNavigate={onNavigate} />
+            </Box>
+          </Fragment>
+        );
+      })}
     </Box>
   );
 }
@@ -177,7 +199,9 @@ export function AdminShell({
   const nav = filterNavByRole(ADMIN_NAV, user.role);
   const title = findActiveLabel(nav, pathname);
 
-  const [collapsed, setCollapsed] = useState(true);
+  // Mặc định mở rộng — không lưu lại lựa chọn thu gọn giữa các lần tải
+  // trang, chỉ có tác dụng trong phiên hiện tại.
+  const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (

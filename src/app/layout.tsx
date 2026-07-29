@@ -12,7 +12,18 @@ import { TRPCReactProvider } from "~/trpc/react";
 export const metadata: Metadata = {
   title: "Goimon",
   description: "Hệ thống POS quản lý nhà hàng",
-  icons: [{ rel: "icon", url: "/favicon.ico" }],
+  // Bộ file sinh từ favicon.io (public/) — favicon.ico cho trình duyệt cũ,
+  // 2 bản PNG cho trình duyệt hiện đại (ưu tiên theo "sizes"), apple-touch-icon
+  // cho màn hình chính iOS, manifest cho Android/PWA "Thêm vào màn hình chính".
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+    ],
+    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
+  manifest: "/site.webmanifest",
 };
 
 // Khoá zoom bằng tay (userScalable/maximumScale) — app chủ yếu chạy như 1 màn

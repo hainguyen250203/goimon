@@ -9,3 +9,16 @@ body {
   margin: 0;
   padding: 0;
 }
+
+/* NextTopLoader (#nprogress) mặc định không ép position:fixed toàn viewport
+   — sidebar (position: sticky + của riêng nó 1 stacking context) khiến
+   thanh loading bị "kẹt" theo layout sidebar thay vì tràn hết chiều ngang
+   trang, hiện sai vào bên trong sidebar/header. Ép fixed + inset:0 để thanh
+   luôn nằm trên cùng, phủ hết viewport, không phụ thuộc layout xung quanh —
+   cùng cách fix đã áp dụng ở alix-bo-frontend-v2 (app/globals.css). */
+#nprogress {
+  position: fixed !important;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9999;
+}

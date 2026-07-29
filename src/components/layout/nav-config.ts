@@ -30,13 +30,19 @@ export type NavItem = {
   minRole?: Extract<Role, "manager" | "admin">;
 };
 
+// Nhóm theo nghiệp vụ, thứ tự cố định: Tổng quan đứng riêng trên cùng, rồi
+// tới "Vận hành" (thao tác ngày qua ngày), "Cấu hình" (thiết lập hệ thống,
+// ít đổi), cuối cùng "Quản trị" (admin-only, giám sát/audit) — pattern nhóm
+// nav tham khảo từ alix-bo-frontend-v2's lib/nav/nav-admin.ts.
 export const ADMIN_NAV: NavItem[] = [
   { key: "dashboard", label: "Tổng quan", icon: LayoutDashboard, href: "/quan-ly" },
+
   {
     key: "menu",
     label: "Món ăn",
     icon: UtensilsCrossed,
     href: "/quan-ly/mon-an",
+    group: "Vận hành",
     minRole: "manager",
   },
   {
@@ -44,6 +50,7 @@ export const ADMIN_NAV: NavItem[] = [
     label: "Bàn",
     icon: Table2,
     href: "/quan-ly/ban",
+    group: "Vận hành",
     minRole: "manager",
   },
   {
@@ -51,13 +58,7 @@ export const ADMIN_NAV: NavItem[] = [
     label: "Đơn hàng",
     icon: ClipboardList,
     href: "/quan-ly/don-hang",
-    minRole: "manager",
-  },
-  {
-    key: "printer",
-    label: "Máy in",
-    icon: Printer,
-    href: "/quan-ly/may-in",
+    group: "Vận hành",
     minRole: "manager",
   },
   {
@@ -65,6 +66,7 @@ export const ADMIN_NAV: NavItem[] = [
     label: "Khuyến mãi",
     icon: Percent,
     href: "/quan-ly/khuyen-mai",
+    group: "Vận hành",
     minRole: "manager",
   },
   {
@@ -72,6 +74,16 @@ export const ADMIN_NAV: NavItem[] = [
     label: "Ca làm việc",
     icon: Clock,
     href: "/quan-ly/ca-lam-viec",
+    group: "Vận hành",
+    minRole: "manager",
+  },
+
+  {
+    key: "printer",
+    label: "Máy in",
+    icon: Printer,
+    href: "/quan-ly/may-in",
+    group: "Cấu hình",
     minRole: "manager",
   },
   {
@@ -79,14 +91,17 @@ export const ADMIN_NAV: NavItem[] = [
     label: "Thanh toán",
     icon: Landmark,
     href: "/quan-ly/thanh-toan",
+    group: "Cấu hình",
     // manager chỉ xem, admin mới sửa được — chặn ở payment-config.router.ts.
     minRole: "manager",
   },
+
   {
     key: "user",
     label: "Người dùng",
     icon: Users,
     href: "/quan-ly/nguoi-dung",
+    group: "Quản trị",
     minRole: "admin",
   },
   {
@@ -94,6 +109,7 @@ export const ADMIN_NAV: NavItem[] = [
     label: "Nhật ký hoạt động",
     icon: ScrollText,
     href: "/quan-ly/nhat-ky-hoat-dong",
+    group: "Quản trị",
     minRole: "admin",
   },
   {
@@ -101,6 +117,7 @@ export const ADMIN_NAV: NavItem[] = [
     label: "Báo cáo",
     icon: BarChart3,
     href: "/quan-ly/bao-cao",
+    group: "Quản trị",
     minRole: "admin",
   },
 ];
