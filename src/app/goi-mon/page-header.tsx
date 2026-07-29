@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 import { Flex, IconButton, Text } from "@chakra-ui/react";
 import { ArrowLeft } from "lucide-react";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 import { keepPreviousData } from "@tanstack/react-query";
 import { Stack, Text } from "@chakra-ui/react";
 import { StatusDot } from "~/components/ui/status-dot";

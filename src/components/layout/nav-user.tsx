@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 import { Flex, IconButton, Separator, Stack, Text } from "@chakra-ui/react";
 import { LogOut } from "lucide-react";
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 import { Box, Button, Flex, Separator, Stack, Text } from "@chakra-ui/react";
 import { History, LayoutDashboard, LogOut } from "lucide-react";
 

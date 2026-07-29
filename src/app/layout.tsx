@@ -2,6 +2,7 @@ import "~/styles/globals.css";
 
 import { type Metadata, type Viewport } from "next";
 import { Be_Vietnam_Pro } from "next/font/google";
+import NextTopLoader from "nextjs-toploader";
 
 import { Provider } from "~/components/ui/provider";
 import { EmotionRegistry } from "~/components/ui/emotion-registry";
@@ -44,6 +45,15 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body>
+        <NextTopLoader
+          initialPosition={0.3}
+          crawlSpeed={800}
+          height={3}
+          showSpinner={false}
+          easing="ease-in"
+          speed={600}
+          zIndex={9999}
+        />
         <EmotionRegistry>
           <Provider defaultTheme="system" enableSystem>
             <TRPCReactProvider>

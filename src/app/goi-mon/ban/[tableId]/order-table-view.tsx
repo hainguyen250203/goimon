@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 import { Badge, Box, Flex, IconButton, Text } from "@chakra-ui/react";
 import {
   ArrowLeft,

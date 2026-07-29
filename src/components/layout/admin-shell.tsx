@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 import { Box, Flex, IconButton, Text } from "@chakra-ui/react";
 import { ChefHat, Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 

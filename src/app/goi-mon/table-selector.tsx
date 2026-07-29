@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 import { Box, Flex, Grid, IconButton, Text, useBreakpointValue } from "@chakra-ui/react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 

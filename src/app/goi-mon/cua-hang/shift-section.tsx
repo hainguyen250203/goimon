@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 import { Button, Flex, Text } from "@chakra-ui/react";
 import { Clock } from "lucide-react";
 
