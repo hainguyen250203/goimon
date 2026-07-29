@@ -50,7 +50,6 @@ export function TransferItemsDialog({
   const transferItems = api.order.transferItems.useMutation({
     onSuccess: async (_data, variables) => {
       resetAndClose();
-      toaster.create({ title: "Đã chuyển món", type: "success" });
       void utils.order.listTablesForOrdering.invalidate();
       void utils.order.getTableOrder.invalidate({ tableId: variables.targetTableId });
       await utils.order.getTableOrder.invalidate({ tableId: order.tableId });

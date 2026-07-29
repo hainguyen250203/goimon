@@ -74,10 +74,7 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
   const isDirty = useMemo(() => !itemsEqual(localItems, order.items), [localItems, order.items]);
 
   const updateItemsMutation = api.order.updateItems.useMutation({
-    onSuccess: () => {
-      toaster.create({ title: "Đã lưu thay đổi", type: "success" });
-      invalidate();
-    },
+    onSuccess: invalidate,
     onError: (error) =>
       toaster.create({ title: "Không lưu được thay đổi", description: error.message, type: "error" }),
   });
@@ -91,7 +88,6 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
   const applyPromotion = api.order.applyPromotion.useMutation({
     onError: (error) => toaster.create({ title: "Không áp dụng được khuyến mãi", description: error.message, type: "error" }),
     onSuccess: () => {
-      toaster.create({ title: "Đã áp dụng khuyến mãi", type: "success" });
       setPromotionPickerOpen(false);
       invalidate();
     },
@@ -148,7 +144,6 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
         await printBill.mutateAsync({ orderId: order.id });
       }
       await confirmPayment.mutateAsync({ orderId: order.id, paymentMethod });
-      toaster.create({ title: "Đã xác nhận thanh toán", type: "success" });
       setPaymentOpen(false);
       invalidate();
       router.push("/goi-mon");
@@ -166,7 +161,6 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
       { orderId: order.id },
       {
         onSuccess: () => {
-          toaster.create({ title: "Đã huỷ đơn", type: "success" });
           setCancelConfirmOpen(false);
           router.push("/goi-mon");
         },

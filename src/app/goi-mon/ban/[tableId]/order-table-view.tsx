@@ -106,6 +106,10 @@ export function OrderTableView({ tableId }: { tableId: number }) {
   }, [order, tab]);
 
   const printBill = api.order.printBill.useMutation({
+    // Giữ lại toast NÀY (khác các mutation khác trong luồng gọi món đã bỏ
+    // toast success) — in bill không có phản hồi UI nào khác (không chuyển
+    // trang/đổi tab/hiện thêm gì), và cần truyền đạt caveat "chưa có máy in
+    // thật" mà không chỗ nào khác trong UI nói tới.
     onSuccess: () => {
       toaster.create({
         title: "Đã in hoá đơn",

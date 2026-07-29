@@ -36,7 +36,6 @@ export function ShiftSection({ canManage }: { canManage: boolean }) {
   // khi hết staleTime hoặc F5. router.refresh() buộc Router Cache làm mới.
   const openShift = api.shift.open.useMutation({
     onSuccess: () => {
-      toaster.create({ title: "Đã mở ca", type: "success" });
       setDialogOpen(false);
       void utils.shift.getOpen.invalidate();
       router.refresh();
@@ -46,7 +45,6 @@ export function ShiftSection({ canManage }: { canManage: boolean }) {
   });
   const closeShift = api.shift.close.useMutation({
     onSuccess: () => {
-      toaster.create({ title: "Đã đóng ca", type: "success" });
       setDialogOpen(false);
       void utils.shift.getOpen.invalidate();
       router.refresh();

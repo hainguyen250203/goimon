@@ -26,7 +26,6 @@ export function DraftCartPanel({
   const addItems = api.order.addItems.useMutation({
     onSuccess: async () => {
       clearCart(tableId);
-      toaster.create({ title: "Đã gửi món", type: "success" });
       void utils.order.listTablesForOrdering.invalidate();
       // Đợi order mới (bàn trống → vừa có đơn) load xong rồi mới chuyển tab —
       // gọi onSubmitted() ngay khi chưa refetch xong thì order ở component

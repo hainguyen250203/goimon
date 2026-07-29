@@ -1,6 +1,6 @@
 import "~/styles/globals.css";
 
-import { type Metadata } from "next";
+import { type Metadata, type Viewport } from "next";
 import { Be_Vietnam_Pro } from "next/font/google";
 
 import { Provider } from "~/components/ui/provider";
@@ -12,6 +12,18 @@ export const metadata: Metadata = {
   title: "Goimon",
   description: "Hệ thống POS quản lý nhà hàng",
   icons: [{ rel: "icon", url: "/favicon.ico" }],
+};
+
+// Khoá zoom bằng tay (userScalable/maximumScale) — app chủ yếu chạy như 1 màn
+// hình thao tác nhanh trên điện thoại, để khách/nhân viên lỡ chạm 2 ngón tay
+// zoom ra thì layout vỡ không đáng có. viewportFit "cover" để dùng hết màn
+// hình trên thiết bị có notch/tai thỏ (safe-area).
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
 };
 
 // Be Vietnam Pro: thiết kế riêng cho tiếng Việt (dấu thanh điệu chuẩn), sans

@@ -40,7 +40,6 @@ export function MoveOrderTableDialog({
   const moveTable = api.order.moveTable.useMutation({
     onSuccess: async (_data, variables) => {
       onOpenChange(false);
-      toaster.create({ title: "Đã chuyển bàn", type: "success" });
       void utils.order.listTablesForOrdering.invalidate();
       void utils.order.getTableOrder.invalidate({ tableId: currentTableId });
       await utils.order.getTableOrder.invalidate({ tableId: variables.targetTableId });
