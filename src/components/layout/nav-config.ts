@@ -3,6 +3,7 @@ import {
   BarChart3,
   ClipboardList,
   Clock,
+  Landmark,
   LayoutDashboard,
   Percent,
   Printer,
@@ -70,6 +71,14 @@ export const ADMIN_NAV: NavItem[] = [
     label: "Ca làm việc",
     icon: Clock,
     href: "/quan-ly/ca-lam-viec",
+    minRole: "manager",
+  },
+  {
+    key: "payment-config",
+    label: "Thanh toán",
+    icon: Landmark,
+    href: "/quan-ly/thanh-toan",
+    // manager chỉ xem, admin mới sửa được — chặn ở payment-config.router.ts.
     minRole: "manager",
   },
   {

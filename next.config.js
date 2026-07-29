@@ -10,6 +10,7 @@ const config = {
   // như "postgres" khỏi client bundle như webpack trước đây — phải khai báo
   // tường minh, nếu không build sẽ lỗi "Module not found: Can't resolve 'tls'".
   serverExternalPackages: ["postgres"],
+  allowedDevOrigins: ['low-institutes-alcohol-kyle.trycloudflare.com'],
   experimental: {
     // Mặc định Next 16 để staleTimes.dynamic = 0 — mọi trang trong app đều
     // dynamic (session/DB) nên MỌI lần chuyển trang, kể cả bấm back, đều bắt

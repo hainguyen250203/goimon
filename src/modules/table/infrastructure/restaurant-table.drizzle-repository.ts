@@ -1,4 +1,4 @@
-import { and, asc, count, eq } from "drizzle-orm";
+import { and, asc, count, eq, sql } from "drizzle-orm";
 
 import { db } from "~/server/db";
 import { isForeignKeyViolation } from "~/lib/db-errors";
@@ -15,6 +15,14 @@ import type {
   UpdateTableParams,
 } from "../domain/restaurant-table.repository";
 import { area, restaurantTable } from "./table.schema";
+
+// Sắp bàn tự nhiên theo tên: so sánh string thuần (mặc định Postgres) cho ra
+// "B10" < "B2" vì so ký tự. Tách phần chữ đầu (bỏ dãy số ở cuối) rồi phần số
+// cuối (cast integer) để sort theo (prefix, number) — regexp_replace/substring
+// ...from là hàm chuẩn Postgres, không cần extension gì thêm.
+const tableNamePrefix = sql`regexp_replace(${restaurantTable.name}, '[0-9]+$', '')`;
+const tableNameNumber = sql`(substring(${restaurantTable.name} from '[0-9]+$'))::integer`;
+const naturalTableNameOrderBy = [asc(tableNamePrefix), asc(tableNameNumber), asc(restaurantTable.name)];
 
 function toEntity(row: {
   id: number;
@@ -75,7 +83,7 @@ export const restaurantTableDrizzleRepository: RestaurantTableRepository = {
         .from(restaurantTable)
         .leftJoin(area, eq(restaurantTable.areaId, area.id))
         .where(where)
-        .orderBy(asc(area.name), asc(restaurantTable.name))
+        .orderBy(asc(area.name), ...naturalTableNameOrderBy)
         .limit(pageSize)
         .offset(offset),
       db.select({ value: count() }).from(restaurantTable).where(where),
@@ -138,7 +146,7 @@ export const restaurantTableDrizzleRepository: RestaurantTableRepository = {
       })
       .from(restaurantTable)
       .leftJoin(area, eq(restaurantTable.areaId, area.id))
-      .orderBy(asc(area.name), asc(restaurantTable.name));
+      .orderBy(asc(area.name), ...naturalTableNameOrderBy);
     return rows.map(toEntity);
   },
 

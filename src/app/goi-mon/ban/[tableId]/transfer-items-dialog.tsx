@@ -16,6 +16,7 @@ import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
 import type { RouterOutputs } from "~/trpc/react";
 import { formatVnd } from "~/lib/format-order";
+import { thinScrollbar } from "~/lib/scrollbar";
 import { TablePickerGrid } from "./table-picker-grid";
 
 type OrderDetail = NonNullable<RouterOutputs["order"]["getTableOrder"]>;
@@ -94,7 +95,7 @@ export function TransferItemsDialog({
             Chọn số lượng món cần chuyển, sau đó chọn bàn nhận.
           </Text>
 
-          <Stack gap={1} maxH="30vh" overflowY="auto" mb={3}>
+          <Stack gap={1} maxH="30vh" overflowY="auto" overscrollBehavior="contain" css={thinScrollbar} mb={3}>
             {order.items.map((item) => {
               const qty = quantities[item.id!] ?? 0;
               return (

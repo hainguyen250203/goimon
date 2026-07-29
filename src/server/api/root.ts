@@ -10,6 +10,7 @@ import { userRouter } from "~/modules/user/user.router";
 import { orderRouter } from "~/modules/order/order.router";
 import { promotionRouter } from "~/modules/promotion/promotion.router";
 import { shiftRouter } from "~/modules/shift/shift.router";
+import { paymentConfigRouter } from "~/modules/payment-config/payment-config.router";
 
 /**
  * This is the primary router for your server.
@@ -25,6 +26,7 @@ export const appRouter = createTRPCRouter({
   order: orderRouter,
   promotion: promotionRouter,
   shift: shiftRouter,
+  paymentConfig: paymentConfigRouter,
 });
 
 // export type definition of API

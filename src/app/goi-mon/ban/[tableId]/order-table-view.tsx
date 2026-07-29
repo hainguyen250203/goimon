@@ -87,7 +87,11 @@ function TabButton({
 export function OrderTableView({ tableId }: { tableId: number }) {
   const router = useRouter();
   const utils = api.useUtils();
-  const [order] = api.order.getTableOrder.useSuspenseQuery({ tableId });
+  // Poll nhẹ đơn đang mở — bàn có thể bị nhân viên khác sửa gần như đồng
+  // thời (không có socket để đẩy realtime); SubmittedOrderPanel dựa vào lần
+  // refetch này để phát hiện xung đột thay vì âm thầm ghi đè thay đổi cục bộ
+  // chưa lưu của người đang thao tác.
+  const [order] = api.order.getTableOrder.useSuspenseQuery({ tableId }, { refetchInterval: 15000 });
   const [tables] = api.order.listTablesForOrdering.useSuspenseQuery();
   const table = tables.find((t) => t.id === tableId);
   const draftItems = useOrderCartStore((s) => s.draftCarts[tableId] ?? EMPTY_DRAFT_ITEMS);
@@ -138,7 +142,7 @@ export function OrderTableView({ tableId }: { tableId: number }) {
           aria-label="Quay lại"
           size={{ base: "xs", lg: "sm" }}
           variant="ghost"
-          onClick={() => router.push("/goi-mon")}
+          onClick={() => router.push(table ? `/goi-mon?khuvuc=${table.areaId}` : "/goi-mon")}
         >
           <ArrowLeft size={16} />
         </IconButton>

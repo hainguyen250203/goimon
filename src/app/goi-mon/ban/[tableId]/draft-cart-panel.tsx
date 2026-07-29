@@ -1,6 +1,7 @@
 "use client";
 
-import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
+import { useState } from "react";
+import { Box, Button, Flex, Spinner, Stack, Text } from "@chakra-ui/react";
 
 import { EmptyState } from "~/components/ui/empty-state";
 import { toaster } from "~/components/ui/toaster";
@@ -23,8 +24,13 @@ export function DraftCartPanel({
   const clearCart = useOrderCartStore((s) => s.clearCart);
 
   const utils = api.useUtils();
+  // clearCart() xoá giỏ ngay lập tức nên `items` rỗng trước khi refetch +
+  // invalidate xong — nếu không có cờ riêng, màn hình sẽ nháy qua EmptyState
+  // "Chưa có món nào" trong lúc chờ rồi mới nhảy tab, trông như đứng hình.
+  const [finalizing, setFinalizing] = useState(false);
   const addItems = api.order.addItems.useMutation({
     onSuccess: async () => {
+      setFinalizing(true);
       clearCart(tableId);
       void utils.order.listTablesForOrdering.invalidate();
       // Đợi order mới (bàn trống → vừa có đơn) load xong rồi mới chuyển tab —
@@ -33,6 +39,7 @@ export function DraftCartPanel({
       // lại "Món đang gọi" trước khi kịp thấy tab "Món đã gọi".
       await utils.order.getTableOrder.invalidate({ tableId });
       onSubmitted();
+      setFinalizing(false);
     },
     onError: (error) => {
       toaster.create({ title: "Không gửi được món", description: error.message, type: "error" });
@@ -55,7 +62,7 @@ export function DraftCartPanel({
   if (items.length === 0) {
     return (
       <Flex flex={1} align="center" justify="center">
-        <EmptyState title="Chưa có món nào" />
+        {finalizing ? <Spinner size="md" /> : <EmptyState title="Chưa có món nào" />}
       </Flex>
     );
   }

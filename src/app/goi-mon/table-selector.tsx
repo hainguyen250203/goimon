@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Box, Flex, Grid, Text } from "@chakra-ui/react";
+import { Box, Flex, Grid, IconButton, Text, useBreakpointValue } from "@chakra-ui/react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { api } from "~/trpc/react";
 import { formatVnd } from "~/lib/format-order";
@@ -34,45 +35,110 @@ export function TableSelector({ areaId }: { areaId?: number }) {
 
   const filteredTables = (tables ?? []).filter((t) => t.areaId === activeAreaId);
 
+  // Khu vực nào đang có ít nhất 1 bàn mở đơn — chấm tròn trên tab khu vực để
+  // nhận biết nhanh không cần bấm vào từng khu mới biết có khách hay chưa.
+  const areasWithOpenOrder = useMemo(() => {
+    const set = new Set<number>();
+    for (const t of tables ?? []) {
+      if (t.activeOrder) set.add(t.areaId);
+    }
+    return set;
+  }, [tables]);
+
+  const areasPerPage = useBreakpointValue({ base: 4, sm: 5, md: 6, lg: 7, xl: 10 }) ?? 4;
+  const totalAreaPages = Math.max(1, Math.ceil(areas.length / areasPerPage));
+
+  // Trang mặc định luôn là trang CHỨA khu vực đang chọn (vd quay lại từ 1 bàn
+  // ở Khu 8 thì hàng khu vực phải tự lật sang trang có Khu 8, không bắt bấm
+  // lại nút "sang" mới thấy). `areaPageOverride` chỉ dùng khi người dùng chủ
+  // động bấm mũi tên để LƯỚT xem các khu khác mà chưa chọn — reset về null
+  // (dùng lại trang mặc định) ngay khi activeAreaId đổi.
+  const activeAreaIndex = areas.findIndex((a) => a.id === activeAreaId);
+  const defaultAreaPage = activeAreaIndex >= 0 ? Math.floor(activeAreaIndex / areasPerPage) : 0;
+  const [areaPageOverride, setAreaPageOverride] = useState<number | null>(null);
+  useEffect(() => {
+    setAreaPageOverride(null);
+  }, [activeAreaId]);
+
+  const areaPage = Math.min(areaPageOverride ?? defaultAreaPage, totalAreaPages - 1);
+  const visibleAreas = areas.slice(areaPage * areasPerPage, areaPage * areasPerPage + areasPerPage);
+
+  const selectArea = (id: number) => {
+    router.push(`/goi-mon?khuvuc=${id}`);
+  };
+
   return (
     <Flex direction="column" flex={1} minH={0}>
       <Flex
         flexShrink={0}
+        align="center"
         borderBottomWidth="1px"
         borderColor="border"
         bg="bg"
         p={{ base: 2, lg: 3 }}
-        gap={{ base: 1.5, lg: 2 }}
-        overflowX="auto"
+        gap={{ base: 1, lg: 1.5 }}
       >
-        {areas.map((area) => {
-          const active = area.id === activeAreaId;
-          return (
-            <Box
-              key={area.id}
-              flexShrink={0}
-              minW={{ base: "64px", lg: "90px" }}
-              px={{ base: 2, lg: 3 }}
-              py={{ base: 1.5, lg: 2 }}
-              rounded="l3"
-              textAlign="center"
-              cursor="pointer"
-              bg={active ? "colorPalette.subtle" : "bg.muted"}
-              borderWidth="1px"
-              borderColor={active ? "colorPalette.emphasized" : "border"}
-              colorPalette={active ? "blue" : "gray"}
-              onClick={() => router.push(`/goi-mon?khuvuc=${area.id}`)}
-            >
-              <Text
-                fontSize={{ base: "2xs", lg: "xs" }}
-                fontWeight={active ? "medium" : "normal"}
-                color={active ? "colorPalette.fg" : "fg"}
+        <IconButton
+          size="xs"
+          variant="ghost"
+          aria-label="Khu vực trước"
+          disabled={areaPage === 0}
+          onClick={() => setAreaPageOverride(Math.max(0, areaPage - 1))}
+        >
+          <ChevronLeft size={16} />
+        </IconButton>
+        <Flex flex={1} gap={{ base: 1.5, lg: 2 }} justify="center" wrap="wrap">
+          {visibleAreas.map((area) => {
+            const active = area.id === activeAreaId;
+            return (
+              <Box
+                key={area.id}
+                position="relative"
+                flexShrink={0}
+                minW={{ base: "64px", lg: "90px" }}
+                px={{ base: 2, lg: 3 }}
+                py={{ base: 1.5, lg: 2 }}
+                rounded="l3"
+                textAlign="center"
+                cursor="pointer"
+                bg={active ? "colorPalette.subtle" : "bg.muted"}
+                borderWidth="1px"
+                borderColor={active ? "colorPalette.emphasized" : "border"}
+                colorPalette={active ? "blue" : "gray"}
+                onClick={() => selectArea(area.id)}
               >
-                {area.name}
-              </Text>
-            </Box>
-          );
-        })}
+                <Text
+                  fontSize={{ base: "2xs", lg: "xs" }}
+                  fontWeight={active ? "medium" : "normal"}
+                  color={active ? "colorPalette.fg" : "fg"}
+                >
+                  {area.name}
+                </Text>
+                {areasWithOpenOrder.has(area.id) && (
+                  <Box
+                    position="absolute"
+                    top="-3px"
+                    right="-3px"
+                    boxSize="10px"
+                    rounded="full"
+                    bg="orange.solid"
+                    borderWidth="2px"
+                    borderColor="bg"
+                  />
+                )}
+              </Box>
+            );
+          })}
+        </Flex>
+        <IconButton
+          size="xs"
+          variant="ghost"
+          aria-label="Khu vực tiếp theo"
+          disabled={areaPage >= totalAreaPages - 1}
+          onClick={() => setAreaPageOverride(Math.min(totalAreaPages - 1, areaPage + 1))}
+        >
+          <ChevronRight size={16} />
+        </IconButton>
       </Flex>
 
       <Box flex={1} overflowY="auto" p={{ base: 2, lg: 3 }}>

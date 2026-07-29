@@ -67,14 +67,39 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
   // gọi thêm món ở tab "Món đang gọi") để đồng bộ lại, không chỉ dựa vào đổi
   // order.id (chỉ đổi khi sang bàn khác).
   const [syncedItems, setSyncedItems] = useState<OrderItems>(order.items);
+  // order.getTableOrder giờ poll định kỳ (xem OrderTableView) — nếu nhân
+  // viên khác vừa sửa đơn này trong lúc mình đang có thay đổi CHƯA lưu
+  // (localItems lệch syncedItems), KHÔNG được âm thầm ghi đè localItems mất
+  // thao tác đang dở — chỉ cập nhật syncedItems để không lặp cảnh báo, và
+  // bật banner để người dùng tự chọn tải lại bản mới nhất.
+  const [hasConflict, setHasConflict] = useState(false);
   if (!itemsEqual(order.items, syncedItems)) {
-    setLocalItems(order.items);
-    setSyncedItems(order.items);
+    if (!itemsEqual(localItems, syncedItems)) {
+      setSyncedItems(order.items);
+      setHasConflict(true);
+    } else {
+      setLocalItems(order.items);
+      setSyncedItems(order.items);
+    }
   }
   const isDirty = useMemo(() => !itemsEqual(localItems, order.items), [localItems, order.items]);
 
+  const handleReloadFromServer = () => {
+    setLocalItems(order.items);
+    setHasConflict(false);
+  };
+
   const updateItemsMutation = api.order.updateItems.useMutation({
-    onSuccess: invalidate,
+    onSuccess: () => {
+      setHasConflict(false);
+      // Đánh dấu NGAY những gì mình vừa lưu là bản đã đồng bộ — nếu không,
+      // lúc invalidate() bên dưới refetch xong sẽ mang về đúng order.items
+      // mới (khớp với localItems vừa lưu) nhưng so với syncedItems CŨ (từ
+      // trước khi sửa) sẽ thấy lệch, code lại tưởng nhầm là người khác vừa
+      // sửa và bật banner xung đột — dù chính mình là người vừa lưu.
+      setSyncedItems(localItems);
+      invalidate();
+    },
     onError: (error) =>
       toaster.create({ title: "Không lưu được thay đổi", description: error.message, type: "error" }),
   });
@@ -115,7 +140,10 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
 
   const { subtotal, discountAmount, payableAmount } = computeTotals(localItems, order.promotion);
 
-  const handleDiscardChanges = () => setLocalItems(order.items);
+  const handleDiscardChanges = () => {
+    setLocalItems(order.items);
+    setHasConflict(false);
+  };
 
   const handleConfirmChanges = () => {
     const removedItemIds = order.items
@@ -170,6 +198,27 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
 
   return (
     <Flex direction="column" flex={1} minH={0}>
+      {hasConflict && (
+        <Flex
+          flexShrink={0}
+          align="center"
+          justify="space-between"
+          gap={2}
+          bg="orange.subtle"
+          borderBottomWidth="1px"
+          borderColor="border"
+          px={{ base: 2, lg: 3 }}
+          py={2}
+        >
+          <Text fontSize="xs" color="orange.fg">
+            Đơn vừa được cập nhật ở nơi khác — tải lại trước khi lưu.
+          </Text>
+          <Button size="xs" variant="outline" flexShrink={0} onClick={handleReloadFromServer}>
+            Tải lại
+          </Button>
+        </Flex>
+      )}
+
       <Box flex={1} overflowY="auto" p={{ base: 2, lg: 3 }}>
         <Stack gap={1.5}>
           {localItems.map((item) => (

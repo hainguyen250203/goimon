@@ -13,6 +13,7 @@ import {
 import { EmptyState } from "~/components/ui/empty-state";
 import { Skeleton } from "~/components/ui/skeleton";
 import { OrderTimeline } from "~/components/order-timeline/order-timeline";
+import { thinScrollbar } from "~/lib/scrollbar";
 import { api } from "~/trpc/react";
 
 /** Dialog xem lịch sử 1 order — dùng chung cho cả admin (/quan-ly/don-hang) lẫn luồng gọi món (/goi-mon). */
@@ -41,7 +42,7 @@ export function OrderHistoryDialog({
         <DialogCloseTrigger />
         <DialogBody>
           {/* Cuộn bên trong dialog thay vì để cả dialog phình theo số event. */}
-          <Box maxH="60vh" overflowY="auto">
+          <Box maxH="60vh" overflowY="auto" overscrollBehavior="contain" css={thinScrollbar}>
             {isLoading ? (
               <Skeleton h={20} rounded="l2" />
             ) : !events || events.length === 0 ? (

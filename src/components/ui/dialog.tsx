@@ -51,7 +51,12 @@ export const DialogCloseTrigger = React.forwardRef<
   )
 })
 
-export const DialogRoot = ChakraDialog.Root
+export function DialogRoot({
+  scrollBehavior = "inside",
+  ...rest
+}: ChakraDialog.RootProps) {
+  return <ChakraDialog.Root scrollBehavior={scrollBehavior} {...rest} />
+}
 export const DialogFooter = ChakraDialog.Footer
 export const DialogHeader = ChakraDialog.Header
 export const DialogBody = ChakraDialog.Body
