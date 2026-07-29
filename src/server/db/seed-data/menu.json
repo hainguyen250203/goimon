@@ -14,14 +14,14 @@
         {
           "id": 2,
           "name": "Khô cá Đuối đen mắm me",
-          "is_active": true,
+          "is_active": false,
           "is_deleted": false,
           "price": 115000
         },
         {
           "id": 3,
           "name": "Khô Bò vắt chanh",
-          "is_active": true,
+          "is_active": false,
           "is_deleted": false,
           "price": 115000
         },
@@ -51,7 +51,7 @@
           "name": "Cá Chỉ Vàng",
           "is_active": true,
           "is_deleted": false,
-          "price": 85000
+          "price": 95000
         }
       ]
     },
@@ -64,14 +64,14 @@
           "name": "Bia hơi Hà Nội",
           "is_active": true,
           "is_deleted": false,
-          "price": 135000
+          "price": 145000
         },
         {
           "id": 9,
           "name": "Budweiser 330",
           "is_active": true,
           "is_deleted": false,
-          "price": 25000
+          "price": 26000
         },
         {
           "id": 10,
@@ -85,49 +85,49 @@
           "name": "Corona",
           "is_active": true,
           "is_deleted": false,
-          "price": 30000
+          "price": 35000
         },
         {
           "id": 12,
           "name": "Sài Gòn Lager",
           "is_active": true,
           "is_deleted": false,
-          "price": 22000
+          "price": 21000
         },
         {
           "id": 13,
           "name": "Tiger bạc",
           "is_active": true,
           "is_deleted": false,
-          "price": 25000
+          "price": 26000
         },
         {
           "id": 14,
           "name": "Tiger nâu",
           "is_active": true,
           "is_deleted": false,
-          "price": 23000
+          "price": 24000
         },
         {
           "id": 15,
           "name": "Heineken lùn",
           "is_active": true,
           "is_deleted": false,
-          "price": 25000
+          "price": 26000
         },
         {
           "id": 16,
           "name": "Nước ngọt",
           "is_active": true,
           "is_deleted": false,
-          "price": 22000
+          "price": 23000
         },
         {
           "id": 17,
           "name": "Nước suối",
           "is_active": true,
           "is_deleted": false,
-          "price": 15000
+          "price": 16000
         }
       ]
     },
@@ -140,14 +140,14 @@
           "name": "Tuỷ bò trứng chiên mềm",
           "is_active": true,
           "is_deleted": false,
-          "price": 115000
+          "price": 125000
         },
         {
           "id": 19,
           "name": "Bò Kobe cháy tỏi tiêu",
           "is_active": true,
           "is_deleted": false,
-          "price": 135000
+          "price": 145000
         },
         {
           "id": 20,
@@ -157,16 +157,9 @@
           "price": 145000
         },
         {
-          "id": 21,
-          "name": "Gân bò sốt Thái",
-          "is_active": true,
-          "is_deleted": false,
-          "price": 105000
-        },
-        {
           "id": 22,
           "name": "Hàu sữa trứng chiên mềm",
-          "is_active": true,
+          "is_active": false,
           "is_deleted": false,
           "price": 115000
         },
@@ -175,7 +168,7 @@
           "name": "Bò băm lá lốt bánh đa",
           "is_active": true,
           "is_deleted": false,
-          "price": 115000
+          "price": 125000
         },
         {
           "id": 24,
@@ -189,7 +182,112 @@
           "name": "Chân gà sốt Thái",
           "is_active": true,
           "is_deleted": false,
-          "price": 95000
+          "price": 105000
+        },
+        {
+          "id": 94,
+          "name": "Răng mực bơ tỏi",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 125000
+        },
+        {
+          "id": 96,
+          "name": "Súp tuỷ tiêu lá quế",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 125000
+        },
+        {
+          "id": 97,
+          "name": "Tai heo trộn thính",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 105000
+        },
+        {
+          "id": 99,
+          "name": "Chẳng dừng mắm nhỉ",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 145000
+        },
+        {
+          "id": 100,
+          "name": "Cơm chiên cá mặn",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 115000
+        },
+        {
+          "id": 122,
+          "name": "Khô lìm kìm chiên giòn",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 115000
+        },
+        {
+          "id": 123,
+          "name": "Nọng heo áp chảo",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 135000
+        },
+        {
+          "id": 124,
+          "name": "Khô cá cơm cháy tỏi",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 115000
+        },
+        {
+          "id": 125,
+          "name": "Đuôi heo xóc muối",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 125000
+        },
+        {
+          "id": 126,
+          "name": "Đuôi heo sả tắc",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 145000
+        },
+        {
+          "id": 127,
+          "name": "Vịt lộn um bầu",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 85000
+        },
+        {
+          "id": 128,
+          "name": "Canh bầu tôm khô",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 85000
+        },
+        {
+          "id": 129,
+          "name": "Súp cật hành gừng",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 125000
+        },
+        {
+          "id": 130,
+          "name": "Hủ tiếu áp chảo bò",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 135000
+        },
+        {
+          "id": 131,
+          "name": "Tôm khô tắc lũi",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 135000
         }
       ]
     },
@@ -216,7 +314,7 @@
           "name": "Bầu luộc trứng Vịt",
           "is_active": true,
           "is_deleted": false,
-          "price": 60000
+          "price": 65000
         },
         {
           "id": 29,
@@ -230,14 +328,14 @@
           "name": "Đậu Bắp chấm chao",
           "is_active": true,
           "is_deleted": false,
-          "price": 50000
+          "price": 65000
         },
         {
           "id": 31,
           "name": "Rau củ mắm kho quẹt",
           "is_active": true,
           "is_deleted": false,
-          "price": 95000
+          "price": 105000
         },
         {
           "id": 32,
@@ -249,6 +347,27 @@
         {
           "id": 33,
           "name": "Đậu Rồng mắm Ruốc",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 95000
+        },
+        {
+          "id": 107,
+          "name": "Cà pháo thêm",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 30000
+        },
+        {
+          "id": 114,
+          "name": "Dưa chua thêm",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 30000
+        },
+        {
+          "id": 119,
+          "name": "Đậu rồng mắm nêm",
           "is_active": true,
           "is_deleted": false,
           "price": 95000
@@ -264,35 +383,42 @@
           "name": "Cơm chiên trứng",
           "is_active": true,
           "is_deleted": false,
-          "price": 75000
+          "price": 85000
         },
         {
           "id": 35,
           "name": "Cơm chiên Dưa Bò",
           "is_active": true,
           "is_deleted": false,
-          "price": 105000
+          "price": 115000
         },
         {
           "id": 36,
           "name": "Mì xào bò",
           "is_active": true,
           "is_deleted": false,
-          "price": 105000
+          "price": 135000
         },
         {
           "id": 37,
           "name": "Súp Lòng non tiêu xanh",
           "is_active": true,
           "is_deleted": false,
-          "price": 95000
+          "price": 105000
         },
         {
           "id": 38,
           "name": "Súp bò viên tiêu xanh",
           "is_active": true,
           "is_deleted": false,
-          "price": 95000
+          "price": 105000
+        },
+        {
+          "id": 116,
+          "name": "Mì xào rau",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 60000
         }
       ]
     },
@@ -305,28 +431,21 @@
           "name": "Tré trộn",
           "is_active": true,
           "is_deleted": false,
-          "price": 95000
+          "price": 105000
         },
         {
           "id": 40,
           "name": "Gỏi Đu Đủ khô Bò Đen",
           "is_active": true,
           "is_deleted": false,
-          "price": 105000
-        },
-        {
-          "id": 41,
-          "name": "Gỏi Xoài cá Đuối Đen",
-          "is_active": true,
-          "is_deleted": false,
-          "price": 125000
+          "price": 115000
         },
         {
           "id": 42,
           "name": "Gỏi Xoài cá Chỉ Vàng",
           "is_active": true,
           "is_deleted": false,
-          "price": 105000
+          "price": 115000
         },
         {
           "id": 43,
@@ -340,18 +459,32 @@
           "name": "Gỏi Bò Cà Pháo",
           "is_active": true,
           "is_deleted": false,
-          "price": 125000
+          "price": 135000
         },
         {
           "id": 45,
           "name": "Salad Bò Trứng",
           "is_active": true,
           "is_deleted": false,
-          "price": 105000
+          "price": 115000
         },
         {
           "id": 46,
           "name": "Salad dầu giấm",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 75000
+        },
+        {
+          "id": 95,
+          "name": "Gỏi tai heo đu đủ",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 115000
+        },
+        {
+          "id": 118,
+          "name": "Gỏi xoài thêm",
           "is_active": true,
           "is_deleted": false,
           "price": 65000
@@ -367,28 +500,28 @@
           "name": "Đậu tẩm hành",
           "is_active": true,
           "is_deleted": false,
-          "price": 65000
+          "price": 75000
         },
         {
           "id": 48,
           "name": "Tôm khô củ kiệu cút bắc thảo",
           "is_active": true,
           "is_deleted": false,
-          "price": 85000
+          "price": 95000
         },
         {
           "id": 49,
           "name": "Phèo chiên giòn mắm me",
           "is_active": true,
           "is_deleted": false,
-          "price": 85000
+          "price": 95000
         },
         {
           "id": 50,
           "name": "Phèo non xào dưa chua",
           "is_active": true,
           "is_deleted": false,
-          "price": 115000
+          "price": 125000
         },
         {
           "id": 51,
@@ -409,14 +542,14 @@
           "name": "Thú Linh chiên giòn",
           "is_active": true,
           "is_deleted": false,
-          "price": 105000
+          "price": 115000
         },
         {
           "id": 54,
           "name": "Lòng xào nghệ (Lòng già)",
           "is_active": true,
           "is_deleted": false,
-          "price": 95000
+          "price": 105000
         }
       ]
     },
@@ -429,28 +562,35 @@
           "name": "Khô Mực nướng",
           "is_active": true,
           "is_deleted": false,
-          "price": 115000
+          "price": 125000
         },
         {
           "id": 56,
           "name": "Khô Mực chiên mắm",
           "is_active": true,
           "is_deleted": false,
-          "price": 115000
+          "price": 125000
         },
         {
           "id": 57,
           "name": "Khô Mực cháy Khoai Môn",
           "is_active": true,
           "is_deleted": false,
-          "price": 115000
+          "price": 125000
         },
         {
           "id": 58,
           "name": "Tôm khô ủ muối lá chanh",
           "is_active": true,
           "is_deleted": false,
-          "price": 135000
+          "price": 145000
+        },
+        {
+          "id": 106,
+          "name": "Trứng Cút Bách Thảo",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 40000
         }
       ]
     },
@@ -460,17 +600,10 @@
       "products": [
         {
           "id": 59,
-          "name": "Chả dùm trứng Muối",
+          "name": "Chả Đùm trứng Muối",
           "is_active": true,
           "is_deleted": false,
           "price": 135000
-        },
-        {
-          "id": 60,
-          "name": "Chả dùm trứng Cút",
-          "is_active": true,
-          "is_deleted": false,
-          "price": 125000
         }
       ]
     },
@@ -490,21 +623,21 @@
           "name": "Đậu hủ sốt tắc sate chà bông",
           "is_active": true,
           "is_deleted": false,
-          "price": 95000
+          "price": 105000
         },
         {
           "id": 63,
           "name": "Đậu hủ tóp mỡ chà bông",
           "is_active": true,
           "is_deleted": false,
-          "price": 95000
+          "price": 105000
         },
         {
           "id": 64,
           "name": "Đậu hủ chiên giòn mắm tôm",
           "is_active": true,
           "is_deleted": false,
-          "price": 65000
+          "price": 75000
         }
       ]
     },
@@ -517,14 +650,14 @@
           "name": "Tóp mỡ Triều Khúc",
           "is_active": true,
           "is_deleted": false,
-          "price": 145000
+          "price": 155000
         },
         {
           "id": 66,
           "name": "Tóp mỡ chiên mắm",
           "is_active": true,
           "is_deleted": false,
-          "price": 95000
+          "price": 105000
         }
       ]
     },
@@ -537,70 +670,133 @@
           "name": "Ruột Vịt nướng, mắm me",
           "is_active": true,
           "is_deleted": false,
-          "price": 75000
+          "price": 85000
         },
         {
           "id": 68,
           "name": "Khoai môn sợi mắm kẹo",
           "is_active": true,
           "is_deleted": false,
-          "price": 75000
+          "price": 95000
         },
         {
           "id": 69,
           "name": "Khoai Tây bơ đường",
           "is_active": true,
           "is_deleted": false,
-          "price": 75000
+          "price": 85000
         },
         {
           "id": 70,
           "name": "Răng Mực bơ Bắp",
           "is_active": true,
           "is_deleted": false,
-          "price": 115000
+          "price": 125000
         },
         {
           "id": 71,
           "name": "Chả giò Tôm Nhà Đậu",
           "is_active": true,
           "is_deleted": false,
-          "price": 95000
+          "price": 105000
         },
         {
           "id": 72,
-          "name": "Hoành thánh cuộn",
+          "name": "Hoành thánh cuộn cut bac thao",
           "is_active": true,
           "is_deleted": false,
-          "price": 95000
+          "price": 105000
         },
         {
           "id": 73,
           "name": "Ba rọi lắc sả tắc",
           "is_active": true,
           "is_deleted": false,
-          "price": 95000
-        },
-        {
-          "id": 74,
-          "name": "Ốc bưu nhồi thịt",
-          "is_active": true,
-          "is_deleted": false,
-          "price": 95000
+          "price": 105000
         },
         {
           "id": 75,
           "name": "Hến xúc bánh đa",
           "is_active": true,
           "is_deleted": false,
-          "price": 95000
+          "price": 105000
         },
         {
-          "id": 76,
-          "name": "Dồi sụn Dê, mắm tôm",
+          "id": 102,
+          "name": "Trứng gà",
           "is_active": true,
           "is_deleted": false,
-          "price": 125000
+          "price": 10000
+        },
+        {
+          "id": 104,
+          "name": "Bánh Đa",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 5000
+        },
+        {
+          "id": 105,
+          "name": "Mì thêm",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 15000
+        },
+        {
+          "id": 108,
+          "name": "Lưỡi vịt sapo",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 115000
+        },
+        {
+          "id": 109,
+          "name": "Lưỡi vịt cháy tỏi",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 115000
+        },
+        {
+          "id": 113,
+          "name": "Đậu Phộng",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 30000
+        },
+        {
+          "id": 115,
+          "name": "Trứng vịt",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 15000
+        },
+        {
+          "id": 117,
+          "name": "Mắm ruốc thêm",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 30000
+        },
+        {
+          "id": 120,
+          "name": "Khổ qua thêm",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 30000
+        },
+        {
+          "id": 121,
+          "name": "Rau luộc thêm",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 60000
+        },
+        {
+          "id": 132,
+          "name": "Chà bông thêm",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 25000
         }
       ]
     },
@@ -613,35 +809,35 @@
           "name": "Ếch chiên bơ tỏi",
           "is_active": true,
           "is_deleted": false,
-          "price": 115000
+          "price": 125000
         },
         {
           "id": 78,
           "name": "Ếch rang muối",
           "is_active": true,
           "is_deleted": false,
-          "price": 115000
+          "price": 125000
         },
         {
           "id": 79,
           "name": "Ếch riềng sả lá chanh",
           "is_active": true,
           "is_deleted": false,
-          "price": 115000
+          "price": 125000
         },
         {
           "id": 80,
           "name": "Ếch xào sả ớt",
           "is_active": true,
           "is_deleted": false,
-          "price": 115000
+          "price": 125000
         },
         {
           "id": 81,
           "name": "Ếch chiên mắm",
           "is_active": true,
           "is_deleted": false,
-          "price": 115000
+          "price": 125000
         }
       ]
     },
@@ -650,15 +846,15 @@
       "name": "Lưỡi Vịt",
       "products": [
         {
-          "id": 82,
-          "name": "Lưỡi Vịt sapo",
+          "id": 110,
+          "name": "Lưỡi vịt sapo",
           "is_active": true,
           "is_deleted": false,
           "price": 115000
         },
         {
-          "id": 83,
-          "name": "Lưỡi Vịt cháy tỏi",
+          "id": 111,
+          "name": "Lưỡi vịt cháy tỏi",
           "is_active": true,
           "is_deleted": false,
           "price": 115000
@@ -671,24 +867,45 @@
       "products": [
         {
           "id": 84,
-          "name": "Sụn Gà / Chân Gà rang muối",
+          "name": "Sụn Gà rang muối",
           "is_active": true,
           "is_deleted": false,
-          "price": 95000
+          "price": 105000
         },
         {
           "id": 85,
-          "name": "Sụn Gà / Chân Gà bơ tỏi",
+          "name": "Sụn Gà  bơ tỏi",
           "is_active": true,
           "is_deleted": false,
-          "price": 95000
+          "price": 105000
         },
         {
           "id": 86,
-          "name": "Sụn Gà / Chân Gà chiên mắm",
+          "name": "Sụn Gà chiên mắm",
           "is_active": true,
           "is_deleted": false,
-          "price": 95000
+          "price": 105000
+        },
+        {
+          "id": 91,
+          "name": "Chân Gà rang muối",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 105000
+        },
+        {
+          "id": 92,
+          "name": "Chân Gà chiên mắm",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 105000
+        },
+        {
+          "id": 93,
+          "name": "Chân Gà  bơ tỏi",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 105000
         }
       ]
     },
@@ -701,11 +918,18 @@
           "name": "Bò Xào Bông Cải Xanh",
           "is_active": true,
           "is_deleted": false,
-          "price": 105000
+          "price": 125000
         },
         {
           "id": 88,
           "name": "Bò Lúc Lắc",
+          "is_active": true,
+          "is_deleted": false,
+          "price": 135000
+        },
+        {
+          "id": 103,
+          "name": "Bò bằm lá lốt bánh đa",
           "is_active": true,
           "is_deleted": false,
           "price": 125000
@@ -721,14 +945,14 @@
           "name": "Trứng non cháy tỏi",
           "is_active": true,
           "is_deleted": false,
-          "price": 95000
+          "price": 105000
         },
         {
           "id": 90,
           "name": "Trứng non xào Bí Nụ",
           "is_active": true,
           "is_deleted": false,
-          "price": 95000
+          "price": 105000
         }
       ]
     }

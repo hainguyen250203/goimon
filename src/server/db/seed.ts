@@ -31,10 +31,15 @@ const SEED_USERS = [
 
 const SEED_USER_PASSWORD = "12345678";
 
+// Khu 1..Khu 9 (20 bàn/khu, tên "K1 - B1"..) + Mang về (4 bàn đại diện cho
+// khách chờ mang đi, không cần đánh số nhiều như khu ngồi tại chỗ).
 const SEED_LAYOUT = [
-  { areaName: "Tầng 1", tableCount: 8 },
-  { areaName: "Tầng 2", tableCount: 6 },
-  { areaName: "Sân vườn", tableCount: 4 },
+  ...Array.from({ length: 9 }, (_, i) => ({
+    areaName: `Khu ${i + 1}`,
+    tablePrefix: `K${i + 1}`,
+    tableCount: 20,
+  })),
+  { areaName: "Mang về", tablePrefix: "MV", tableCount: 4 },
 ];
 
 /**
@@ -81,11 +86,11 @@ async function findOrCreateArea(name: string) {
 }
 
 async function seedAreasAndTables() {
-  for (const { areaName, tableCount } of SEED_LAYOUT) {
+  for (const { areaName, tablePrefix, tableCount } of SEED_LAYOUT) {
     const areaRow = await findOrCreateArea(areaName);
 
     for (let i = 1; i <= tableCount; i++) {
-      const tableName = `${areaName} - Bàn ${i}`;
+      const tableName = `${tablePrefix} - B${i}`;
       const existing = await db.query.restaurantTable.findFirst({
         where: (t, { eq }) => eq(t.name, tableName),
       });

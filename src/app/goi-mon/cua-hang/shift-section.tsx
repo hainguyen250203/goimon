@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button, Flex, Text } from "@chakra-ui/react";
 import { Clock } from "lucide-react";
 
@@ -22,15 +23,23 @@ import { formatDateTime } from "~/lib/format-order";
  * dialog xem trạng thái + mở/đóng ca (chỉ manager/admin thao tác được).
  */
 export function ShiftSection({ canManage }: { canManage: boolean }) {
+  const router = useRouter();
   const utils = api.useUtils();
   const { data: shift } = api.shift.getOpen.useQuery();
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  // ShiftGate (server component chặn /goi-mon khi chưa mở ca) đọc trạng thái
+  // ca qua RSC — invalidate query ở trên chỉ làm mới cache TanStack Query
+  // phía client (đúng ngay ở dialog này), KHÔNG đụng tới Router Cache của
+  // route /goi-mon (đang cache RSC theo staleTimes.dynamic, xem next.config.js).
+  // Không router.refresh() thì quay lại /goi-mon vẫn thấy "chưa mở ca" cho tới
+  // khi hết staleTime hoặc F5. router.refresh() buộc Router Cache làm mới.
   const openShift = api.shift.open.useMutation({
     onSuccess: () => {
       toaster.create({ title: "Đã mở ca", type: "success" });
       setDialogOpen(false);
       void utils.shift.getOpen.invalidate();
+      router.refresh();
     },
     onError: (error) =>
       toaster.create({ title: "Không mở được ca", description: error.message, type: "error" }),
@@ -40,6 +49,7 @@ export function ShiftSection({ canManage }: { canManage: boolean }) {
       toaster.create({ title: "Đã đóng ca", type: "success" });
       setDialogOpen(false);
       void utils.shift.getOpen.invalidate();
+      router.refresh();
     },
     onError: (error) =>
       toaster.create({ title: "Không đóng được ca", description: error.message, type: "error" }),
