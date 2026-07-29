@@ -207,12 +207,7 @@ export const orderDrizzleRepository: OrderRepository = {
     const [orderRow] = await db
       .select()
       .from(order)
-      .where(
-        and(
-          eq(order.tableId, tableId),
-          inArray(order.status, ["open", "printed"]),
-        ),
-      );
+      .where(and(eq(order.tableId, tableId), eq(order.status, "open")));
     if (!orderRow) return null;
     const itemRows = await db
       .select()
@@ -350,7 +345,7 @@ export const orderDrizzleRepository: OrderRepository = {
       })
       .from(order)
       .leftJoin(orderItem, eq(orderItem.orderId, order.id))
-      .where(inArray(order.status, ["open", "printed"]))
+      .where(eq(order.status, "open"))
       .groupBy(order.id, order.tableId, order.createdAt);
     return rows;
   },
@@ -411,8 +406,11 @@ export const orderDrizzleRepository: OrderRepository = {
         tableName: row.tableName ?? "",
         actorName: row.actorName ?? "",
         items: Array.isArray((row.payload as { items?: unknown })?.items)
-          ? ((row.payload as { items: { itemName: string; quantity: number; unitPrice: number }[] })
-              .items)
+          ? (
+              row.payload as {
+                items: { itemName: string; quantity: number; unitPrice: number; note: string | null }[];
+              }
+            ).items
           : [],
         createdAt: row.createdAt,
       })),

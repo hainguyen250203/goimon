@@ -18,11 +18,12 @@ import { discountTypeEnum, promotion } from "~/modules/promotion/infrastructure/
 import { shift } from "~/modules/shift/infrastructure/shift.schema";
 
 // Không có entity "invoice" riêng — order tự mang vòng đời thanh toán:
-// open (đang gọi món) -> printed (đã in bill, chờ thanh toán) -> paid / cancelled.
+// open (đang gọi món, có thể đã in bill hay chưa) -> paid / cancelled. In bill
+// chỉ là 1 HÀNH ĐỘNG (set printedAt), KHÔNG phải 1 trạng thái riêng — tránh
+// nhầm giữa "trạng thái" và "đã làm hành động gì" trên cùng 1 đơn.
 // Rule chuyển trạng thái nằm trong domain/order.entity.ts, KHÔNG phải ở đây.
 export const orderStatusEnum = pgEnum("order_status", [
   "open",
-  "printed",
   "paid",
   "cancelled",
 ]);
@@ -83,7 +84,7 @@ export const order = pgTable(
     // Mỗi bàn chỉ có tối đa 1 order đang hoạt động (chưa paid/cancelled).
     uniqueIndex("orders_active_per_table_idx")
       .on(t.tableId)
-      .where(sql`${t.status} in ('open', 'printed')`),
+      .where(sql`${t.status} = 'open'`),
   ],
 );
 

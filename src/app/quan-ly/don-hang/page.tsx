@@ -6,7 +6,7 @@ import type { OrderStatus } from "~/modules/order/domain/order-list-item.entity"
 import { OrderList } from "./order-list";
 
 const PAGE_SIZE = 20;
-const VALID_STATUS: OrderStatus[] = ["open", "printed", "paid", "cancelled"];
+const VALID_STATUS: OrderStatus[] = ["open", "paid", "cancelled"];
 
 export default async function DonHangPage({
   searchParams,

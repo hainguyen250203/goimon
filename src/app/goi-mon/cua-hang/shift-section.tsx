@@ -66,7 +66,7 @@ export function ShiftSection({ canManage }: { canManage: boolean }) {
       </Flex>
 
       <DialogRoot open={dialogOpen} onOpenChange={(e) => setDialogOpen(e.open)}>
-        <DialogContent maxW={{ base: "calc(100vw - 24px)", sm: "360px" }} mx="auto">
+        <DialogContent maxW={{ base: "calc(100vw - 24px)", md: "360px", lg: "420px" }} mx="auto">
           <DialogHeader>
             <DialogTitle>Ca làm việc</DialogTitle>
           </DialogHeader>

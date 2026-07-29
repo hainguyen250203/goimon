@@ -34,7 +34,7 @@ export function OrderHistoryDialog({
 
   return (
     <DialogRoot open={open} onOpenChange={(e) => onOpenChange(e.open)}>
-      <DialogContent maxW={{ base: "calc(100vw - 24px)", sm: "480px" }} mx="auto">
+      <DialogContent maxW={{ base: "calc(100vw - 24px)", md: "480px", lg: "600px" }} mx="auto">
         <DialogHeader>
           <DialogTitle>Lịch sử đơn #{orderId}</DialogTitle>
         </DialogHeader>

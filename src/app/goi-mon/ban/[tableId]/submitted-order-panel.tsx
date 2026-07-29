@@ -142,9 +142,9 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
 
   const handleConfirmPayment = async () => {
     try {
-      // In bill trước nếu đơn đang "open" — điều kiện bắt buộc để thanh toán
-      // trong state machine (xem CLAUDE.md), chưa gọi máy in thật.
-      if (order.status === "open") {
+      // In bill trước nếu chưa in (printedAt null) — điều kiện bắt buộc để
+      // thanh toán trong state machine (xem CLAUDE.md), chưa gọi máy in thật.
+      if (order.printedAt === null) {
         await printBill.mutateAsync({ orderId: order.id });
       }
       await confirmPayment.mutateAsync({ orderId: order.id, paymentMethod });
@@ -278,7 +278,7 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
             disabled={isBusy}
             onClick={() => (isDirty ? handleDiscardChanges() : setCancelConfirmOpen(true))}
           >
-            Huỷ
+            {isDirty ? "Huỷ thay đổi" : "Huỷ đơn"}
           </Button>
           <Button
             flex={1}
@@ -293,7 +293,7 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
       </Box>
 
       <DialogRoot open={paymentOpen} onOpenChange={(e) => setPaymentOpen(e.open)}>
-        <DialogContent maxW={{ base: "calc(100vw - 24px)", sm: "400px" }} mx="auto">
+        <DialogContent maxW={{ base: "calc(100vw - 24px)", md: "400px", lg: "480px" }} mx="auto">
           <DialogHeader>
             <DialogTitle>Chọn phương thức thanh toán</DialogTitle>
           </DialogHeader>
@@ -342,7 +342,7 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
       </DialogRoot>
 
       <DialogRoot role="alertdialog" open={cancelConfirmOpen} onOpenChange={(e) => setCancelConfirmOpen(e.open)}>
-        <DialogContent maxW={{ base: "calc(100vw - 24px)", sm: "360px" }} mx="auto">
+        <DialogContent maxW={{ base: "calc(100vw - 24px)", md: "360px", lg: "420px" }} mx="auto">
           <DialogHeader>
             <DialogTitle>Huỷ đơn hàng của bàn này?</DialogTitle>
           </DialogHeader>

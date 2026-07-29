@@ -2,14 +2,12 @@ import type { OrderStatus } from "~/modules/order/domain/order-list-item.entity"
 
 export const STATUS_LABEL: Record<OrderStatus, string> = {
   open: "Đang mở",
-  printed: "Đã in bill",
   paid: "Đã thanh toán",
   cancelled: "Đã huỷ",
 };
 
 export const STATUS_DOT_COLOR: Record<OrderStatus, string> = {
   open: "gray.400",
-  printed: "blue.500",
   paid: "green.500",
   cancelled: "red.500",
 };

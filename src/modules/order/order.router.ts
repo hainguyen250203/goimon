@@ -17,6 +17,7 @@ import { confirmPayment } from "./application/confirm-payment.usecase";
 import { cancelOrder } from "./application/cancel-order.usecase";
 import { applyPromotion } from "./application/apply-promotion.usecase";
 import { removePromotion } from "./application/remove-promotion.usecase";
+import { moveOrderTable } from "./application/move-order-table.usecase";
 import { orderDrizzleRepository } from "./infrastructure/order.drizzle-repository";
 import { shiftDrizzleRepository } from "~/modules/shift/infrastructure/shift.drizzle-repository";
 import {
@@ -24,6 +25,7 @@ import {
   OrderItemNotFoundError,
   EmptyOrderError,
   PromotionNotAvailableError,
+  InvalidTableTransferError,
 } from "./domain/order.errors";
 import type { Order } from "./domain/order.entity";
 
@@ -37,7 +39,8 @@ async function runOrderAction<T extends Order>(action: () => Promise<T>) {
       error instanceof InvalidOrderStatusTransitionError ||
       error instanceof OrderItemNotFoundError ||
       error instanceof EmptyOrderError ||
-      error instanceof PromotionNotAvailableError
+      error instanceof PromotionNotAvailableError ||
+      error instanceof InvalidTableTransferError
     ) {
       throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
     }
@@ -68,7 +71,7 @@ export const orderRouter = createTRPCRouter({
       z.object({
         page: z.number().int().min(1).default(1),
         pageSize: z.number().int().min(1).max(100).default(20),
-        status: z.enum(["open", "printed", "paid", "cancelled"]).optional(),
+        status: z.enum(["open", "paid", "cancelled"]).optional(),
         search: z.string().optional(),
         shiftId: z.number().int().positive().optional(),
       }),
@@ -232,6 +235,27 @@ export const orderRouter = createTRPCRouter({
       return runOrderAction(() =>
         removePromotion(orderDrizzleRepository, {
           orderId: input.orderId,
+          actorId: ctx.session.user.id,
+        }),
+      );
+    }),
+
+  // Chuyển đơn đang phục vụ sang bàn khác (khách đổi bàn) — chỉ chuyển được
+  // tới bàn đang trống, dialog UI (table-switcher-dialog.tsx) chỉ cho chọn
+  // bàn trống nhưng vẫn phải chặn lại ở đây phòng gọi thẳng API.
+  moveTable: userProcedure
+    .input(
+      z.object({
+        orderId: z.number().int().positive(),
+        targetTableId: z.number().int().positive(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await requireOpenShift();
+      return runOrderAction(() =>
+        moveOrderTable(orderDrizzleRepository, restaurantTableDrizzleRepository, {
+          orderId: input.orderId,
+          targetTableId: input.targetTableId,
           actorId: ctx.session.user.id,
         }),
       );

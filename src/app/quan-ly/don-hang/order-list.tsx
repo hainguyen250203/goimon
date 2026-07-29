@@ -33,7 +33,6 @@ const ALL_STATUS = "all";
 const STATUS_OPTIONS = [
   { value: ALL_STATUS, label: "Tất cả trạng thái" },
   { value: "open", label: STATUS_LABEL.open },
-  { value: "printed", label: STATUS_LABEL.printed },
   { value: "paid", label: STATUS_LABEL.paid },
   { value: "cancelled", label: STATUS_LABEL.cancelled },
 ];

@@ -1,5 +1,5 @@
 import { Box, Circle, Flex, Stack, Text } from "@chakra-ui/react";
-import { Ban, ChefHat, CreditCard, Minus, Percent, X } from "lucide-react";
+import { ArrowLeftRight, Ban, ChefHat, CreditCard, Minus, Percent, X } from "lucide-react";
 
 import type { OrderTimelineEvent } from "~/modules/order/domain/order.repository";
 import { formatDateTime, formatVnd, PAYMENT_METHOD_LABEL } from "~/lib/format-order";
@@ -26,21 +26,23 @@ function describeEvent(entry: OrderTimelineEvent): {
 
   switch (entry.eventType) {
     case "items_added": {
-      const items = (payload?.items as { itemName: string; quantity: number }[] | undefined) ?? [];
+      const items =
+        (payload?.items as { itemName: string; quantity: number; note?: string | null }[] | undefined) ?? [];
       return {
         icon: <ChefHat size={14} />,
         accent: "green",
         label: "Gọi món",
-        detail: items.map((i) => `${i.itemName} ×${i.quantity}`),
+        detail: items.map((i) => `${i.itemName} ×${i.quantity}${i.note ? ` (${i.note})` : ""}`),
       };
     }
     case "items_removed": {
-      const items = (payload?.items as { itemName: string; quantity: number }[] | undefined) ?? [];
+      const items =
+        (payload?.items as { itemName: string; quantity: number; note?: string | null }[] | undefined) ?? [];
       return {
         icon: <Minus size={14} />,
         accent: "red",
         label: "Trả món",
-        detail: items.map((i) => `${i.itemName} ×${i.quantity}`),
+        detail: items.map((i) => `${i.itemName} ×${i.quantity}${i.note ? ` (${i.note})` : ""}`),
       };
     }
     case "items_quantity_updated": {
@@ -88,6 +90,16 @@ function describeEvent(entry: OrderTimelineEvent): {
     }
     case "order_cancelled":
       return { icon: <Ban size={14} />, accent: "red", label: "Huỷ đơn", detail: [] };
+    case "table_changed": {
+      const fromTableName = payload?.fromTableName as string | undefined;
+      const toTableName = payload?.toTableName as string | undefined;
+      return {
+        icon: <ArrowLeftRight size={14} />,
+        accent: "gray",
+        label: "Chuyển bàn",
+        detail: fromTableName && toTableName ? [`${fromTableName} → ${toTableName}`] : [],
+      };
+    }
     default:
       return { icon: <ChefHat size={14} />, accent: "gray", label: entry.eventType, detail: [] };
   }

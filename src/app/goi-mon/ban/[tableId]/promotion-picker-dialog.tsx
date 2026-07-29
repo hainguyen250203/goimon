@@ -39,7 +39,7 @@ export function PromotionPickerDialog({
 
   return (
     <DialogRoot open={open} onOpenChange={(e) => onOpenChange(e.open)}>
-      <DialogContent maxW={{ base: "calc(100vw - 24px)", sm: "400px" }} mx="auto">
+      <DialogContent maxW={{ base: "calc(100vw - 24px)", md: "400px", lg: "480px" }} mx="auto">
         <DialogHeader>
           <DialogTitle>Chọn khuyến mãi</DialogTitle>
         </DialogHeader>

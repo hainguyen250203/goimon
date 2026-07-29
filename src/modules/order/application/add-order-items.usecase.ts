@@ -12,7 +12,7 @@ export type AddOrderItemsParams = {
 };
 
 /**
- * Mở order mới cho bàn nếu chưa có (hoặc dùng order "open"/"printed" đang có),
+ * Mở order mới cho bàn nếu chưa có (hoặc dùng order "open" đang có),
  * thêm/gộp các món vào — giá/tên lấy từ menu thật (KHÔNG tin client) để
  * tránh gian lận giá. Nếu order mới mở, tự chuyển bàn sang "occupied".
  */
@@ -60,7 +60,12 @@ export async function addOrderItems(
   // tên/bị xoá sau đó (giống cách order_items snapshot itemName/unitPrice).
   const resolvedItems = params.items.map((i) => {
     const menuItem = menuItemById.get(i.menuItemId)!;
-    return { itemName: menuItem.name, unitPrice: menuItem.price, quantity: i.quantity };
+    return {
+      itemName: menuItem.name,
+      unitPrice: menuItem.price,
+      quantity: i.quantity,
+      note: i.note ?? null,
+    };
   });
 
   await orderRepository.recordEvent({

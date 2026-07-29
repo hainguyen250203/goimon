@@ -25,3 +25,10 @@ export class PromotionNotAvailableError extends Error {
     this.name = "PromotionNotAvailableError";
   }
 }
+
+export class InvalidTableTransferError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "InvalidTableTransferError";
+  }
+}

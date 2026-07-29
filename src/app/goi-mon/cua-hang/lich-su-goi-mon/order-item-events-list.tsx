@@ -38,14 +38,21 @@ function OrderItemEventCard({ entry }: { entry: OrderItemEventEntry }) {
 
       <Stack gap={1} mt={3}>
         {entry.items.map((item, index) => (
-          <Flex key={index} justify="space-between" gap={3}>
-            <Text fontSize={{ base: "xs", lg: "sm" }} color={isRemoved ? "red.fg" : "fg.muted"} lineClamp={1}>
-              {item.itemName}
-            </Text>
-            <Text fontSize={{ base: "xs", lg: "sm" }} color={isRemoved ? "red.fg" : "fg.muted"} flexShrink={0}>
-              {isRemoved ? "−" : "×"} {item.quantity}
-            </Text>
-          </Flex>
+          <Box key={index}>
+            <Flex justify="space-between" gap={3}>
+              <Text fontSize={{ base: "xs", lg: "sm" }} color={isRemoved ? "red.fg" : "fg.muted"} lineClamp={1}>
+                {item.itemName}
+              </Text>
+              <Text fontSize={{ base: "xs", lg: "sm" }} color={isRemoved ? "red.fg" : "fg.muted"} flexShrink={0}>
+                {isRemoved ? "−" : "×"} {item.quantity}
+              </Text>
+            </Flex>
+            {item.note && (
+              <Text fontSize={{ base: "2xs", lg: "xs" }} color="fg.muted" fontStyle="italic" lineClamp={1}>
+                Ghi chú: {item.note}
+              </Text>
+            )}
+          </Box>
         ))}
       </Stack>
     </Box>

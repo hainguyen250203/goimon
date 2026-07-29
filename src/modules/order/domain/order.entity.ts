@@ -46,8 +46,6 @@ export type OrderProps = {
   items: OrderLineItem[];
 };
 
-const OPEN_STATUSES = new Set<OrderStatus>(["open", "printed"]);
-
 /** DTO thuần cho client — không lộ instance/method của entity qua tRPC. */
 export type OrderDetail = {
   id: number;
@@ -74,7 +72,7 @@ export type OrderDetail = {
  */
 export class Order {
   readonly id: number | null;
-  readonly tableId: number;
+  tableId: number;
   readonly shiftId: number | null;
   status: OrderStatus;
   readonly createdBy: string;
@@ -144,16 +142,16 @@ export class Order {
   }
 
   private assertMutable() {
-    if (!OPEN_STATUSES.has(this.status)) {
+    if (this.status !== "open") {
       throw new InvalidOrderStatusTransitionError(
         `Không thể sửa món khi đơn đã ở trạng thái "${this.status}".`,
       );
     }
   }
 
-  /** Sửa món (thêm/sửa/xoá) khi đang "printed" thì tự quay về "open" — phải in lại mới thanh toán được. */
-  private backToOpenIfPrinted() {
-    if (this.status === "printed") this.status = "open";
+  /** Sửa món/khuyến mãi sau khi đã in bill thì phải in lại mới thanh toán được — xoá mốc in cũ (không đụng status, status luôn "open" tới khi thanh toán/huỷ). */
+  private invalidatePrint() {
+    if (this.printedAt !== null) this.printedAt = null;
   }
 
   addItem(
@@ -179,7 +177,7 @@ export class Order {
         note: note ?? null,
       });
     }
-    this.backToOpenIfPrinted();
+    this.invalidatePrint();
   }
 
   updateItemQuantity(itemId: number, quantity: number) {
@@ -191,7 +189,7 @@ export class Order {
       return;
     }
     item.quantity = quantity;
-    this.backToOpenIfPrinted();
+    this.invalidatePrint();
   }
 
   updateItemNote(itemId: number, note: string | null) {
@@ -199,7 +197,7 @@ export class Order {
     const item = this.items.find((i) => i.id === itemId);
     if (!item) throw new OrderItemNotFoundError(itemId);
     item.note = note;
-    this.backToOpenIfPrinted();
+    this.invalidatePrint();
   }
 
   /** Xoá hết món (đơn về 0 món) thì huỷ luôn đơn — bàn không thể "đang phục vụ" với đơn rỗng. */
@@ -212,25 +210,31 @@ export class Order {
       this.status = "cancelled";
       return;
     }
-    this.backToOpenIfPrinted();
+    this.invalidatePrint();
   }
 
-  /** Đổi khuyến mãi (thêm mới hoặc thay khuyến mãi đang áp dụng) — như sửa món, in "printed" thì quay lại "open". */
+  /** Đổi khuyến mãi (thêm mới hoặc thay khuyến mãi đang áp dụng) — như sửa món, đã in bill rồi thì phải in lại. */
   applyPromotion(promotion: OrderPromotion) {
     this.assertMutable();
     this.promotion = promotion;
-    this.backToOpenIfPrinted();
+    this.invalidatePrint();
   }
 
   removePromotion() {
     this.assertMutable();
     this.promotion = null;
-    this.backToOpenIfPrinted();
+    this.invalidatePrint();
   }
 
-  /** open→printed hoặc printed→printed (in lại) — tính lại totalAmount (đã trừ khuyến mãi), set printedAt. */
+  /** Chuyển đơn đang phục vụ sang bàn khác (khách đổi bàn) — không đổi món/tổng tiền nên không cần in lại bill. */
+  moveToTable(tableId: number) {
+    this.assertMutable();
+    this.tableId = tableId;
+  }
+
+  /** In bill là 1 HÀNH ĐỘNG, không đổi status — chỉ tính lại totalAmount (đã trừ khuyến mãi) và set printedAt, in lại bao nhiêu lần cũng được khi đơn còn "open". */
   printBill() {
-    if (!OPEN_STATUSES.has(this.status)) {
+    if (this.status !== "open") {
       throw new InvalidOrderStatusTransitionError(
         `Không thể in bill khi đơn đã ở trạng thái "${this.status}".`,
       );
@@ -238,15 +242,17 @@ export class Order {
     if (this.items.length === 0) throw new EmptyOrderError();
     this.totalAmount = this.payableAmount;
     this.printedAt = new Date();
-    this.status = "printed";
   }
 
-  /** Chỉ hợp lệ khi đang "printed" → "paid". */
+  /** Chỉ hợp lệ khi đơn đang "open" VÀ đã in bill (printedAt khác null) → "paid". */
   confirmPayment(staffId: string, paymentMethod: PaymentMethod) {
-    if (this.status !== "printed") {
+    if (this.status !== "open") {
       throw new InvalidOrderStatusTransitionError(
-        `Chỉ xác nhận thanh toán được khi đơn đã in bill (đang ở trạng thái "${this.status}").`,
+        `Không thể xác nhận thanh toán khi đơn đã ở trạng thái "${this.status}".`,
       );
+    }
+    if (this.printedAt === null) {
+      throw new InvalidOrderStatusTransitionError("Phải in bill trước khi xác nhận thanh toán.");
     }
     this.status = "paid";
     this.paymentMethod = paymentMethod;
@@ -254,9 +260,9 @@ export class Order {
     this.paidConfirmedAt = new Date();
   }
 
-  /** Hợp lệ từ "open" hoặc "printed" → "cancelled". */
+  /** Hợp lệ từ "open" → "cancelled" (kể cả đã in bill, chưa thanh toán). */
   cancel() {
-    if (!OPEN_STATUSES.has(this.status)) {
+    if (this.status !== "open") {
       throw new InvalidOrderStatusTransitionError(
         `Không thể huỷ đơn đã ở trạng thái "${this.status}".`,
       );

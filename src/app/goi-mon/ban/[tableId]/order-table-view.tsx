@@ -3,7 +3,16 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Badge, Box, Flex, IconButton, Text } from "@chakra-ui/react";
-import { ArrowLeft, ChefHat, ClipboardCheck, History, LayoutGrid, Printer, UtensilsCrossed } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowLeftRight,
+  ChefHat,
+  ClipboardCheck,
+  History,
+  LayoutGrid,
+  Printer,
+  UtensilsCrossed,
+} from "lucide-react";
 
 import { toaster } from "~/components/ui/toaster";
 import { OrderHistoryDialog } from "~/components/order-timeline/order-history-dialog";
@@ -13,6 +22,7 @@ import { MenuBrowserPanel } from "./menu-browser";
 import { DraftCartPanel } from "./draft-cart-panel";
 import { SubmittedOrderPanel } from "./submitted-order-panel";
 import { TableSwitcherDialog } from "./table-switcher-dialog";
+import { MoveOrderTableDialog } from "./move-order-table-dialog";
 
 type Tab = "menu" | "draft" | "submitted";
 
@@ -83,6 +93,7 @@ export function OrderTableView({ tableId }: { tableId: number }) {
 
   const [tab, setTab] = useState<Tab>(() => (draftCount > 0 ? "draft" : order ? "submitted" : "menu"));
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [moveTableOpen, setMoveTableOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
 
   // Xoá hết món ở tab "Món đã gọi" thì đơn bị huỷ — order trả về null sau khi
@@ -135,6 +146,16 @@ export function OrderTableView({ tableId }: { tableId: number }) {
         >
           <LayoutGrid size={16} />
         </IconButton>
+        {order && (
+          <IconButton
+            aria-label="Chuyển bàn"
+            size={{ base: "xs", lg: "sm" }}
+            variant="outline"
+            onClick={() => setMoveTableOpen(true)}
+          >
+            <ArrowLeftRight size={16} />
+          </IconButton>
+        )}
         {order && (
           <IconButton
             aria-label="Lịch sử đơn hàng"
@@ -200,7 +221,15 @@ export function OrderTableView({ tableId }: { tableId: number }) {
 
       <TableSwitcherDialog open={switcherOpen} onOpenChange={setSwitcherOpen} currentTableId={tableId} />
       {order && (
-        <OrderHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} orderId={order.id} />
+        <>
+          <MoveOrderTableDialog
+            open={moveTableOpen}
+            onOpenChange={setMoveTableOpen}
+            currentTableId={tableId}
+            orderId={order.id}
+          />
+          <OrderHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} orderId={order.id} />
+        </>
       )}
     </Flex>
   );

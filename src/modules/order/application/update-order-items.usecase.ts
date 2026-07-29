@@ -44,7 +44,12 @@ export async function updateOrderItems(
   const removedItems = params.removedItemIds
     .map((id) => itemById.get(id))
     .filter((item): item is NonNullable<typeof item> => item != null)
-    .map((item) => ({ itemName: item.itemName, unitPrice: item.unitPrice, quantity: item.quantity }));
+    .map((item) => ({
+      itemName: item.itemName,
+      unitPrice: item.unitPrice,
+      quantity: item.quantity,
+      note: item.note,
+    }));
 
   // Chênh lệch số lượng: dương = gọi thêm (cộng vào items_added), âm = trả
   // bớt (cộng vào items_removed) — không phát sinh event nếu số lượng không đổi.
@@ -55,9 +60,19 @@ export async function updateOrderItems(
     if (!item) continue;
     const delta = change.quantity - item.quantity;
     if (delta > 0) {
-      addedFromQuantityChange.push({ itemName: item.itemName, unitPrice: item.unitPrice, quantity: delta });
+      addedFromQuantityChange.push({
+        itemName: item.itemName,
+        unitPrice: item.unitPrice,
+        quantity: delta,
+        note: item.note,
+      });
     } else if (delta < 0) {
-      removedFromQuantityChange.push({ itemName: item.itemName, unitPrice: item.unitPrice, quantity: -delta });
+      removedFromQuantityChange.push({
+        itemName: item.itemName,
+        unitPrice: item.unitPrice,
+        quantity: -delta,
+        note: item.note,
+      });
     }
   }
 
