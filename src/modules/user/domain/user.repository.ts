@@ -51,8 +51,15 @@ export type SetUserPasswordParams = {
   headers: Headers;
 };
 
+export type GetUserByIdParams = {
+  userId: string;
+  headers: Headers;
+};
+
 export interface UserRepository {
   list(params: ListUsersParams): Promise<ListUsersResult>;
+  /** Dùng để lấy snapshot "before" khi ghi activity log lúc setRole/ban/unban. */
+  getById(params: GetUserByIdParams): Promise<UserAccount>;
   create(params: CreateUserParams): Promise<UserAccount>;
   setRole(params: SetUserRoleParams): Promise<UserAccount>;
   ban(params: BanUserParams): Promise<UserAccount>;

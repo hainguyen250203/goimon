@@ -57,7 +57,17 @@ async function findById(id: number): Promise<RestaurantTable> {
   return toEntity(row);
 }
 
+async function findAreaById(id: number): Promise<Area> {
+  const rows = await db.select().from(area).where(eq(area.id, id));
+  const row = rows[0];
+  if (!row) throw new Error("Không tìm thấy khu vực.");
+  return row;
+}
+
 export const restaurantTableDrizzleRepository: RestaurantTableRepository = {
+  findById,
+  findAreaById,
+
   async list({
     page,
     pageSize,

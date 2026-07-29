@@ -46,11 +46,41 @@ const ENTITY_TYPE_OPTIONS = [
   ...Object.entries(ENTITY_TYPE_LABEL).map(([value, label]) => ({ value, label })),
 ];
 
+function formatValue(value: unknown) {
+  return value === null || value === undefined ? "—" : String(value);
+}
+
+function formatFlat(fields: Record<string, unknown>) {
+  const entries = Object.entries(fields);
+  if (entries.length === 0) return "—";
+  return entries.map(([key, value]) => `${key}: ${formatValue(value)}`).join(" · ");
+}
+
+/**
+ * Hành động "cập nhật" (update/set_role/ban/unban/đóng ca) ghi metadata dạng
+ * chuẩn { before, after } — diff ra field nào THỰC SỰ đổi, hiển thị
+ * "field: cũ -> mới". Metadata cũ dạng phẳng (create/delete, hoặc log ghi
+ * trước khi có chuẩn này) không có 2 key before/after nên rớt về hiển thị
+ * phẳng như cũ — không vỡ log lịch sử.
+ */
 function formatMetadata(metadata: Record<string, unknown> | null) {
-  if (!metadata || Object.keys(metadata).length === 0) return "—";
-  return Object.entries(metadata)
-    .map(([key, value]) => `${key}: ${String(value)}`)
-    .join(" · ");
+  if (!metadata) return "—";
+
+  const hasEnvelope = "before" in metadata || "after" in metadata;
+  if (!hasEnvelope) return formatFlat(metadata);
+
+  const before = metadata.before as Record<string, unknown> | null | undefined;
+  const after = metadata.after as Record<string, unknown> | null | undefined;
+
+  if (before && after) {
+    const changed = Object.keys(after).filter((key) => before[key] !== after[key]);
+    if (changed.length === 0) return "Không có gì thay đổi";
+    return changed
+      .map((key) => `${key}: ${formatValue(before[key])} -> ${formatValue(after[key])}`)
+      .join(" · ");
+  }
+  // before null (vd payment-config lần đầu thiết lập) hoặc after null — hiện phẳng bên còn lại.
+  return formatFlat((after ?? before ?? {}) as Record<string, unknown>);
 }
 
 const columns: ListViewColumn<ActivityLogEntry>[] = [

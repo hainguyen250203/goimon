@@ -50,6 +50,8 @@ export interface MenuItemRepository {
   listForOrdering(): Promise<MenuItem[]>;
   /** Tra cứu theo id — order module dùng để lấy tên/giá thật (không tin client) khi thêm món vào đơn. */
   findByIds(ids: number[]): Promise<MenuItem[]>;
+  /** Dùng để lấy snapshot "before" khi ghi activity log lúc update — xem update-menu-item.usecase.ts. */
+  findById(id: number): Promise<MenuItem>;
   create(params: CreateMenuItemParams): Promise<MenuItem>;
   update(params: UpdateMenuItemParams): Promise<MenuItem>;
   /** Xoá thật (hard delete). Throw nếu món đã từng nằm trong order_items
@@ -60,6 +62,8 @@ export interface MenuItemRepository {
   // --- Quản trị danh mục (Category) — dùng cho dialog "Quản lý danh mục" ở /quan-ly/mon-an ---
   /** Toàn bộ danh mục (kể cả đang ẩn) — cho dialog quản lý, khác listCategoryOptions (chỉ active). */
   listCategoriesFull(): Promise<Category[]>;
+  /** Dùng để lấy snapshot "before" khi ghi activity log lúc updateCategory — xem update-category.usecase.ts. */
+  findCategoryById(id: number): Promise<Category>;
   createCategory(params: CreateCategoryParams): Promise<Category>;
   updateCategory(params: UpdateCategoryParams): Promise<Category>;
   /** Xoá thật. Throw nếu còn món ăn thuộc danh mục này (foreign_key_violation). */

@@ -3,6 +3,7 @@ import type { UserAccount, UserRole } from "../domain/user-account.entity";
 import type {
   BanUserParams,
   CreateUserParams,
+  GetUserByIdParams,
   ListUsersParams,
   ListUsersResult,
   SetUserPasswordParams,
@@ -51,6 +52,13 @@ function toEntity(row: RawUser): UserAccount {
 }
 
 export const userBetterAuthRepository: UserRepository = {
+  // `getUser` (khác các endpoint mutation ở dưới) trả về UserWithRole TRỰC
+  // TIẾP, không bọc trong `{ user }` — verify từ admin.d.mts.
+  async getById({ userId, headers }: GetUserByIdParams): Promise<UserAccount> {
+    const result = await auth.api.getUser({ query: { id: userId }, headers });
+    return toEntity(result as RawUser);
+  },
+
   async list({ page, pageSize, role, banned, headers }: ListUsersParams): Promise<ListUsersResult> {
     const offset = (page - 1) * pageSize;
 

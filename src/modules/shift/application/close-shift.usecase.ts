@@ -1,7 +1,12 @@
 import { NoOpenShiftError, ShiftHasActiveOrdersError } from "../domain/shift.errors";
-import type { Shift } from "../domain/shift.entity";
+import type { Shift, ShiftDetail } from "../domain/shift.entity";
 import type { ShiftRepository } from "../domain/shift.repository";
 import type { OrderRepository } from "~/modules/order/domain/order.repository";
+
+export type CloseShiftResult = {
+  before: ShiftDetail;
+  after: Shift;
+};
 
 /**
  * Chặn đóng ca nếu còn đơn "open" chưa xử lý xong (kể cả đã in bill, chưa
@@ -13,13 +18,17 @@ export async function closeShift(
   repository: ShiftRepository,
   orderRepository: OrderRepository,
   closedBy: string,
-): Promise<Shift> {
+): Promise<CloseShiftResult> {
   const openShift = await repository.findOpen();
   if (!openShift) throw new NoOpenShiftError();
 
   const activeOrders = await orderRepository.listActive();
   if (activeOrders.length > 0) throw new ShiftHasActiveOrdersError();
 
+  // Snapshot NGAY trước khi mutate — Shift.close() đổi state in-place, sau
+  // đó object gốc không còn phản ánh được trạng thái "trước khi đóng" nữa.
+  const before = openShift.toDetail();
   openShift.close(closedBy);
-  return repository.save(openShift);
+  const after = await repository.save(openShift);
+  return { before, after };
 }

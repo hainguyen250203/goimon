@@ -71,7 +71,7 @@ export const userRouter = createTRPCRouter({
   setRole: adminProcedure
     .input(z.object({ userId: z.string().min(1), role: roleSchema }))
     .mutation(async ({ ctx, input }) => {
-      const updated = await setUserRole(userBetterAuthRepository, {
+      const { before, after } = await setUserRole(userBetterAuthRepository, {
         ...input,
         headers: ctx.headers,
       });
@@ -79,10 +79,10 @@ export const userRouter = createTRPCRouter({
         actorId: ctx.session.user.id,
         action: "set_role",
         entityType: "user",
-        entityId: updated.id,
-        metadata: { role: updated.role },
+        entityId: after.id,
+        metadata: { before: { role: before.role }, after: { role: after.role } },
       });
-      return updated;
+      return after;
     }),
 
   ban: adminProcedure
@@ -93,7 +93,7 @@ export const userRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const updated = await banUser(userBetterAuthRepository, {
+      const { before, after } = await banUser(userBetterAuthRepository, {
         ...input,
         headers: ctx.headers,
       });
@@ -101,16 +101,19 @@ export const userRouter = createTRPCRouter({
         actorId: ctx.session.user.id,
         action: "ban",
         entityType: "user",
-        entityId: updated.id,
-        metadata: input.banReason ? { banReason: input.banReason } : undefined,
+        entityId: after.id,
+        metadata: {
+          before: { banned: before.banned, banReason: before.banReason },
+          after: { banned: after.banned, banReason: after.banReason },
+        },
       });
-      return updated;
+      return after;
     }),
 
   unban: adminProcedure
     .input(z.object({ userId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      const updated = await unbanUser(userBetterAuthRepository, {
+      const { before, after } = await unbanUser(userBetterAuthRepository, {
         ...input,
         headers: ctx.headers,
       });
@@ -118,9 +121,13 @@ export const userRouter = createTRPCRouter({
         actorId: ctx.session.user.id,
         action: "unban",
         entityType: "user",
-        entityId: updated.id,
+        entityId: after.id,
+        metadata: {
+          before: { banned: before.banned, banReason: before.banReason },
+          after: { banned: after.banned, banReason: after.banReason },
+        },
       });
-      return updated;
+      return after;
     }),
 
   setPassword: adminProcedure

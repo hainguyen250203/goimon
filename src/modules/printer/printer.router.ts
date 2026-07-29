@@ -52,15 +52,18 @@ export const printerRouter = createTRPCRouter({
   update: managerProcedure
     .input(printerInputSchema.extend({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
-      const item = await updatePrinter(printerDrizzleRepository, input);
+      const { before, after } = await updatePrinter(printerDrizzleRepository, input);
       await logActivity({
         actorId: ctx.session.user.id,
         action: "update",
         entityType: "printer",
-        entityId: String(item.id),
-        metadata: { name: item.name },
+        entityId: String(after.id),
+        metadata: {
+          before: { name: before.name, ipAddress: before.ipAddress, port: before.port, isActive: before.isActive },
+          after: { name: after.name, ipAddress: after.ipAddress, port: after.port, isActive: after.isActive },
+        },
       });
-      return item;
+      return after;
     }),
 
   delete: managerProcedure

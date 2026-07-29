@@ -36,14 +36,27 @@ export const paymentConfigRouter = createTRPCRouter({
   update: adminProcedure
     .input(paymentConfigInputSchema)
     .mutation(async ({ ctx, input }) => {
-      const item = await updatePaymentConfig(paymentConfigDrizzleRepository, input);
+      const { before, after } = await updatePaymentConfig(paymentConfigDrizzleRepository, input);
       await logActivity({
         actorId: ctx.session.user.id,
         action: "update",
         entityType: "payment-config",
-        entityId: String(item.id),
-        metadata: { bankAccountNumber: item.bankAccountNumber },
+        entityId: String(after.id),
+        metadata: {
+          before: before
+            ? {
+                bankCode: before.bankCode,
+                bankAccountNumber: before.bankAccountNumber,
+                bankAccountName: before.bankAccountName,
+              }
+            : null,
+          after: {
+            bankCode: after.bankCode,
+            bankAccountNumber: after.bankAccountNumber,
+            bankAccountName: after.bankAccountName,
+          },
+        },
       });
-      return item;
+      return after;
     }),
 });

@@ -50,15 +50,28 @@ export const promotionRouter = createTRPCRouter({
   update: managerProcedure
     .input(promotionInputSchema.extend({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
-      const item = await updatePromotion(promotionDrizzleRepository, input);
+      const { before, after } = await updatePromotion(promotionDrizzleRepository, input);
       await logActivity({
         actorId: ctx.session.user.id,
         action: "update",
         entityType: "promotion",
-        entityId: String(item.id),
-        metadata: { name: item.name },
+        entityId: String(after.id),
+        metadata: {
+          before: {
+            name: before.name,
+            discountType: before.discountType,
+            discountValue: before.discountValue,
+            isActive: before.isActive,
+          },
+          after: {
+            name: after.name,
+            discountType: after.discountType,
+            discountValue: after.discountValue,
+            isActive: after.isActive,
+          },
+        },
       });
-      return item;
+      return after;
     }),
 
   delete: managerProcedure

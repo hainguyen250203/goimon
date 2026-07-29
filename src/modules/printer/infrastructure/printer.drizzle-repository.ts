@@ -35,6 +35,8 @@ async function findById(id: number): Promise<Printer> {
 }
 
 export const printerDrizzleRepository: PrinterRepository = {
+  findById,
+
   async list({
     page,
     pageSize,

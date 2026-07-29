@@ -61,15 +61,18 @@ export const tableRouter = createTRPCRouter({
   update: managerProcedure
     .input(tableInputSchema.extend({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
-      const item = await updateTable(restaurantTableDrizzleRepository, input);
+      const { before, after } = await updateTable(restaurantTableDrizzleRepository, input);
       await logActivity({
         actorId: ctx.session.user.id,
         action: "update",
         entityType: "table",
-        entityId: String(item.id),
-        metadata: { name: item.name },
+        entityId: String(after.id),
+        metadata: {
+          before: { name: before.name, areaId: before.areaId, status: before.status },
+          after: { name: after.name, areaId: after.areaId, status: after.status },
+        },
       });
-      return item;
+      return after;
     }),
 
   delete: managerProcedure
@@ -111,15 +114,18 @@ export const tableRouter = createTRPCRouter({
   updateArea: managerProcedure
     .input(areaInputSchema.extend({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
-      const item = await updateArea(restaurantTableDrizzleRepository, input);
+      const { before, after } = await updateArea(restaurantTableDrizzleRepository, input);
       await logActivity({
         actorId: ctx.session.user.id,
         action: "update",
         entityType: "area",
-        entityId: String(item.id),
-        metadata: { name: item.name },
+        entityId: String(after.id),
+        metadata: {
+          before: { name: before.name, isActive: before.isActive },
+          after: { name: after.name, isActive: after.isActive },
+        },
       });
-      return item;
+      return after;
     }),
 
   deleteArea: managerProcedure

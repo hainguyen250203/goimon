@@ -55,7 +55,17 @@ async function findById(id: number): Promise<MenuItem> {
   return toEntity(row);
 }
 
+async function findCategoryById(id: number): Promise<Category> {
+  const rows = await db.select().from(category).where(eq(category.id, id));
+  const row = rows[0];
+  if (!row) throw new Error("Không tìm thấy danh mục.");
+  return row;
+}
+
 export const menuItemDrizzleRepository: MenuItemRepository = {
+  findById,
+  findCategoryById,
+
   async list({
     page,
     pageSize,

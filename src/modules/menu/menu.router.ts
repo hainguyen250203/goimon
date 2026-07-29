@@ -69,15 +69,30 @@ export const menuRouter = createTRPCRouter({
   update: managerProcedure
     .input(menuItemInputSchema.extend({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
-      const item = await updateMenuItem(menuItemDrizzleRepository, input);
+      const { before, after } = await updateMenuItem(menuItemDrizzleRepository, input);
       await logActivity({
         actorId: ctx.session.user.id,
         action: "update",
         entityType: "menu_item",
-        entityId: String(item.id),
-        metadata: { name: item.name },
+        entityId: String(after.id),
+        metadata: {
+          before: {
+            name: before.name,
+            categoryId: before.categoryId,
+            price: before.price,
+            isAvailable: before.isAvailable,
+            isPublished: before.isPublished,
+          },
+          after: {
+            name: after.name,
+            categoryId: after.categoryId,
+            price: after.price,
+            isAvailable: after.isAvailable,
+            isPublished: after.isPublished,
+          },
+        },
       });
-      return item;
+      return after;
     }),
 
   delete: managerProcedure
@@ -121,15 +136,18 @@ export const menuRouter = createTRPCRouter({
   updateCategory: managerProcedure
     .input(categoryInputSchema.extend({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
-      const item = await updateCategory(menuItemDrizzleRepository, input);
+      const { before, after } = await updateCategory(menuItemDrizzleRepository, input);
       await logActivity({
         actorId: ctx.session.user.id,
         action: "update",
         entityType: "category",
-        entityId: String(item.id),
-        metadata: { name: item.name },
+        entityId: String(after.id),
+        metadata: {
+          before: { name: before.name, isActive: before.isActive },
+          after: { name: after.name, isActive: after.isActive },
+        },
       });
-      return item;
+      return after;
     }),
 
   deleteCategory: managerProcedure

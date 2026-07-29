@@ -4,9 +4,16 @@ import type {
   UpdateAreaParams,
 } from "../domain/restaurant-table.repository";
 
+export type UpdateAreaResult = {
+  before: Area;
+  after: Area;
+};
+
 export async function updateArea(
   repository: RestaurantTableRepository,
   params: UpdateAreaParams,
-): Promise<Area> {
-  return repository.updateArea(params);
+): Promise<UpdateAreaResult> {
+  const before = await repository.findAreaById(params.id);
+  const after = await repository.updateArea(params);
+  return { before, after };
 }

@@ -43,15 +43,19 @@ export const shiftRouter = createTRPCRouter({
 
   close: managerProcedure.mutation(async ({ ctx }) => {
     try {
-      const shift = await closeShift(shiftDrizzleRepository, orderDrizzleRepository, ctx.session.user.id);
+      const { before, after } = await closeShift(shiftDrizzleRepository, orderDrizzleRepository, ctx.session.user.id);
+      const afterDetail = after.toDetail();
       await logActivity({
         actorId: ctx.session.user.id,
         action: "update",
         entityType: "shift",
-        entityId: String(shift.toDetail().id),
-        metadata: { action: "close" },
+        entityId: String(afterDetail.id),
+        metadata: {
+          before: { status: before.status, closedBy: before.closedBy },
+          after: { status: afterDetail.status, closedBy: afterDetail.closedBy },
+        },
       });
-      return shift.toDetail();
+      return afterDetail;
     } catch (error) {
       if (error instanceof NoOpenShiftError || error instanceof ShiftHasActiveOrdersError) {
         throw new TRPCError({ code: "BAD_REQUEST", message: error.message });

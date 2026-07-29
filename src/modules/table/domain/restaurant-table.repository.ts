@@ -43,6 +43,8 @@ export interface RestaurantTableRepository {
   list(params: ListTablesParams): Promise<ListTablesResult>;
   /** Chỉ id+name, chỉ khu vực active — cho filter dropdown/form chọn khu vực. */
   listAreaOptions(): Promise<AreaOption[]>;
+  /** Dùng để lấy snapshot "before" khi ghi activity log lúc update — xem update-table.usecase.ts. */
+  findById(id: number): Promise<RestaurantTable>;
   create(params: CreateTableParams): Promise<RestaurantTable>;
   update(params: UpdateTableParams): Promise<RestaurantTable>;
   /** Xoá thật (hard delete). Throw nếu bàn đã từng có order (foreign_key_violation). */
@@ -58,6 +60,8 @@ export interface RestaurantTableRepository {
   // --- Quản trị khu vực (Area) — dùng cho dialog "Quản lý khu vực" ở /quan-ly/ban ---
   /** Toàn bộ khu vực (kể cả đang ẩn) — cho dialog quản lý, khác listAreaOptions (chỉ active). */
   listAreasFull(): Promise<Area[]>;
+  /** Dùng để lấy snapshot "before" khi ghi activity log lúc updateArea — xem update-area.usecase.ts. */
+  findAreaById(id: number): Promise<Area>;
   createArea(params: CreateAreaParams): Promise<Area>;
   updateArea(params: UpdateAreaParams): Promise<Area>;
   /** Xoá thật. Throw nếu còn bàn thuộc khu vực này (foreign_key_violation). */
