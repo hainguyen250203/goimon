@@ -110,6 +110,16 @@ export async function updateOrderItems(
       itemsSummary: allAdded.map((i) => `${i.itemName} ×${i.quantity}`).join(", "),
     });
   }
+  // Xoá hết món tự chuyển đơn sang "cancelled" (xem Order.removeItem()) —
+  // ghi thêm mốc đóng đơn rõ ràng, giống hệt lúc huỷ tay, để lịch sử không
+  // dừng lại đột ngột ở dòng "Trả món" cuối cùng mà không rõ đơn đã đóng.
+  if (saved.status === "cancelled") {
+    await orderRepository.recordEvent({
+      orderId: saved.id!,
+      actorId: params.actorId,
+      eventType: "order_cancelled",
+    });
+  }
 
   return saved;
 }

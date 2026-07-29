@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   ChefHat,
   ClipboardCheck,
+  GitMerge,
   History,
   LayoutGrid,
   Move,
@@ -25,6 +26,7 @@ import { SubmittedOrderPanel } from "./submitted-order-panel";
 import { TableSwitcherDialog } from "./table-switcher-dialog";
 import { MoveOrderTableDialog } from "./move-order-table-dialog";
 import { TransferItemsDialog } from "./transfer-items-dialog";
+import { MergeOrdersDialog } from "./merge-orders-dialog";
 
 type Tab = "menu" | "draft" | "submitted";
 
@@ -101,6 +103,7 @@ export function OrderTableView({ tableId }: { tableId: number }) {
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [moveTableOpen, setMoveTableOpen] = useState(false);
   const [transferItemsOpen, setTransferItemsOpen] = useState(false);
+  const [mergeOrdersOpen, setMergeOrdersOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
 
   // Xoá hết món ở tab "Món đã gọi" thì đơn bị huỷ — order trả về null sau khi
@@ -179,6 +182,16 @@ export function OrderTableView({ tableId }: { tableId: number }) {
         )}
         {order && (
           <IconButton
+            aria-label="Gộp đơn với bàn khác"
+            size={{ base: "xs", lg: "sm" }}
+            variant="outline"
+            onClick={() => setMergeOrdersOpen(true)}
+          >
+            <GitMerge size={16} />
+          </IconButton>
+        )}
+        {order && (
+          <IconButton
             aria-label="Lịch sử đơn hàng"
             size={{ base: "xs", lg: "sm" }}
             variant="outline"
@@ -250,6 +263,12 @@ export function OrderTableView({ tableId }: { tableId: number }) {
             orderId={order.id}
           />
           <TransferItemsDialog open={transferItemsOpen} onOpenChange={setTransferItemsOpen} order={order} />
+          <MergeOrdersDialog
+            open={mergeOrdersOpen}
+            onOpenChange={setMergeOrdersOpen}
+            currentTableId={tableId}
+            orderId={order.id}
+          />
           <OrderHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} orderId={order.id} />
         </>
       )}

@@ -109,6 +109,16 @@ export async function transferOrderItems(
     eventType: "items_transferred_in",
     payload: { items: transferredItems, fromTableId: savedSource.tableId, fromTableName: sourceTableName },
   });
+  // Chuyển hết món tự chuyển đơn nguồn sang "cancelled" — ghi thêm mốc đóng
+  // đơn rõ ràng, giống hệt lúc huỷ tay, để lịch sử không dừng lại đột ngột
+  // ở dòng "Chuyển món sang X" mà không rõ đơn đã đóng.
+  if (sourceBecameEmpty) {
+    await orderRepository.recordEvent({
+      orderId: savedSource.id!,
+      actorId: params.actorId,
+      eventType: "order_cancelled",
+    });
+  }
 
   return { source: sourceBecameEmpty ? null : savedSource, target: savedTarget };
 }

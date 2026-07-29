@@ -20,6 +20,7 @@ import { applyPromotion } from "./application/apply-promotion.usecase";
 import { removePromotion } from "./application/remove-promotion.usecase";
 import { moveOrderTable } from "./application/move-order-table.usecase";
 import { transferOrderItems } from "./application/transfer-order-items.usecase";
+import { mergeOrders } from "./application/merge-orders.usecase";
 import { orderDrizzleRepository } from "./infrastructure/order.drizzle-repository";
 import { shiftDrizzleRepository } from "~/modules/shift/infrastructure/shift.drizzle-repository";
 import {
@@ -318,6 +319,34 @@ export const orderRouter = createTRPCRouter({
           },
         );
         return { source: source?.toDetail() ?? null, target: target.toDetail() };
+      } catch (error) {
+        mapOrderDomainError(error);
+      }
+    }),
+
+  // Gộp NGUYÊN đơn đang mở ở bàn này vào đơn đang mở SẴN ở bàn đích (khách
+  // ghép bàn) — bàn đích bắt buộc đã có đơn đang mở, khác transferItems
+  // (chuyển từng phần món, bàn đích có thể đang trống).
+  mergeOrders: userProcedure
+    .input(
+      z.object({
+        sourceOrderId: z.number().int().positive(),
+        targetTableId: z.number().int().positive(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await requireOpenShift();
+      try {
+        const { source, target } = await mergeOrders(
+          orderDrizzleRepository,
+          restaurantTableDrizzleRepository,
+          {
+            sourceOrderId: input.sourceOrderId,
+            targetTableId: input.targetTableId,
+            actorId: ctx.session.user.id,
+          },
+        );
+        return { source: source.toDetail(), target: target.toDetail() };
       } catch (error) {
         mapOrderDomainError(error);
       }
