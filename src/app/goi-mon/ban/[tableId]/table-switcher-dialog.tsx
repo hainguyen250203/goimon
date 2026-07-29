@@ -40,7 +40,7 @@ export function TableSwitcherDialog({
     <DialogRoot open={open} onOpenChange={(e) => onOpenChange(e.open)}>
       <DialogContent maxW={{ base: "calc(100vw - 24px)", md: "480px", lg: "600px" }} mx="auto">
         <DialogHeader>
-          <DialogTitle>Đổi bàn</DialogTitle>
+          <DialogTitle>Xem bàn khác</DialogTitle>
         </DialogHeader>
         <DialogCloseTrigger />
         <DialogBody>

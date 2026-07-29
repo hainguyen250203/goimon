@@ -18,6 +18,7 @@ import { cancelOrder } from "./application/cancel-order.usecase";
 import { applyPromotion } from "./application/apply-promotion.usecase";
 import { removePromotion } from "./application/remove-promotion.usecase";
 import { moveOrderTable } from "./application/move-order-table.usecase";
+import { transferOrderItems } from "./application/transfer-order-items.usecase";
 import { orderDrizzleRepository } from "./infrastructure/order.drizzle-repository";
 import { shiftDrizzleRepository } from "~/modules/shift/infrastructure/shift.drizzle-repository";
 import {
@@ -31,20 +32,24 @@ import type { Order } from "./domain/order.entity";
 
 // Domain error → TRPCError BAD_REQUEST với message tiếng Việt gốc thay vì
 // để lộ generic 500 — áp dụng cho mọi mutation đụng vào state machine order.
+function mapOrderDomainError(error: unknown): never {
+  if (
+    error instanceof InvalidOrderStatusTransitionError ||
+    error instanceof OrderItemNotFoundError ||
+    error instanceof EmptyOrderError ||
+    error instanceof PromotionNotAvailableError ||
+    error instanceof InvalidTableTransferError
+  ) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
+  }
+  throw error;
+}
+
 async function runOrderAction<T extends Order>(action: () => Promise<T>) {
   try {
     return (await action()).toDetail();
   } catch (error) {
-    if (
-      error instanceof InvalidOrderStatusTransitionError ||
-      error instanceof OrderItemNotFoundError ||
-      error instanceof EmptyOrderError ||
-      error instanceof PromotionNotAvailableError ||
-      error instanceof InvalidTableTransferError
-    ) {
-      throw new TRPCError({ code: "BAD_REQUEST", message: error.message });
-    }
-    throw error;
+    mapOrderDomainError(error);
   }
 }
 
@@ -259,5 +264,44 @@ export const orderRouter = createTRPCRouter({
           actorId: ctx.session.user.id,
         }),
       );
+    }),
+
+  // Chuyển 1 phần món (có thể chỉ 1 phần số lượng) từ đơn bàn này sang
+  // order_id của bàn khác — gộp vào đơn đang mở sẵn ở bàn đích hoặc tự mở đơn
+  // mới nếu bàn đích đang trống. Khác moveTable (chuyển NGUYÊN đơn sang bàn
+  // trống) — đơn nguồn ở đây vẫn tiếp tục tồn tại nếu còn món.
+  transferItems: userProcedure
+    .input(
+      z.object({
+        sourceOrderId: z.number().int().positive(),
+        items: z
+          .array(
+            z.object({
+              itemId: z.number().int().positive(),
+              quantity: z.number().int().positive(),
+            }),
+          )
+          .min(1),
+        targetTableId: z.number().int().positive(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const shiftId = await requireOpenShift();
+      try {
+        const { source, target } = await transferOrderItems(
+          orderDrizzleRepository,
+          restaurantTableDrizzleRepository,
+          {
+            sourceOrderId: input.sourceOrderId,
+            items: input.items,
+            targetTableId: input.targetTableId,
+            actorId: ctx.session.user.id,
+            shiftId,
+          },
+        );
+        return { source: source?.toDetail() ?? null, target: target.toDetail() };
+      } catch (error) {
+        mapOrderDomainError(error);
+      }
     }),
 });

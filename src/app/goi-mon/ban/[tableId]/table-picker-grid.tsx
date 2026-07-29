@@ -20,14 +20,15 @@ export function TablePickerGrid({
   currentTableId,
   isTableDisabled,
   onSelectTable,
-  busy,
+  disabled,
 }: {
   areas: AreaOption[];
   tables: TableForOrdering[];
   currentTableId: number;
   isTableDisabled?: (table: TableForOrdering) => boolean;
   onSelectTable: (tableId: number) => void;
-  busy?: boolean;
+  /** Khoá cả lưới — dùng khi đang mutate HOẶC khi chưa đủ điều kiện chọn bàn (vd chưa chọn món nào cần chuyển), không chỉ khi "đang bận". */
+  disabled?: boolean;
 }) {
   const [selectedAreaId, setSelectedAreaId] = useState<number>();
   const areaId = selectedAreaId ?? areas[0]?.id;
@@ -65,7 +66,7 @@ export function TablePickerGrid({
         })}
       </Flex>
 
-      <Box maxH="50vh" overflowY="auto" opacity={busy ? 0.6 : 1} pointerEvents={busy ? "none" : "auto"}>
+      <Box maxH="50vh" overflowY="auto" opacity={disabled ? 0.6 : 1} pointerEvents={disabled ? "none" : "auto"}>
         <Grid templateColumns={{ base: "repeat(4, 1fr)", lg: "repeat(5, 1fr)" }} gap={1.5}>
           {filteredTables.map((table) => {
             const occupied = table.activeOrder !== null;

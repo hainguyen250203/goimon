@@ -68,7 +68,7 @@ export function MoveOrderTableDialog({
             currentTableId={currentTableId}
             isTableDisabled={(table) => table.activeOrder !== null}
             onSelectTable={(tableId) => moveTable.mutate({ orderId, targetTableId: tableId })}
-            busy={moveTable.isPending}
+            disabled={moveTable.isPending}
           />
         </DialogBody>
       </DialogContent>

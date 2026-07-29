@@ -1,5 +1,5 @@
 import { Box, Circle, Flex, Stack, Text } from "@chakra-ui/react";
-import { ArrowLeftRight, Ban, ChefHat, CreditCard, Minus, Percent, X } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Ban, ChefHat, CreditCard, Minus, Move, Percent, X } from "lucide-react";
 
 import type { OrderTimelineEvent } from "~/modules/order/domain/order.repository";
 import { formatDateTime, formatVnd, PAYMENT_METHOD_LABEL } from "~/lib/format-order";
@@ -94,10 +94,32 @@ function describeEvent(entry: OrderTimelineEvent): {
       const fromTableName = payload?.fromTableName as string | undefined;
       const toTableName = payload?.toTableName as string | undefined;
       return {
-        icon: <ArrowLeftRight size={14} />,
+        icon: <Move size={14} />,
         accent: "gray",
         label: "Chuyển bàn",
         detail: fromTableName && toTableName ? [`${fromTableName} → ${toTableName}`] : [],
+      };
+    }
+    case "items_transferred_out": {
+      const items =
+        (payload?.items as { itemName: string; quantity: number; note?: string | null }[] | undefined) ?? [];
+      const toTableName = payload?.toTableName as string | undefined;
+      return {
+        icon: <ArrowUpRight size={14} />,
+        accent: "gray",
+        label: toTableName ? `Chuyển món sang ${toTableName}` : "Chuyển món sang bàn khác",
+        detail: items.map((i) => `${i.itemName} ×${i.quantity}${i.note ? ` (${i.note})` : ""}`),
+      };
+    }
+    case "items_transferred_in": {
+      const items =
+        (payload?.items as { itemName: string; quantity: number; note?: string | null }[] | undefined) ?? [];
+      const fromTableName = payload?.fromTableName as string | undefined;
+      return {
+        icon: <ArrowDownLeft size={14} />,
+        accent: "gray",
+        label: fromTableName ? `Nhận món từ ${fromTableName}` : "Nhận món từ bàn khác",
+        detail: items.map((i) => `${i.itemName} ×${i.quantity}${i.note ? ` (${i.note})` : ""}`),
       };
     }
     default:

@@ -5,12 +5,13 @@ import { useRouter } from "next/navigation";
 import { Badge, Box, Flex, IconButton, Text } from "@chakra-ui/react";
 import {
   ArrowLeft,
-  ArrowLeftRight,
   ChefHat,
   ClipboardCheck,
   History,
   LayoutGrid,
+  Move,
   Printer,
+  Split,
   UtensilsCrossed,
 } from "lucide-react";
 
@@ -23,6 +24,7 @@ import { DraftCartPanel } from "./draft-cart-panel";
 import { SubmittedOrderPanel } from "./submitted-order-panel";
 import { TableSwitcherDialog } from "./table-switcher-dialog";
 import { MoveOrderTableDialog } from "./move-order-table-dialog";
+import { TransferItemsDialog } from "./transfer-items-dialog";
 
 type Tab = "menu" | "draft" | "submitted";
 
@@ -94,6 +96,7 @@ export function OrderTableView({ tableId }: { tableId: number }) {
   const [tab, setTab] = useState<Tab>(() => (draftCount > 0 ? "draft" : order ? "submitted" : "menu"));
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [moveTableOpen, setMoveTableOpen] = useState(false);
+  const [transferItemsOpen, setTransferItemsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
 
   // Xoá hết món ở tab "Món đã gọi" thì đơn bị huỷ — order trả về null sau khi
@@ -139,7 +142,7 @@ export function OrderTableView({ tableId }: { tableId: number }) {
           {table?.name ?? `Bàn ${tableId}`}
         </Text>
         <IconButton
-          aria-label="Đổi bàn"
+          aria-label="Xem bàn khác"
           size={{ base: "xs", lg: "sm" }}
           variant="outline"
           onClick={() => setSwitcherOpen(true)}
@@ -153,7 +156,17 @@ export function OrderTableView({ tableId }: { tableId: number }) {
             variant="outline"
             onClick={() => setMoveTableOpen(true)}
           >
-            <ArrowLeftRight size={16} />
+            <Move size={16} />
+          </IconButton>
+        )}
+        {order && (
+          <IconButton
+            aria-label="Chuyển món sang bàn khác"
+            size={{ base: "xs", lg: "sm" }}
+            variant="outline"
+            onClick={() => setTransferItemsOpen(true)}
+          >
+            <Split size={16} />
           </IconButton>
         )}
         {order && (
@@ -228,6 +241,7 @@ export function OrderTableView({ tableId }: { tableId: number }) {
             currentTableId={tableId}
             orderId={order.id}
           />
+          <TransferItemsDialog open={transferItemsOpen} onOpenChange={setTransferItemsOpen} order={order} />
           <OrderHistoryDialog open={historyOpen} onOpenChange={setHistoryOpen} orderId={order.id} />
         </>
       )}
