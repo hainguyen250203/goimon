@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Percent,
   Printer,
+  ScrollText,
   Table2,
   Users,
   UtensilsCrossed,
@@ -86,6 +87,13 @@ export const ADMIN_NAV: NavItem[] = [
     label: "Người dùng",
     icon: Users,
     href: "/quan-ly/nguoi-dung",
+    minRole: "admin",
+  },
+  {
+    key: "activity-log",
+    label: "Nhật ký hoạt động",
+    icon: ScrollText,
+    href: "/quan-ly/nhat-ky-hoat-dong",
     minRole: "admin",
   },
   {
