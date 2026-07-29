@@ -1,4 +1,3 @@
-import type { RestaurantTableRepository } from "~/modules/table/domain/restaurant-table.repository";
 import type { Order } from "../domain/order.entity";
 import type { OrderRepository } from "../domain/order.repository";
 
@@ -25,13 +24,12 @@ export type UpdateOrderItemsParams = {
  * DB sau đó) để trang Lịch sử gọi món hiển thị/tìm kiếm được mà không cần
  * join lại. Chỉ ghi event khi hành động đó thực sự xảy ra (mảng không rỗng).
  *
- * Xoá hết món (đơn về 0 món): order.entity tự chuyển status sang "cancelled"
- * (xem removeItem()) — usecase chỉ cần trả bàn về "available" giống luồng
- * cancelOrder, vì bàn không thể "đang phục vụ" với đơn rỗng/đã huỷ.
+ * Xoá hết món (đơn về 0 món) ở đây KHÔNG tự huỷ đơn — coi như "trả hết
+ * món", đơn vẫn "open", bàn vẫn đang phục vụ (xem Order.removeItem()). Chỉ
+ * bấm "Huỷ đơn" (cancel-order.usecase.ts) mới thật sự đóng đơn/trả bàn.
  */
 export async function updateOrderItems(
   orderRepository: OrderRepository,
-  tableRepository: RestaurantTableRepository,
   params: UpdateOrderItemsParams,
 ): Promise<Order> {
   const orderEntity = await orderRepository.findById(params.orderId);
@@ -85,10 +83,6 @@ export async function updateOrderItems(
 
   const saved = await orderRepository.save(orderEntity);
 
-  if (saved.status === "cancelled") {
-    await tableRepository.setStatus(saved.tableId, "available");
-  }
-
   const allRemoved = [...removedItems, ...removedFromQuantityChange];
   const allAdded = addedFromQuantityChange;
 
@@ -108,16 +102,6 @@ export async function updateOrderItems(
       eventType: "items_added",
       payload: { items: allAdded },
       itemsSummary: allAdded.map((i) => `${i.itemName} ×${i.quantity}`).join(", "),
-    });
-  }
-  // Xoá hết món tự chuyển đơn sang "cancelled" (xem Order.removeItem()) —
-  // ghi thêm mốc đóng đơn rõ ràng, giống hệt lúc huỷ tay, để lịch sử không
-  // dừng lại đột ngột ở dòng "Trả món" cuối cùng mà không rõ đơn đã đóng.
-  if (saved.status === "cancelled") {
-    await orderRepository.recordEvent({
-      orderId: saved.id!,
-      actorId: params.actorId,
-      eventType: "order_cancelled",
     });
   }
 

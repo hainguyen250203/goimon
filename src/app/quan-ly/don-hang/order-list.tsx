@@ -35,6 +35,7 @@ const STATUS_OPTIONS = [
   { value: "open", label: STATUS_LABEL.open },
   { value: "paid", label: STATUS_LABEL.paid },
   { value: "cancelled", label: STATUS_LABEL.cancelled },
+  { value: "transferred", label: STATUS_LABEL.transferred },
 ];
 
 const columns: ListViewColumn<OrderListItem>[] = [

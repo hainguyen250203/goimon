@@ -175,6 +175,7 @@ export function OrderTableView({ tableId }: { tableId: number }) {
             aria-label="Chuyển món sang bàn khác"
             size={{ base: "xs", lg: "sm" }}
             variant="outline"
+            disabled={order.items.length === 0}
             onClick={() => setTransferItemsOpen(true)}
           >
             <Split size={16} />
@@ -185,6 +186,7 @@ export function OrderTableView({ tableId }: { tableId: number }) {
             aria-label="Gộp đơn với bàn khác"
             size={{ base: "xs", lg: "sm" }}
             variant="outline"
+            disabled={order.items.length === 0}
             onClick={() => setMergeOrdersOpen(true)}
           >
             <GitMerge size={16} />
@@ -206,6 +208,7 @@ export function OrderTableView({ tableId }: { tableId: number }) {
             size={{ base: "xs", lg: "sm" }}
             variant="outline"
             loading={printBill.isPending}
+            disabled={order.items.length === 0}
             onClick={() => printBill.mutate({ orderId: order.id })}
           >
             <Printer size={16} />

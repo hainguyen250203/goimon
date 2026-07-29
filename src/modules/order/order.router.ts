@@ -78,7 +78,7 @@ export const orderRouter = createTRPCRouter({
       z.object({
         page: z.number().int().min(1).default(1),
         pageSize: z.number().int().min(1).max(100).default(20),
-        status: z.enum(["open", "paid", "cancelled"]).optional(),
+        status: z.enum(["open", "paid", "cancelled", "transferred"]).optional(),
         search: z.string().optional(),
         shiftId: z.number().int().positive().optional(),
       }),
@@ -186,7 +186,7 @@ export const orderRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await requireOpenShift();
       return runOrderAction(() =>
-        updateOrderItems(orderDrizzleRepository, restaurantTableDrizzleRepository, {
+        updateOrderItems(orderDrizzleRepository, {
           orderId: input.orderId,
           actorId: ctx.session.user.id,
           changes: input.changes,

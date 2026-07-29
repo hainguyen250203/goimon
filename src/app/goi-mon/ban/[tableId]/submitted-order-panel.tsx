@@ -127,14 +127,6 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [promotionPickerOpen, setPromotionPickerOpen] = useState(false);
 
-  if (order.items.length === 0) {
-    return (
-      <Flex flex={1} align="center" justify="center">
-        <EmptyState title="Chưa có món nào" />
-      </Flex>
-    );
-  }
-
   const isBusy =
     updateItemsMutation.isPending || printBill.isPending || applyPromotion.isPending || removePromotion.isPending;
 
@@ -220,23 +212,32 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
       )}
 
       <Box flex={1} overflowY="auto" p={{ base: 2, lg: 3 }}>
-        <Stack gap={1.5}>
-          {localItems.map((item) => (
-            <OrderLineItemCard
-              key={item.id!}
-              name={item.itemName}
-              unitPrice={item.unitPrice}
-              quantity={item.quantity}
-              note={item.note}
-              editableNote={false}
-              disabled={isBusy}
-              onQuantityChange={(quantity) =>
-                setLocalItems((items) => items.map((i) => (i.id === item.id ? { ...i, quantity } : i)))
-              }
-              onRemove={() => setLocalItems((items) => items.filter((i) => i.id !== item.id))}
+        {localItems.length === 0 ? (
+          <Flex flex={1} align="center" justify="center" py={10}>
+            <EmptyState
+              title="Đã trả hết món"
+              description="Bàn vẫn đang phục vụ — gọi thêm món hoặc bấm Huỷ đơn nếu không dùng nữa."
             />
-          ))}
-        </Stack>
+          </Flex>
+        ) : (
+          <Stack gap={1.5}>
+            {localItems.map((item) => (
+              <OrderLineItemCard
+                key={item.id!}
+                name={item.itemName}
+                unitPrice={item.unitPrice}
+                quantity={item.quantity}
+                note={item.note}
+                editableNote={false}
+                disabled={isBusy}
+                onQuantityChange={(quantity) =>
+                  setLocalItems((items) => items.map((i) => (i.id === item.id ? { ...i, quantity } : i)))
+                }
+                onRemove={() => setLocalItems((items) => items.filter((i) => i.id !== item.id))}
+              />
+            ))}
+          </Stack>
+        )}
       </Box>
 
       <Box flexShrink={0} bg="bg" borderTopWidth="1px" borderColor="border" p={{ base: 2.5, lg: 3 }}>
@@ -249,7 +250,7 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
           </Text>
         </Flex>
 
-        {order.promotion ? (
+        {localItems.length > 0 && (order.promotion ? (
           <Flex
             justify="space-between"
             align="center"
@@ -302,7 +303,7 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
               Thêm
             </Button>
           </Flex>
-        )}
+        ))}
 
         <Flex justify="space-between" align="center" mb={2}>
           <Text fontSize={{ base: "xs", lg: "sm" }} fontWeight="semibold">
@@ -328,6 +329,9 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
             colorPalette="blue"
             size={{ base: "sm", lg: "md" }}
             loading={updateItemsMutation.isPending}
+            // Đơn đã lưu mà 0 món thì chưa có gì để thanh toán — "Xác nhận"
+            // (lưu thay đổi, kể cả trả hết món) vẫn luôn bấm được.
+            disabled={!isDirty && localItems.length === 0}
             onClick={() => (isDirty ? handleConfirmChanges() : handleOpenPayment())}
           >
             {isDirty ? "Xác nhận" : "Thanh toán"}

@@ -10,7 +10,7 @@ export type MergeOrdersParams = {
 };
 
 export type MergeOrdersResult = {
-  /** Đơn nguồn LUÔN hết món sau khi gộp — tự "cancelled" (xem Order.removeItem()). */
+  /** Đơn nguồn LUÔN hết món sau khi gộp — tự "transferred" (xem Order.removeItem()). */
   source: Order;
   target: Order;
 };
@@ -61,7 +61,7 @@ export async function mergeOrders(
     );
   }
   for (const item of [...sourceOrder.items]) {
-    sourceOrder.removeItem(item.id!);
+    sourceOrder.removeItem(item.id!, "transferred");
   }
 
   const savedTarget = await orderRepository.save(targetOrder);
@@ -88,13 +88,13 @@ export async function mergeOrders(
     eventType: "items_transferred_in",
     payload: { items: movedItems, fromTableId: savedSource.tableId, fromTableName: sourceTableName },
   });
-  // Gộp đơn LUÔN chuyển hết món đi nên đơn nguồn luôn "cancelled" — ghi thêm
-  // mốc đóng đơn rõ ràng, giống hệt lúc huỷ tay, để lịch sử không dừng lại
-  // đột ngột ở dòng "Chuyển món sang X" mà không rõ đơn đã đóng.
+  // Gộp đơn LUÔN chuyển hết món đi nên đơn nguồn luôn "transferred" (KHÁC
+  // "cancelled" — không mất gì, chỉ gộp đơn) — ghi mốc đóng đơn riêng, không
+  // dùng chung eventType "order_cancelled" kẻo lịch sử hiện nhầm "Huỷ đơn".
   await orderRepository.recordEvent({
     orderId: savedSource.id!,
     actorId: params.actorId,
-    eventType: "order_cancelled",
+    eventType: "order_transferred",
   });
 
   return { source: savedSource, target: savedTarget };

@@ -200,14 +200,20 @@ export class Order {
     this.invalidatePrint();
   }
 
-  /** Xoá hết món (đơn về 0 món) thì huỷ luôn đơn — bàn không thể "đang phục vụ" với đơn rỗng. */
-  removeItem(itemId: number) {
+  /**
+   * Xoá món — KHÔNG tự huỷ đơn dù về 0 món (đơn về 0 món coi như "trả hết
+   * món", đơn vẫn "open", bàn vẫn đang phục vụ — chỉ bấm "Huỷ đơn" mới thật
+   * sự huỷ). Chỉ truyền `emptyStatus` khi việc xoá này là HỆ QUẢ của chuyển/
+   * gộp hết món sang bàn khác — lúc đó đơn nguồn thật sự cần đóng lại để trả
+   * bàn (xem transfer-order-items.usecase.ts và merge-orders.usecase.ts).
+   */
+  removeItem(itemId: number, emptyStatus?: Extract<OrderStatus, "transferred">) {
     this.assertMutable();
     const index = this.items.findIndex((i) => i.id === itemId);
     if (index === -1) throw new OrderItemNotFoundError(itemId);
     this.items.splice(index, 1);
-    if (this.items.length === 0) {
-      this.status = "cancelled";
+    if (this.items.length === 0 && emptyStatus) {
+      this.status = emptyStatus;
       return;
     }
     this.invalidatePrint();

@@ -14,7 +14,7 @@ export type TransferOrderItemsParams = {
 };
 
 export type TransferOrderItemsResult = {
-  /** null nếu đơn nguồn hết món sau khi chuyển (tự "cancelled" — xem Order.removeItem()). */
+  /** null nếu đơn nguồn hết món sau khi chuyển (tự "transferred" — xem Order.removeItem()). */
   source: Order | null;
   target: Order;
 };
@@ -71,12 +71,12 @@ export async function transferOrderItems(
     if (remaining > 0) {
       sourceOrder.updateItemQuantity(item.id!, remaining);
     } else {
-      sourceOrder.removeItem(item.id!);
+      sourceOrder.removeItem(item.id!, "transferred");
     }
   }
 
   const savedTarget = await orderRepository.save(targetOrder);
-  const sourceBecameEmpty = sourceOrder.status === "cancelled";
+  const sourceBecameEmpty = sourceOrder.status === "transferred";
   const savedSource = await orderRepository.save(sourceOrder);
 
   if (isNewTargetOrder) {
@@ -109,14 +109,14 @@ export async function transferOrderItems(
     eventType: "items_transferred_in",
     payload: { items: transferredItems, fromTableId: savedSource.tableId, fromTableName: sourceTableName },
   });
-  // Chuyển hết món tự chuyển đơn nguồn sang "cancelled" — ghi thêm mốc đóng
-  // đơn rõ ràng, giống hệt lúc huỷ tay, để lịch sử không dừng lại đột ngột
-  // ở dòng "Chuyển món sang X" mà không rõ đơn đã đóng.
+  // Chuyển hết món tự chuyển đơn nguồn sang "transferred" (KHÁC "cancelled"
+  // — không mất gì, chỉ chuyển đơn) — ghi mốc đóng đơn riêng, không dùng
+  // chung eventType "order_cancelled" kẻo lịch sử hiện nhầm thành "Huỷ đơn".
   if (sourceBecameEmpty) {
     await orderRepository.recordEvent({
       orderId: savedSource.id!,
       actorId: params.actorId,
-      eventType: "order_cancelled",
+      eventType: "order_transferred",
     });
   }
 

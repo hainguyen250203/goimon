@@ -10,7 +10,7 @@ type Accent = "green" | "red" | "gray";
  * Diễn giải payload JSON thô thành nhãn + chi tiết tiếng Việt theo eventType
  * — UI tự biết cách đọc từng loại event, repository chỉ trả payload thô.
  * Dùng chung cho cả trang lịch sử full-page (/goi-mon) lẫn dialog lịch sử ở
- * admin (/quan-ly/don-hang) — tránh lặp lại cách diễn giải 9 event_type.
+ * admin (/quan-ly/don-hang) — tránh lặp lại cách diễn giải 10 event_type.
  *
  * Màu chỉ dùng 3 tông (xanh = việc tích cực/hoàn tất, đỏ = việc bị đảo
  * ngược/huỷ, xám = chỉnh sửa thông thường) thay vì 1 màu riêng cho mỗi loại
@@ -111,6 +111,10 @@ export function describeEvent(entry: OrderTimelineEvent): {
         detail: items.map((i) => `${i.itemName} ×${i.quantity}${i.note ? ` (${i.note})` : ""}`),
       };
     }
+    // Đơn tự đóng vì chuyển/gộp hết món sang bàn khác — KHÁC "order_cancelled"
+    // (huỷ thật): đây không mất gì nên không dùng màu đỏ, chỉ là mốc đóng đơn.
+    case "order_transferred":
+      return { icon: <ArrowUpRight size={14} />, accent: "gray", label: "Đơn đã chuyển hết", detail: [] };
     default:
       return { icon: <ChefHat size={14} />, accent: "gray", label: entry.eventType, detail: [] };
   }
