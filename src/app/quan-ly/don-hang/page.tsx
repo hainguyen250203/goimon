@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Box } from "@chakra-ui/react";
 import { Skeleton } from "~/components/ui/skeleton";
 
 import { api, HydrateClient } from "~/trpc/server";
@@ -27,10 +28,12 @@ export default async function DonHangPage({
   void api.order.list.prefetch({ page, pageSize: PAGE_SIZE, status, shiftId });
 
   return (
-    <HydrateClient>
+    <Box p={{ base: 4, md: 6 }}>
+      <HydrateClient>
       <Suspense fallback={<Skeleton h={96} rounded="l3" />}>
         <OrderList page={page} status={status} shiftId={shiftId} />
       </Suspense>
-    </HydrateClient>
+      </HydrateClient>
+    </Box>
   );
 }

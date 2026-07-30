@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Box } from "@chakra-ui/react";
 import { Skeleton } from "~/components/ui/skeleton";
 
 import { getSession } from "~/server/better-auth/server";
@@ -12,10 +13,12 @@ export default async function ThanhToanPage() {
   void api.paymentConfig.get.prefetch();
 
   return (
-    <HydrateClient>
+    <Box p={{ base: 4, md: 6 }}>
+      <HydrateClient>
       <Suspense fallback={<Skeleton h={40} rounded="l3" />}>
         <PaymentConfigView canEdit={canEdit} />
       </Suspense>
-    </HydrateClient>
+      </HydrateClient>
+    </Box>
   );
 }

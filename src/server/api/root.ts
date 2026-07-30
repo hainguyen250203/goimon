@@ -3,6 +3,7 @@ import {
   createTRPCRouter,
   publicProcedure,
 } from "~/server/api/trpc";
+import { assistantRouter } from "~/modules/assistant/assistant.router";
 import { menuRouter } from "~/modules/menu/menu.router";
 import { tableRouter } from "~/modules/table/table.router";
 import { printerRouter } from "~/modules/printer/printer.router";
@@ -29,6 +30,7 @@ export const appRouter = createTRPCRouter({
   shift: shiftRouter,
   paymentConfig: paymentConfigRouter,
   activityLog: activityLogRouter,
+  assistant: assistantRouter,
 });
 
 // export type definition of API

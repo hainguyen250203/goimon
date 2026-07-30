@@ -1,6 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
+  Bot,
+  Gauge,
   ClipboardList,
   Clock,
   Landmark,
@@ -96,6 +98,22 @@ export const ADMIN_NAV: NavItem[] = [
     minRole: "manager",
   },
 
+  {
+    key: "assistant",
+    label: "Trợ lý AI",
+    icon: Bot,
+    href: "/quan-ly/tro-ly-ai",
+    group: "Quản trị",
+    minRole: "admin",
+  },
+  {
+    key: "assistant-usage",
+    label: "Thống kê AI",
+    icon: Gauge,
+    href: "/quan-ly/tro-ly-ai/thong-ke",
+    group: "Quản trị",
+    minRole: "admin",
+  },
   {
     key: "user",
     label: "Người dùng",

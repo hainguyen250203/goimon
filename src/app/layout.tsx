@@ -36,6 +36,13 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: "cover",
+  // Khớp đúng màu nền thật của app (semantic token "bg": trắng ở light mode,
+  // đen ở dark mode) — trước đây không set nên trình duyệt/PWA lấy màu xanh
+  // mặc định (#3182CE) từ site.webmanifest, gây lệch tông rõ nhất ở light mode.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#000000" },
+  ],
 };
 
 // Be Vietnam Pro: thiết kế riêng cho tiếng Việt (dấu thanh điệu chuẩn), sans

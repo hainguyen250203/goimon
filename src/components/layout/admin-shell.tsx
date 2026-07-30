@@ -276,7 +276,11 @@ export function AdminShell({
           </Tooltip>
           <NavUser user={user} />
         </Flex>
-        <Box as="main" flex={1} p={{ base: 4, md: 6 }}>
+        {/* Không quy định padding ở đây — mỗi page tự set padding của mình
+            (xem CLAUDE.md / hướng dẫn tro-ly-ai). Trang có lịch sử/chat cần
+            chiếm toàn bộ chiều cao (không padding trên dưới) trong khi các
+            trang danh sách bình thường tự thêm `p={{ base: 4, md: 6 }}`. */}
+        <Box as="main" flex={1}>
           {children}
         </Box>
       </Flex>

@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Box } from "@chakra-ui/react";
 import { Skeleton } from "~/components/ui/skeleton";
 
 import { api, HydrateClient } from "~/trpc/server";
@@ -29,10 +30,12 @@ export default async function BanPage({
   void api.table.listAreas.prefetch();
 
   return (
-    <HydrateClient>
+    <Box p={{ base: 4, md: 6 }}>
+      <HydrateClient>
       <Suspense fallback={<Skeleton h={96} rounded="l3" />}>
         <TableList page={page} areaId={areaId} status={status} />
       </Suspense>
-    </HydrateClient>
+      </HydrateClient>
+    </Box>
   );
 }

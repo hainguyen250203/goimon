@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Box } from "@chakra-ui/react";
 import { Skeleton } from "~/components/ui/skeleton";
 
 import { api, HydrateClient } from "~/trpc/server";
@@ -20,10 +21,12 @@ export default async function MayInPage({
   void api.printer.list.prefetch({ page, pageSize: PAGE_SIZE, isActive });
 
   return (
-    <HydrateClient>
+    <Box p={{ base: 4, md: 6 }}>
+      <HydrateClient>
       <Suspense fallback={<Skeleton h={96} rounded="l3" />}>
         <PrinterList page={page} isActive={isActive} />
       </Suspense>
-    </HydrateClient>
+      </HydrateClient>
+    </Box>
   );
 }

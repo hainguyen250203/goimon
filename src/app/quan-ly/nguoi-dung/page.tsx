@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Box } from "@chakra-ui/react";
 import { redirect } from "next/navigation";
 import { Skeleton } from "~/components/ui/skeleton";
 
@@ -45,10 +46,12 @@ export default async function NguoiDungPage({
   void api.user.list.prefetch({ page, pageSize: PAGE_SIZE, role, banned });
 
   return (
-    <HydrateClient>
+    <Box p={{ base: 4, md: 6 }}>
+      <HydrateClient>
       <Suspense fallback={<Skeleton h={96} rounded="l3" />}>
         <UserList page={page} role={role} banned={banned} />
       </Suspense>
-    </HydrateClient>
+      </HydrateClient>
+    </Box>
   );
 }

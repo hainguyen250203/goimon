@@ -22,3 +22,26 @@ body {
   pointer-events: none;
   z-index: 9999;
 }
+
+/* Avatar nhỏ ở dòng "đang xử lý" (xem chat-panel.tsx) — glow lan toả nhẹ.
+   Avatar lớn ở màn hình chào dùng Web Animations API (xem
+   modules/assistant/ui/floating-avatar.tsx), không cần CSS keyframes riêng. */
+@keyframes assistant-avatar-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
+  }
+}
+
+.assistant-avatar-glow {
+  animation: assistant-avatar-glow 1.6s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .assistant-avatar-glow {
+    animation: none;
+  }
+}

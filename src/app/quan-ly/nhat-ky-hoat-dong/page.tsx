@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { Box } from "@chakra-ui/react";
 import { redirect } from "next/navigation";
 import { Skeleton } from "~/components/ui/skeleton";
 
@@ -29,10 +30,12 @@ export default async function NhatKyHoatDongPage({
   void api.activityLog.list.prefetch({ page, pageSize: PAGE_SIZE, entityType });
 
   return (
-    <HydrateClient>
+    <Box p={{ base: 4, md: 6 }}>
+      <HydrateClient>
       <Suspense fallback={<Skeleton h={96} rounded="l3" />}>
         <ActivityLogList page={page} entityType={entityType} />
       </Suspense>
-    </HydrateClient>
+      </HydrateClient>
+    </Box>
   );
 }

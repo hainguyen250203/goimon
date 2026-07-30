@@ -240,7 +240,19 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
         )}
       </Box>
 
-      <Box flexShrink={0} bg="bg" borderTopWidth="1px" borderColor="border" p={{ base: 2.5, lg: 3 }}>
+      <Box
+        flexShrink={0}
+        bg="bg"
+        borderTopWidth="1px"
+        borderColor="border"
+        px={{ base: 2.5, lg: 3 }}
+        pt={{ base: 2.5, lg: 3 }}
+        // An toàn cho thiết bị có thanh cử chỉ/notch dưới (viewportFit "cover"
+        // ở layout.tsx bật env(safe-area-inset-bottom)) — cộng thêm khoảng đệm
+        // cố định để nút bấm không dính sát mép màn hình dù có safe-area hay
+        // không (Android thường trả về 0 cho biến này).
+        pb={{ base: "calc(0.625rem + env(safe-area-inset-bottom))", lg: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+      >
         <Flex justify="space-between" align="center" mb={1}>
           <Text fontSize={{ base: "xs", lg: "sm" }} color="fg.muted">
             Tạm tính
