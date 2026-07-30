@@ -27,6 +27,7 @@ const printerInputSchema = z.object({
       "Địa chỉ IP không hợp lệ",
     ),
   port: z.number().int().min(1).max(65535),
+  type: z.enum(["bill", "kitchen"]),
   isActive: z.boolean(),
 });
 
@@ -72,8 +73,8 @@ export const printerRouter = createTRPCRouter({
         entityType: "printer",
         entityId: String(after.id),
         metadata: {
-          before: { name: before.name, ipAddress: before.ipAddress, port: before.port, isActive: before.isActive },
-          after: { name: after.name, ipAddress: after.ipAddress, port: after.port, isActive: after.isActive },
+          before: { name: before.name, ipAddress: before.ipAddress, port: before.port, type: before.type, isActive: before.isActive },
+          after: { name: after.name, ipAddress: after.ipAddress, port: after.port, type: after.type, isActive: after.isActive },
         },
       });
       return after;

@@ -1,7 +1,7 @@
-import { asc, count, eq } from "drizzle-orm";
+import { and, asc, count, eq } from "drizzle-orm";
 
 import { db } from "~/server/db";
-import type { Printer } from "../domain/printer.entity";
+import type { Printer, PrinterType } from "../domain/printer.entity";
 import type {
   CreatePrinterParams,
   ListPrintersParams,
@@ -16,6 +16,7 @@ function toEntity(row: {
   name: string;
   ipAddress: string;
   port: number;
+  type: string;
   isActive: boolean;
 }): Printer {
   return {
@@ -23,6 +24,7 @@ function toEntity(row: {
     name: row.name,
     ipAddress: row.ipAddress,
     port: row.port,
+    type: row.type as PrinterType,
     isActive: row.isActive,
   };
 }
@@ -75,5 +77,13 @@ export const printerDrizzleRepository: PrinterRepository = {
 
   async remove(id: number): Promise<void> {
     await db.delete(printer).where(eq(printer.id, id));
+  },
+
+  async listActiveByType(type: PrinterType): Promise<Printer[]> {
+    const rows = await db
+      .select()
+      .from(printer)
+      .where(and(eq(printer.type, type), eq(printer.isActive, true)));
+    return rows.map(toEntity);
   },
 };

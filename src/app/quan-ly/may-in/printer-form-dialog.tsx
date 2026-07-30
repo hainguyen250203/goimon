@@ -14,15 +14,22 @@ import {
 import { Field } from "~/components/ui/field";
 import { Switch } from "~/components/ui/switch";
 import { toaster } from "~/components/ui/toaster";
+import { FilterSelect } from "~/components/data-table/filter-select";
 import { api } from "~/trpc/react";
-import type { Printer } from "~/modules/printer/domain/printer.entity";
+import type { Printer, PrinterType } from "~/modules/printer/domain/printer.entity";
 
 const IPV4_REGEX = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+
+const TYPE_OPTIONS: { value: PrinterType; label: string }[] = [
+  { value: "bill", label: "Hoá đơn" },
+  { value: "kitchen", label: "Bếp" },
+];
 
 type FormState = {
   name: string;
   ipAddress: string;
   port: string;
+  type: PrinterType;
   isActive: boolean;
 };
 
@@ -31,6 +38,7 @@ function toFormState(item?: Printer, prefill?: { ipAddress: string; port: number
     name: item?.name ?? "",
     ipAddress: item?.ipAddress ?? prefill?.ipAddress ?? "",
     port: item ? String(item.port) : prefill ? String(prefill.port) : "",
+    type: item?.type ?? "bill",
     isActive: item?.isActive ?? true,
   };
 }
@@ -95,6 +103,7 @@ export function PrinterFormDialog({
       name: form.name.trim(),
       ipAddress: form.ipAddress.trim(),
       port,
+      type: form.type,
       isActive: form.isActive,
     };
 
@@ -155,6 +164,15 @@ export function PrinterFormDialog({
                 max={65535}
                 value={form.port}
                 onChange={(e) => setForm((f) => ({ ...f, port: e.target.value }))}
+              />
+            </Field>
+
+            <Field label="Loại máy in">
+              <FilterSelect
+                options={TYPE_OPTIONS}
+                value={form.type}
+                onValueChange={(value) => setForm((f) => ({ ...f, type: value as PrinterType }))}
+                width="full"
               />
             </Field>
 

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "nextjs-toploader/app";
 import { keepPreviousData } from "@tanstack/react-query";
-import { Button, Stack } from "@chakra-ui/react";
+import { Badge, Button, Stack } from "@chakra-ui/react";
 import { Plus, ScanSearch } from "lucide-react";
 
 import {
@@ -58,6 +58,15 @@ export function PrinterList({
     { key: "name", header: "Tên máy in", cell: (row) => row.name },
     { key: "ipAddress", header: "Địa chỉ IP", cell: (row) => row.ipAddress },
     { key: "port", header: "Cổng", cell: (row) => row.port },
+    {
+      key: "type",
+      header: "Loại",
+      cell: (row) => (
+        <Badge colorPalette={row.type === "kitchen" ? "purple" : "blue"} variant="subtle" size="sm">
+          {row.type === "kitchen" ? "Bếp" : "Hoá đơn"}
+        </Badge>
+      ),
+    },
     {
       key: "isActive",
       header: "Trạng thái",

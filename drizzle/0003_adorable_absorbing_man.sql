@@ -1,0 +1,1 @@
+ALTER TABLE "printers" ADD COLUMN "type" varchar(20) DEFAULT 'bill' NOT NULL;

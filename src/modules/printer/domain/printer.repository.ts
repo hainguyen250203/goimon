@@ -1,4 +1,4 @@
-import type { Printer } from "./printer.entity";
+import type { Printer, PrinterType } from "./printer.entity";
 
 export type ListPrintersParams = {
   page: number;
@@ -15,6 +15,7 @@ export type CreatePrinterParams = {
   name: string;
   ipAddress: string;
   port: number;
+  type: PrinterType;
   isActive: boolean;
 };
 
@@ -28,4 +29,6 @@ export interface PrinterRepository {
   update(params: UpdatePrinterParams): Promise<Printer>;
   /** Không có bảng nào khác tham chiếu printers — xoá thật (hard delete). */
   remove(id: number): Promise<void>;
+  /** Dùng để gửi lệnh in tới TOÀN BỘ máy in khớp loại — xem print-bill-to-printers.usecase.ts. */
+  listActiveByType(type: PrinterType): Promise<Printer[]>;
 }
