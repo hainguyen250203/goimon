@@ -21,19 +21,14 @@ function vnDateToUtc(year: number, month: number, day: number): Date {
 }
 
 /**
- * Mặc định: đầu tháng hiện tại → hết hôm qua (loại hôm nay vì chưa xong
- * ngày). Nếu hôm nay là ngày 1, "đầu tháng → hôm qua" sẽ rỗng/vô nghĩa —
- * lùi về xem trọn tháng trước.
+ * Mặc định: đầu tháng hiện tại → hết hôm nay (bao gồm hôm nay). `day + 1`
+ * tự tràn sang tháng sau đúng nếu hôm nay là ngày cuối tháng — `Date.UTC`
+ * xử lý overflow ngày/tháng theo chuẩn, không cần tự tính tháng sau thủ công.
  */
 export function getDefaultReportRange(now = new Date()): ReportDateRange {
   const { year, month, day } = getVietnamYMD(now);
-  const startOfThisMonth = vnDateToUtc(year, month, 1);
-
-  if (day === 1) {
-    const prevMonth = month === 1 ? 12 : month - 1;
-    const prevYear = month === 1 ? year - 1 : year;
-    return { start: vnDateToUtc(prevYear, prevMonth, 1), end: startOfThisMonth };
-  }
-
-  return { start: startOfThisMonth, end: vnDateToUtc(year, month, day) };
+  return {
+    start: vnDateToUtc(year, month, 1),
+    end: vnDateToUtc(year, month, day + 1),
+  };
 }
