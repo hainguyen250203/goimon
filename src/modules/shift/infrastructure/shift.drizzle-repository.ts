@@ -1,4 +1,4 @@
-import { aliasedTable, count, desc, eq } from "drizzle-orm";
+import { aliasedTable, and, asc, count, desc, eq, gte, lt } from "drizzle-orm";
 
 import { db } from "~/server/db";
 import { user } from "~/server/better-auth/schema";
@@ -6,6 +6,7 @@ import { Shift } from "../domain/shift.entity";
 import type {
   ListShiftsParams,
   ListShiftsResult,
+  ShiftRangeItem,
   ShiftRepository,
 } from "../domain/shift.repository";
 import { shift } from "./shift.schema";
@@ -35,6 +36,15 @@ export const shiftDrizzleRepository: ShiftRepository = {
   async findLatest(): Promise<Shift | null> {
     const [row] = await db.select().from(shift).orderBy(desc(shift.startTime)).limit(1);
     return row ? toEntity(row) : null;
+  },
+
+  async listInRange({ start, end }: { start: Date; end: Date }): Promise<ShiftRangeItem[]> {
+    const rows = await db
+      .select({ id: shift.id, status: shift.status, startTime: shift.startTime, endTime: shift.endTime })
+      .from(shift)
+      .where(and(gte(shift.startTime, start), lt(shift.startTime, end)))
+      .orderBy(asc(shift.startTime));
+    return rows;
   },
 
   async findById(id: number): Promise<Shift | null> {

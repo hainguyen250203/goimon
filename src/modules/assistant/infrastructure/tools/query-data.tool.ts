@@ -4,7 +4,7 @@ import { AssistantQueryError } from "../query-tool/assistant-query.error";
 import { runStructuredQuery } from "../query-tool/run-structured-query";
 import { structuredQuerySchema } from "../query-tool/structured-query.schema";
 
-export function createQueryDataTool(actorId: string) {
+export function createQueryDataTool() {
   return tool({
     description:
       "Truy vấn READ-ONLY dữ liệu kinh doanh (đơn hàng, món ăn, khuyến mãi, ca làm...). " +
@@ -15,7 +15,7 @@ export function createQueryDataTool(actorId: string) {
     inputSchema: structuredQuerySchema,
     execute: async (input) => {
       try {
-        return await runStructuredQuery(input, actorId);
+        return await runStructuredQuery(input);
       } catch (error) {
         if (error instanceof AssistantQueryError) {
           return { isError: true, message: error.message };

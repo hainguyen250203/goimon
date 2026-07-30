@@ -23,7 +23,6 @@ import {
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 
 import { db } from "~/server/db";
-import { logActivity } from "~/modules/activity-log/log-activity";
 
 import { AssistantQueryError } from "./assistant-query.error";
 import {
@@ -243,7 +242,6 @@ function resolveSortTarget(
 
 export async function runStructuredQuery(
   input: StructuredQuery,
-  actorId: string,
 ): Promise<RunStructuredQueryResult> {
   const base = loadTableCtx(input.table);
   const joined = new Map<string, TableCtx>();
@@ -348,22 +346,6 @@ export async function runStructuredQuery(
     truncated = true;
     serialized = JSON.stringify(resultRows);
   }
-
-  await logActivity({
-    actorId,
-    action: "assistant_query",
-    entityType: "assistant_query_tool",
-    entityId: actorId,
-    metadata: {
-      table: input.table,
-      columns: input.columns,
-      aggregate: input.aggregate,
-      filter: input.filter,
-      join: input.join,
-      rowCount: resultRows.length,
-      truncated,
-    },
-  });
 
   return { rows: resultRows, rowCount: resultRows.length, truncated };
 }

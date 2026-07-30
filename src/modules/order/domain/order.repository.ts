@@ -46,6 +46,53 @@ export type ShiftOrderStats = {
   cancelledOrderCount: number;
 };
 
+/** 1 dòng doanh thu của 1 ca — cho trang Báo cáo (biểu đồ + bảng chi tiết). */
+export type ShiftRevenueRow = {
+  shiftId: number;
+  /** Doanh thu thực nhận (sau giảm giá) — chính là orders.total_amount, số
+   * tiền khách thực trả. */
+  totalRevenue: number;
+  paidOrderCount: number;
+  cancelledOrderCount: number;
+  /** Doanh thu tách theo phương thức thanh toán — cho biểu đồ Báo cáo so sánh
+   * tiền mặt/chuyển khoản theo từng ca. */
+  cashRevenue: number;
+  transferRevenue: number;
+  /** Tổng tiền món TRƯỚC giảm giá (sum unitPrice*quantity của order_items). */
+  grossRevenue: number;
+  /** grossRevenue - totalRevenue — số tiền đã giảm giá, suy ra chứ không lưu
+   * cột riêng (xem giải thích ở getPromotionUsage). */
+  discountAmount: number;
+};
+
+export type TopSellingItem = {
+  menuItemId: number;
+  itemName: string;
+  quantitySold: number;
+  revenue: number;
+};
+
+export type PaymentMethodRevenue = {
+  paymentMethod: string;
+  revenue: number;
+  orderCount: number;
+};
+
+export type PromotionUsageRow = {
+  promotionId: number;
+  promotionName: string;
+  orderCount: number;
+  /** Suy ra từ (tổng tiền order_items) - totalAmount, không lưu sẵn cột nào —
+   * cả 2 giá trị đã đóng băng khi đơn "paid" nên tính lúc nào cũng đúng. */
+  totalDiscount: number;
+};
+
+export type CategoryRevenue = {
+  categoryId: number;
+  categoryName: string;
+  revenue: number;
+};
+
 /**
  * 1 dòng "gọi món"/"trả món" (event items_added hoặc items_removed) — cho
  * trang Lịch sử gọi món. Tăng/giảm số lượng món đã gọi cũng được ghi vào 2
@@ -136,6 +183,24 @@ export interface OrderRepository {
   /** Toàn bộ số liệu đơn hàng của 1 ca theo từng trạng thái (đã thanh toán/đang
    * mở/đã huỷ) — cho trang Tổng quan, luôn theo ca đang mở, không theo ngày. */
   getShiftOrderStats(shiftId: number): Promise<ShiftOrderStats>;
+  /** Doanh thu + số đơn (đã thanh toán/đã huỷ) theo TỪNG ca trong danh sách
+   * — cho trang Báo cáo. Luôn trả đủ 1 dòng cho mỗi shiftId truyền vào, kể cả
+   * ca không có đơn nào (revenue = 0) — để biểu đồ không bị thiếu điểm. */
+  getRevenueByShift(shiftIds: number[]): Promise<ShiftRevenueRow[]>;
+  /** Top món bán chạy nhất (theo số lượng) trong các ca truyền vào — chỉ tính
+   * đơn đã thanh toán. `categoryIds` (nếu có) chỉ tính món thuộc các danh mục
+   * đó — cho phép bỏ bớt danh mục không cần khỏi báo cáo. */
+  getTopSellingItems(shiftIds: number[], limit: number, categoryIds?: number[]): Promise<TopSellingItem[]>;
+  /** Doanh thu theo phương thức thanh toán (tiền mặt/chuyển khoản) trong các
+   * ca truyền vào — chỉ tính đơn đã thanh toán. */
+  getRevenueByPaymentMethod(shiftIds: number[]): Promise<PaymentMethodRevenue[]>;
+  /** Số đơn + số tiền đã giảm theo từng khuyến mãi trong các ca truyền vào —
+   * chỉ tính đơn đã thanh toán có áp khuyến mãi. */
+  getPromotionUsage(shiftIds: number[]): Promise<PromotionUsageRow[]>;
+  /** Doanh thu theo danh mục món (đồ uống/món chính/...) trong các ca truyền
+   * vào — chỉ tính đơn đã thanh toán. `categoryIds` (nếu có) chỉ tính các
+   * danh mục đó — cho phép bỏ bớt danh mục không cần khỏi báo cáo. */
+  getRevenueByCategory(shiftIds: number[], categoryIds?: number[]): Promise<CategoryRevenue[]>;
   /** Lịch sử gọi món (event items_added + items_removed), phân trang + tìm không dấu server-side. */
   listOrderItemEvents(
     params: ListOrderItemEventsParams,

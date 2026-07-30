@@ -55,8 +55,8 @@ export function DashboardOverview() {
         </StatusDot>
       </Flex>
       <Grid
-        templateColumns={{ base: "1fr", sm: "repeat(2, 1fr)", lg: "repeat(3, 1fr)", xl: "repeat(5, 1fr)" }}
-        gap={4}
+        templateColumns={{ base: "repeat(2, 1fr)", lg: "repeat(3, 1fr)", xl: "repeat(5, 1fr)" }}
+        gap={{ base: 3, md: 4 }}
       >
         <KpiCard
           label="Doanh thu ca này"

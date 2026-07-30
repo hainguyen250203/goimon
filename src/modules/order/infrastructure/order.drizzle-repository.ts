@@ -1,7 +1,8 @@
-import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 
 import { db } from "~/server/db";
 import { area, restaurantTable } from "~/modules/table/infrastructure/table.schema";
+import { category, menuItem } from "~/modules/menu/infrastructure/menu.schema";
 import { user } from "~/server/better-auth/schema";
 import { Order, type OrderLineItem, type OrderPromotion } from "../domain/order.entity";
 import type {
@@ -12,6 +13,7 @@ import type {
 } from "../domain/order-list-item.entity";
 import type {
   ActiveOrderSummary,
+  CategoryRevenue,
   ListOrderItemEventsParams,
   ListOrderItemEventsResult,
   ListOrdersParams,
@@ -20,9 +22,13 @@ import type {
   ListTableTransferEventsResult,
   OrderRepository,
   OrderTimelineEvent,
+  PaymentMethodRevenue,
+  PromotionUsageRow,
   RecordOrderEventParams,
   ShiftOrderStats,
+  ShiftRevenueRow,
   ShiftSummary,
+  TopSellingItem,
 } from "../domain/order.repository";
 import { order, orderEvent, orderItem } from "./order.schema";
 
@@ -382,6 +388,188 @@ export const orderDrizzleRepository: OrderRepository = {
       openOrderCount: byStatus.get("open")?.orderCount ?? 0,
       cancelledOrderCount: byStatus.get("cancelled")?.orderCount ?? 0,
     };
+  },
+
+  async getRevenueByShift(shiftIds: number[]): Promise<ShiftRevenueRow[]> {
+    if (shiftIds.length === 0) return [];
+    // Nhóm thêm theo paymentMethod (ngoài shiftId/status) để tách được doanh
+    // thu tiền mặt/chuyển khoản theo từng ca cho biểu đồ Báo cáo — 1 ca "paid"
+    // giờ có thể ra 2 dòng (1 cho mỗi phương thức), cộng dồn bằng += thay vì =.
+    const [rows, grossRows] = await Promise.all([
+      db
+        .select({
+          shiftId: order.shiftId,
+          status: order.status,
+          paymentMethod: order.paymentMethod,
+          orderCount: count(),
+          revenue: sql<number>`coalesce(sum(${order.totalAmount}), 0)`.mapWith(Number),
+        })
+        .from(order)
+        .where(inArray(order.shiftId, shiftIds))
+        .groupBy(order.shiftId, order.status, order.paymentMethod),
+      // Tổng tiền món TRƯỚC giảm giá — cần join order_items riêng vì
+      // orders.total_amount đã là số SAU giảm giá, không suy ra gross được
+      // nếu chỉ đọc bảng orders.
+      db
+        .select({
+          shiftId: order.shiftId,
+          grossRevenue: sql<number>`coalesce(sum(${orderItem.unitPrice} * ${orderItem.quantity}), 0)`.mapWith(
+            Number,
+          ),
+        })
+        .from(orderItem)
+        .innerJoin(order, eq(order.id, orderItem.orderId))
+        .where(and(inArray(order.shiftId, shiftIds), eq(order.status, "paid")))
+        .groupBy(order.shiftId),
+    ]);
+
+    const byShift = new Map<number, ShiftRevenueRow>(
+      shiftIds.map((id) => [
+        id,
+        {
+          shiftId: id,
+          totalRevenue: 0,
+          paidOrderCount: 0,
+          cancelledOrderCount: 0,
+          cashRevenue: 0,
+          transferRevenue: 0,
+          grossRevenue: 0,
+          discountAmount: 0,
+        },
+      ]),
+    );
+    for (const row of rows) {
+      if (row.shiftId === null) continue;
+      const entry = byShift.get(row.shiftId);
+      if (!entry) continue;
+      if (row.status === "paid") {
+        entry.totalRevenue += row.revenue;
+        entry.paidOrderCount += row.orderCount;
+        if (row.paymentMethod === "cash") entry.cashRevenue += row.revenue;
+        else if (row.paymentMethod === "transfer") entry.transferRevenue += row.revenue;
+      } else if (row.status === "cancelled") {
+        entry.cancelledOrderCount += row.orderCount;
+      }
+    }
+    for (const row of grossRows) {
+      if (row.shiftId === null) continue;
+      const entry = byShift.get(row.shiftId);
+      if (!entry) continue;
+      entry.grossRevenue = row.grossRevenue;
+    }
+    for (const entry of byShift.values()) {
+      entry.discountAmount = Math.max(0, entry.grossRevenue - entry.totalRevenue);
+    }
+    return Array.from(byShift.values());
+  },
+
+  async getTopSellingItems(
+    shiftIds: number[],
+    limit: number,
+    categoryIds?: number[],
+  ): Promise<TopSellingItem[]> {
+    if (shiftIds.length === 0) return [];
+    const conditions = [inArray(order.shiftId, shiftIds), eq(order.status, "paid")];
+    if (categoryIds && categoryIds.length > 0) {
+      conditions.push(inArray(menuItem.categoryId, categoryIds));
+    }
+    const rows = await db
+      .select({
+        menuItemId: orderItem.menuItemId,
+        itemName: orderItem.itemName,
+        quantitySold: sql<number>`coalesce(sum(${orderItem.quantity}), 0)`.mapWith(Number),
+        revenue: sql<number>`coalesce(sum(${orderItem.unitPrice} * ${orderItem.quantity}), 0)`.mapWith(Number),
+      })
+      .from(orderItem)
+      .innerJoin(order, eq(order.id, orderItem.orderId))
+      .innerJoin(menuItem, eq(menuItem.id, orderItem.menuItemId))
+      .where(and(...conditions))
+      .groupBy(orderItem.menuItemId, orderItem.itemName)
+      .orderBy(desc(sql`sum(${orderItem.quantity})`))
+      .limit(limit);
+    return rows;
+  },
+
+  async getRevenueByPaymentMethod(shiftIds: number[]): Promise<PaymentMethodRevenue[]> {
+    if (shiftIds.length === 0) return [];
+    const rows = await db
+      .select({
+        paymentMethod: order.paymentMethod,
+        revenue: sql<number>`coalesce(sum(${order.totalAmount}), 0)`.mapWith(Number),
+        orderCount: count(),
+      })
+      .from(order)
+      .where(and(inArray(order.shiftId, shiftIds), eq(order.status, "paid")))
+      .groupBy(order.paymentMethod);
+    return rows
+      .filter((row): row is typeof row & { paymentMethod: NonNullable<typeof row.paymentMethod> } =>
+        row.paymentMethod !== null,
+      )
+      .map((row) => ({ paymentMethod: row.paymentMethod, revenue: row.revenue, orderCount: row.orderCount }));
+  },
+
+  async getPromotionUsage(shiftIds: number[]): Promise<PromotionUsageRow[]> {
+    if (shiftIds.length === 0) return [];
+    const paidOrders = await db
+      .select({
+        id: order.id,
+        promotionId: order.promotionId,
+        promotionName: order.promotionName,
+        totalAmount: order.totalAmount,
+      })
+      .from(order)
+      .where(and(inArray(order.shiftId, shiftIds), eq(order.status, "paid"), isNotNull(order.promotionId)));
+    if (paidOrders.length === 0) return [];
+
+    const orderIds = paidOrders.map((o) => o.id);
+    const subtotalRows = await db
+      .select({
+        orderId: orderItem.orderId,
+        subtotal: sql<number>`coalesce(sum(${orderItem.unitPrice} * ${orderItem.quantity}), 0)`.mapWith(Number),
+      })
+      .from(orderItem)
+      .where(inArray(orderItem.orderId, orderIds))
+      .groupBy(orderItem.orderId);
+    const subtotalByOrderId = new Map(subtotalRows.map((r) => [r.orderId, r.subtotal]));
+
+    const byPromotion = new Map<number, PromotionUsageRow>();
+    for (const o of paidOrders) {
+      if (o.promotionId === null) continue;
+      const subtotal = subtotalByOrderId.get(o.id) ?? 0;
+      const discount = Math.max(0, subtotal - (o.totalAmount ?? 0));
+      const entry = byPromotion.get(o.promotionId) ?? {
+        promotionId: o.promotionId,
+        promotionName: o.promotionName ?? "",
+        orderCount: 0,
+        totalDiscount: 0,
+      };
+      entry.orderCount += 1;
+      entry.totalDiscount += discount;
+      byPromotion.set(o.promotionId, entry);
+    }
+    return Array.from(byPromotion.values()).sort((a, b) => b.totalDiscount - a.totalDiscount);
+  },
+
+  async getRevenueByCategory(shiftIds: number[], categoryIds?: number[]): Promise<CategoryRevenue[]> {
+    if (shiftIds.length === 0) return [];
+    const conditions = [inArray(order.shiftId, shiftIds), eq(order.status, "paid")];
+    if (categoryIds && categoryIds.length > 0) {
+      conditions.push(inArray(category.id, categoryIds));
+    }
+    const rows = await db
+      .select({
+        categoryId: category.id,
+        categoryName: category.name,
+        revenue: sql<number>`coalesce(sum(${orderItem.unitPrice} * ${orderItem.quantity}), 0)`.mapWith(Number),
+      })
+      .from(orderItem)
+      .innerJoin(order, eq(order.id, orderItem.orderId))
+      .innerJoin(menuItem, eq(menuItem.id, orderItem.menuItemId))
+      .innerJoin(category, eq(category.id, menuItem.categoryId))
+      .where(and(...conditions))
+      .groupBy(category.id, category.name)
+      .orderBy(desc(sql`sum(${orderItem.unitPrice} * ${orderItem.quantity})`));
+    return rows;
   },
 
   async listOrderItemEvents({

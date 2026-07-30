@@ -13,7 +13,8 @@ import { ListViewPagination } from "~/components/data-table/list-view-pagination
 import { ListViewToolbar } from "~/components/data-table/list-view-toolbar";
 import { FilterSelect } from "~/components/data-table/filter-select";
 import { api } from "~/trpc/react";
-import type { ShiftListItem } from "~/modules/shift/domain/shift.repository";
+import { formatVnd } from "~/lib/format-order";
+import type { ShiftListItemWithRevenue } from "~/modules/shift/application/list-shifts.usecase";
 import type { ShiftStatus } from "~/modules/shift/domain/shift.entity";
 
 const PAGE_SIZE = 20;
@@ -36,7 +37,7 @@ function formatDateTime(date: Date) {
   }).format(date);
 }
 
-const columns: ListViewColumn<ShiftListItem>[] = [
+const columns: ListViewColumn<ShiftListItemWithRevenue>[] = [
   {
     key: "id",
     header: "ID",
@@ -57,6 +58,18 @@ const columns: ListViewColumn<ShiftListItem>[] = [
     key: "endTime",
     header: "Đóng lúc",
     cell: (row) => (row.endTime ? formatDateTime(row.endTime) : "—"),
+  },
+  {
+    key: "totalRevenue",
+    header: "Doanh thu",
+    cell: (row) => formatVnd(row.totalRevenue),
+    textAlign: "right",
+  },
+  {
+    key: "paidOrderCount",
+    header: "Số đơn",
+    cell: (row) => String(row.paidOrderCount),
+    textAlign: "right",
   },
 ];
 

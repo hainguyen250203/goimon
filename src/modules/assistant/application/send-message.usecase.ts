@@ -66,7 +66,7 @@ export async function sendMessage(
     model: openai(MODEL),
     system: SYSTEM_PROMPT + buildCurrentTimeContext(),
     messages: modelMessages,
-    tools: assistantTools(userId),
+    tools: assistantTools(),
     stopWhen: stepCountIs(6),
   });
 

@@ -76,5 +76,5 @@ export const shiftRouter = createTRPCRouter({
         status: z.enum(["open", "closed"]).optional(),
       }),
     )
-    .query(({ input }) => listShifts(shiftDrizzleRepository, input)),
+    .query(({ input }) => listShifts(shiftDrizzleRepository, orderDrizzleRepository, input)),
 });
