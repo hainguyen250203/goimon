@@ -60,47 +60,6 @@ function SidebarLogo({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-function SidebarCollapseToggle({
-  collapsed,
-  onToggle,
-}: {
-  collapsed: boolean;
-  onToggle: () => void;
-}) {
-  const button = (
-    <Flex
-      align="center"
-      justify={collapsed ? "center" : "flex-start"}
-      gap={2.5}
-      px={3}
-      py="6px"
-      mx={2}
-      rounded="l2"
-      cursor="pointer"
-      h="36px"
-      color="fg.muted"
-      _hover={{ bg: "bg.muted", color: "fg" }}
-      transition="background 0.15s, color 0.15s"
-      onClick={onToggle}
-    >
-      {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-      {!collapsed && <Text fontSize="sm">Thu gọn</Text>}
-    </Flex>
-  );
-
-  return (
-    <Box borderTopWidth="1px" borderColor="border" py={2} display={{ base: "none", md: "block" }}>
-      {collapsed ? (
-        <Tooltip content="Mở rộng" positioning={{ placement: "right" }}>
-          {button}
-        </Tooltip>
-      ) : (
-        button
-      )}
-    </Box>
-  );
-}
-
 // Nhãn nhóm — chữ hoa nhỏ + 1 đường kẻ mờ chiếm hết phần còn lại, đúng
 // pattern tham khảo từ alix-bo-frontend-v2 (components/admin/AdminSidebarItem.tsx).
 // Chiều cao CỐ ĐỊNH, giống nhau ở cả 2 trạng thái (chỉ ẩn/hiện chữ nhãn) — để
@@ -160,19 +119,16 @@ function SidebarNav({
 function SidebarContent({
   nav,
   collapsed,
-  onToggle,
   onNavigate,
 }: {
   nav: NavItem[];
   collapsed: boolean;
-  onToggle?: () => void;
   onNavigate?: () => void;
 }) {
   return (
     <Flex direction="column" h="full" w="full" bg="bg">
       <SidebarLogo collapsed={collapsed} />
       <SidebarNav nav={nav} collapsed={collapsed} onNavigate={onNavigate} />
-      {onToggle && <SidebarCollapseToggle collapsed={collapsed} onToggle={onToggle} />}
     </Flex>
   );
 }
@@ -221,11 +177,7 @@ export function AdminShell({
         transition="width 0.2s ease"
         overflow="hidden"
       >
-        <SidebarContent
-          nav={nav}
-          collapsed={collapsed}
-          onToggle={() => setCollapsed((c) => !c)}
-        />
+        <SidebarContent nav={nav} collapsed={collapsed} />
       </Box>
 
       {/* Mobile drawer */}
@@ -265,6 +217,17 @@ export function AdminShell({
           zIndex={10}
         >
           <MobileHeaderTrigger onOpen={() => setMobileOpen(true)} />
+          <Tooltip content={collapsed ? "Mở rộng menu" : "Thu gọn menu"}>
+            <IconButton
+              aria-label={collapsed ? "Mở rộng menu" : "Thu gọn menu"}
+              variant="ghost"
+              size="sm"
+              display={{ base: "none", md: "flex" }}
+              onClick={() => setCollapsed((c) => !c)}
+            >
+              {collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+            </IconButton>
+          </Tooltip>
           <Text flex={1} fontSize="sm" fontWeight="medium" lineClamp={1}>
             {title}
           </Text>

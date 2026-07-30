@@ -114,6 +114,8 @@ export const assistantDrizzleRepository: AssistantRepository = {
   },
 
   async getUsageSummary(userId: string): Promise<UsageSummaryRow[]> {
+    // Không lọc deletedAt — phiên đã xoá mềm vẫn phải tính vào chi phí (tiền
+    // đã trả cho OpenAI rồi), UI tự hiện nhãn "Đã xoá" để phân biệt.
     const rows = await db
       .select({
         sessionId: assistantSession.id,
@@ -121,15 +123,19 @@ export const assistantDrizzleRepository: AssistantRepository = {
         messageCount: count(assistantMessage.id),
         inputTokens: sql<number>`coalesce(sum((${assistantMessage.usageJson}->>'inputTokens')::int), 0)`,
         outputTokens: sql<number>`coalesce(sum((${assistantMessage.usageJson}->>'outputTokens')::int), 0)`,
+        deletedAt: assistantSession.deletedAt,
       })
       .from(assistantSession)
       .leftJoin(
         assistantMessage,
         and(eq(assistantMessage.sessionId, assistantSession.id), eq(assistantMessage.role, "assistant")),
       )
-      .where(and(eq(assistantSession.userId, userId), isNull(assistantSession.deletedAt)))
+      .where(eq(assistantSession.userId, userId))
       .groupBy(assistantSession.id)
-      .orderBy(desc(assistantSession.updatedAt));
+      // Phiên đã xoá luôn đẩy xuống cuối bất kể updatedAt (thao tác xoá cũng
+      // cập nhật updatedAt nên nếu không tách riêng, phiên vừa xoá sẽ nhảy
+      // lên đầu danh sách thay vì lịch sử chat mới nhất).
+      .orderBy(sql`${assistantSession.deletedAt} is not null`, desc(assistantSession.updatedAt));
 
     return rows;
   },

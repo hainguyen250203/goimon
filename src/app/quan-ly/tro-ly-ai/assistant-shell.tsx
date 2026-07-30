@@ -31,6 +31,9 @@ export function AssistantShell({
   // chuyển thành Drawer mở bằng nút riêng, đúng cách AdminShell đã làm với
   // sidebar điều hướng chính.
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  // Thu gọn/mở rộng riêng cho sidebar desktop — chỉ ẩn/hiện danh sách phiên,
+  // không ảnh hưởng Drawer mobile (đã có cơ chế ẩn/hiện riêng qua Drawer).
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const handleSelectSession = (id: number) => {
     setSessionId(id);
@@ -58,6 +61,8 @@ export function AssistantShell({
           activeSessionId={sessionId}
           onSelectSession={handleSelectSession}
           onNewChat={handleNewChat}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed((v) => !v)}
         />
       </Box>
 

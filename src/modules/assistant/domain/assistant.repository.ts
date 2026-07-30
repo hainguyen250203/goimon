@@ -35,6 +35,7 @@ export type UsageSummaryRow = {
   messageCount: number;
   inputTokens: number;
   outputTokens: number;
+  deletedAt: Date | null;
 };
 
 export interface AssistantRepository {
@@ -47,6 +48,10 @@ export interface AssistantRepository {
   listMessages(sessionId: number): Promise<AssistantMessage[]>;
   appendMessage(params: AppendMessageParams): Promise<AssistantMessage>;
   touchSessionUpdatedAt(sessionId: number): Promise<void>;
-  /** Tổng token đã dùng theo từng phiên — nguồn dữ liệu cho trang thống kê. */
+  /**
+   * Tổng token đã dùng theo từng phiên — nguồn dữ liệu cho trang thống kê.
+   * Gồm cả phiên đã xoá mềm (deletedAt != null): chi phí đã phát sinh thật với
+   * OpenAI dù phiên đã bị ẩn khỏi sidebar, nên vẫn phải tính vào báo cáo chi phí.
+   */
   getUsageSummary(userId: string): Promise<UsageSummaryRow[]>;
 }
