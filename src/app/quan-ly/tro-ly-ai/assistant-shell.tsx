@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Flex } from "@chakra-ui/react";
+import { Box, Flex, IconButton, VisuallyHidden } from "@chakra-ui/react";
+import { PanelLeft } from "lucide-react";
 
+import { DrawerBody, DrawerContent, DrawerRoot, DrawerTitle } from "~/components/ui/drawer";
 import { SessionSidebar } from "./session-sidebar";
 import { ChatPanel } from "./chat-panel";
 
@@ -24,16 +26,23 @@ export function AssistantShell({
   // khác/bấm "Trò chuyện mới", KHÔNG đổi khi phiên được tạo ngầm lúc gửi tin
   // nhắn đầu tiên (nếu không sẽ mất nội dung đang stream giữa chừng).
   const [instanceKey, setInstanceKey] = useState<string | number>(activeSessionId ?? "new");
+  // Sidebar danh sách phiên hiển thị inline trên desktop (md+), nhưng trên
+  // mobile 2 cột không đủ chỗ (chữ bị bóp dồn xuống dòng, xem ảnh chụp) —
+  // chuyển thành Drawer mở bằng nút riêng, đúng cách AdminShell đã làm với
+  // sidebar điều hướng chính.
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const handleSelectSession = (id: number) => {
     setSessionId(id);
     setInstanceKey(id);
+    setMobileSidebarOpen(false);
     window.history.replaceState(null, "", `/quan-ly/tro-ly-ai?session=${id}`);
   };
 
   const handleNewChat = () => {
     setSessionId(undefined);
     setInstanceKey(crypto.randomUUID());
+    setMobileSidebarOpen(false);
     window.history.replaceState(null, "", "/quan-ly/tro-ly-ai");
   };
 
@@ -44,12 +53,61 @@ export function AssistantShell({
 
   return (
     <Flex h="full" minH={0} gap={0}>
-      <SessionSidebar
-        activeSessionId={sessionId}
-        onSelectSession={handleSelectSession}
-        onNewChat={handleNewChat}
-      />
-      <ChatPanel key={instanceKey} sessionId={sessionId} onSessionCreated={handleSessionCreated} userName={userName} />
+      <Box display={{ base: "none", md: "block" }} h="full">
+        <SessionSidebar
+          activeSessionId={sessionId}
+          onSelectSession={handleSelectSession}
+          onNewChat={handleNewChat}
+        />
+      </Box>
+
+      <DrawerRoot
+        open={mobileSidebarOpen}
+        placement="start"
+        onOpenChange={(e) => setMobileSidebarOpen(e.open)}
+      >
+        <DrawerContent maxW="17rem" p={0}>
+          <VisuallyHidden>
+            <DrawerTitle>Danh sách trò chuyện</DrawerTitle>
+          </VisuallyHidden>
+          <DrawerBody p={0}>
+            <SessionSidebar
+              activeSessionId={sessionId}
+              onSelectSession={handleSelectSession}
+              onNewChat={handleNewChat}
+            />
+          </DrawerBody>
+        </DrawerContent>
+      </DrawerRoot>
+
+      <Flex direction="column" flex={1} minW={0} h="full">
+        <Flex
+          display={{ base: "flex", md: "none" }}
+          align="center"
+          px={2}
+          py={1}
+          flexShrink={0}
+          borderBottomWidth="1px"
+          borderColor="border"
+        >
+          <IconButton
+            aria-label="Danh sách trò chuyện"
+            variant="ghost"
+            size="sm"
+            onClick={() => setMobileSidebarOpen(true)}
+          >
+            <PanelLeft size={18} />
+          </IconButton>
+        </Flex>
+        <Box flex={1} minH={0}>
+          <ChatPanel
+            key={instanceKey}
+            sessionId={sessionId}
+            onSessionCreated={handleSessionCreated}
+            userName={userName}
+          />
+        </Box>
+      </Flex>
     </Flex>
   );
 }

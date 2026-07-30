@@ -1,26 +1,38 @@
 "use client";
 
 import NextLink from "next/link";
-import { Armchair, CalendarClock, CheckCircle2, Clock, Wallet, XCircle } from "lucide-react";
-import { Box, Flex, Grid, Heading, Link as ChakraLink } from "@chakra-ui/react";
+import { Armchair, CheckCircle2, Clock, Wallet, XCircle } from "lucide-react";
+import { Flex, Grid, Heading, Link as ChakraLink, Box } from "@chakra-ui/react";
 
 import { EmptyState } from "~/components/ui/empty-state";
+import { StatusDot } from "~/components/ui/status-dot";
 import { api } from "~/trpc/react";
 import { formatDateTime, formatVnd } from "~/lib/format-order";
+import type { ShiftStatus } from "~/modules/shift/domain/shift.entity";
 import { KpiCard } from "./kpi-card";
+
+const SHIFT_STATUS_LABEL: Record<ShiftStatus, string> = {
+  open: "Đang mở",
+  closed: "Đã đóng",
+};
+
+const SHIFT_STATUS_DOT_COLOR: Record<ShiftStatus, string> = {
+  open: "green.500",
+  closed: "gray.400",
+};
 
 export function DashboardOverview() {
   const { data } = api.dashboard.getOverview.useQuery(undefined, { refetchInterval: 30_000 });
   if (!data) return null;
 
-  const { currentShift, tables } = data;
+  const { latestShift, tables } = data;
 
-  if (!currentShift) {
+  if (!latestShift) {
     return (
       <Box borderWidth="1px" rounded="l3" p={6} bg="bg.panel">
         <EmptyState
           icon={<Clock size={28} />}
-          title="Chưa có ca làm việc nào đang mở"
+          title="Chưa có ca làm việc nào"
           description="Mở ca ở trang Ca làm việc để bắt đầu theo dõi doanh thu và đơn hàng."
         >
           <ChakraLink asChild fontSize="sm">
@@ -33,11 +45,14 @@ export function DashboardOverview() {
 
   return (
     <Flex direction="column" gap={5}>
-      <Flex align="center" gap={2} color="fg.muted">
-        <CalendarClock size={18} />
-        <Heading size="sm" color="fg">
-          Ca làm việc hiện tại — mở lúc {formatDateTime(currentShift.startTime)}
+      <Flex align="center" gap={3} wrap="wrap">
+        <Heading size="sm">
+          Ca gần nhất — {formatDateTime(latestShift.startTime)}
+          {latestShift.endTime ? ` → ${formatDateTime(latestShift.endTime)}` : ""}
         </Heading>
+        <StatusDot color={SHIFT_STATUS_DOT_COLOR[latestShift.status]}>
+          {SHIFT_STATUS_LABEL[latestShift.status]}
+        </StatusDot>
       </Flex>
       <Grid
         templateColumns={{ base: "1fr", sm: "repeat(2, 1fr)", lg: "repeat(3, 1fr)", xl: "repeat(5, 1fr)" }}
@@ -45,32 +60,32 @@ export function DashboardOverview() {
       >
         <KpiCard
           label="Doanh thu ca này"
-          value={formatVnd(currentShift.totalRevenue)}
-          icon={<Wallet size={20} />}
+          value={formatVnd(latestShift.totalRevenue)}
+          icon={<Wallet size={18} />}
           colorPalette="green"
         />
         <KpiCard
           label="Đơn đã thanh toán"
-          value={String(currentShift.paidOrderCount)}
-          icon={<CheckCircle2 size={20} />}
+          value={String(latestShift.paidOrderCount)}
+          icon={<CheckCircle2 size={18} />}
           colorPalette="blue"
         />
         <KpiCard
           label="Đơn đang mở"
-          value={String(currentShift.openOrderCount)}
-          icon={<Clock size={20} />}
+          value={String(latestShift.openOrderCount)}
+          icon={<Clock size={18} />}
           colorPalette="orange"
         />
         <KpiCard
           label="Đơn đã huỷ"
-          value={String(currentShift.cancelledOrderCount)}
-          icon={<XCircle size={20} />}
+          value={String(latestShift.cancelledOrderCount)}
+          icon={<XCircle size={18} />}
           colorPalette="red"
         />
         <KpiCard
           label="Bàn đang phục vụ"
           value={`${tables.occupied}/${tables.total}`}
-          icon={<Armchair size={20} />}
+          icon={<Armchair size={18} />}
           colorPalette="purple"
         />
       </Grid>

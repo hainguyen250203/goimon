@@ -17,14 +17,14 @@ export function KpiCard({
   helpText?: string;
 }) {
   return (
-    <Box borderWidth="1px" rounded="l3" p={5} bg="bg.panel">
-      <StatRoot size="lg">
-        <Flex align="center" gap={3} mb={3}>
+    <Box borderWidth="1px" rounded="l3" p={4} bg="bg.panel">
+      <StatRoot size="sm">
+        <Flex align="center" gap={2.5} mb={2}>
           <Flex
             colorPalette={colorPalette}
             align="center"
             justify="center"
-            boxSize="10"
+            boxSize="8"
             rounded="l2"
             bg="colorPalette.subtle"
             color="colorPalette.fg"

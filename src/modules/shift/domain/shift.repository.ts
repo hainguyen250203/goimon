@@ -24,6 +24,9 @@ export type ListShiftsResult = {
 export interface ShiftRepository {
   /** Ca đang mở (nếu có) — tối đa 1 trên toàn nhà hàng. */
   findOpen(): Promise<Shift | null>;
+  /** Ca gần nhất (bất kể đang mở hay đã đóng) — cho trang Tổng quan, để
+   * ca vừa đóng vẫn xem lại được số liệu thay vì mất trắng ngay khi đóng ca. */
+  findLatest(): Promise<Shift | null>;
   findById(id: number): Promise<Shift | null>;
   save(shift: Shift): Promise<Shift>;
   list(params: ListShiftsParams): Promise<ListShiftsResult>;

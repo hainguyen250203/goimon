@@ -40,6 +40,11 @@ Hệ thống POS quản lý nhà hàng: order món, tạo hóa đơn, in bill, x
 - `/quan-ly/layout.tsx` chỉ chặn role `user` (đẩy sang `/goi-mon`), không phân biệt `manager` vs `admin`. Route admin-only (vd: `nguoi-dung`, `bao-cao`) phải tự check `session.user.role !== "admin"` và `redirect("/quan-ly")` ngay trong `page.tsx` — nếu không, `manager` vẫn vào được UI nhưng mọi gọi tRPC (`adminProcedure`) đều FORBIDDEN, kẹt loading vô thời hạn thay vì bị chặn rõ ràng.
 - Trang danh sách có phân trang/filter: dùng `useQuery` + `placeholderData: keepPreviousData` (KHÔNG `useSuspenseQuery`) cho query đó — Suspense không có khái niệm giữ data cũ trong lúc fetch data mới. Điều hướng phân trang/filter phải qua `router.push` (client-side), không dùng `<a href>` thô — gây full page reload, nháy trắng màn hình.
 
+## Responsive / Mobile
+
+- Bất kỳ layout nhiều cột tự viết riêng cho 1 trang (không phải sidebar điều hướng chính của `AdminShell`) — ví dụ sidebar danh sách phiên + khung chat của Trợ lý AI — đều phải tự thu gọn trên mobile: ẩn cột phụ bằng `display={{ base: "none", md: "..." }}`, thay bằng nút mở `Drawer` (`~/components/ui/drawer`) khi cần xem, đúng pattern `AdminShell` đã dùng cho sidebar điều hướng chính. Không bao giờ để 2 cột tự co lại chia đôi màn hình hẹp — chữ bị bóp xuống dòng liên tục, không đọc được.
+- `ListViewPagination`: trên mobile chỉ hiện nút Trước/Sau + dòng "Trang X/Y — N kết quả" (`display={{ base: "none", sm: "..." }}` cho `PaginationFirstTrigger`/`PaginationLastTrigger`/danh sách số trang) — hiện đầy đủ từ `sm` trở lên. Danh sách số trang dễ tràn dòng trên màn hình hẹp nếu hiện hết.
+
 ## Quy tắc tổ chức code
 
 1. **Server Component mặc định.**

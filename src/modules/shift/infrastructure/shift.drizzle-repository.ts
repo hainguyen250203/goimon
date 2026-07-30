@@ -32,6 +32,11 @@ export const shiftDrizzleRepository: ShiftRepository = {
     return row ? toEntity(row) : null;
   },
 
+  async findLatest(): Promise<Shift | null> {
+    const [row] = await db.select().from(shift).orderBy(desc(shift.startTime)).limit(1);
+    return row ? toEntity(row) : null;
+  },
+
   async findById(id: number): Promise<Shift | null> {
     const [row] = await db.select().from(shift).where(eq(shift.id, id));
     return row ? toEntity(row) : null;

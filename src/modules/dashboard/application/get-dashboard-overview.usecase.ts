@@ -8,26 +8,32 @@ import type { DashboardOverview } from "../domain/dashboard-overview.entity";
  * cách order/application/list-tables-for-ordering.usecase.ts đã ghép table +
  * order ở tầng usecase để tránh circular import giữa các module.
  *
- * Toàn bộ số liệu đơn hàng luôn theo CA ĐANG MỞ hiện tại, không theo ngày —
- * nếu chưa có ca nào đang mở thì `currentShift` là null, không tự suy ra
- * khoảng thời gian nào khác.
+ * Số liệu đơn hàng theo CA GẦN NHẤT (đang mở hoặc vừa đóng) — cố tình không
+ * chỉ lấy ca đang mở, vì đóng ca xong vẫn cần xem lại số liệu ca đó ngay
+ * trên Tổng quan thay vì rơi vào trạng thái "chưa có ca nào".
  */
 export async function getDashboardOverview(
   orderRepository: OrderRepository,
   shiftRepository: ShiftRepository,
   tableRepository: RestaurantTableRepository,
 ): Promise<DashboardOverview> {
-  const [openShift, tableCounts] = await Promise.all([
-    shiftRepository.findOpen(),
+  const [shift, tableCounts] = await Promise.all([
+    shiftRepository.findLatest(),
     tableRepository.countByStatus(),
   ]);
 
-  let currentShift: DashboardOverview["currentShift"] = null;
-  if (openShift) {
-    const detail = openShift.toDetail();
+  let latestShift: DashboardOverview["latestShift"] = null;
+  if (shift) {
+    const detail = shift.toDetail();
     const stats = await orderRepository.getShiftOrderStats(detail.id);
-    currentShift = { id: detail.id, startTime: detail.startTime, ...stats };
+    latestShift = {
+      id: detail.id,
+      status: detail.status,
+      startTime: detail.startTime,
+      endTime: detail.endTime,
+      ...stats,
+    };
   }
 
-  return { currentShift, tables: tableCounts };
+  return { latestShift, tables: tableCounts };
 }

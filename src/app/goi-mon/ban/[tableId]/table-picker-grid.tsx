@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Box, Flex, Grid, IconButton, Text, useBreakpointValue } from "@chakra-ui/react";
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from "lucide-react";
 
@@ -43,6 +43,17 @@ export function TablePickerGrid({
   const areaId = selectedAreaId ?? areas[0]?.id;
   const filteredTables = tables.filter((t) => t.areaId === areaId);
 
+  // Khu vực nào đang có ít nhất 1 bàn mở đơn — chấm tròn trên tab khu vực,
+  // đúng logic đã có ở table-selector.tsx (trang /goi-mon chính) để nhận
+  // biết nhanh không cần bấm vào từng khu mới biết có khách hay chưa.
+  const areasWithOpenOrder = useMemo(() => {
+    const set = new Set<number>();
+    for (const t of tables) {
+      if (t.activeOrder) set.add(t.areaId);
+    }
+    return set;
+  }, [tables]);
+
   const areasPerPage = useBreakpointValue({ base: 4, lg: 6 }) ?? 4;
   const totalAreaPages = Math.max(1, Math.ceil(areas.length / areasPerPage));
   const areaPage = Math.min(areaPageRaw, totalAreaPages - 1);
@@ -77,6 +88,7 @@ export function TablePickerGrid({
             return (
               <Box
                 key={area.id}
+                position="relative"
                 flexShrink={0}
                 px={3}
                 py={1.5}
@@ -96,6 +108,18 @@ export function TablePickerGrid({
                 >
                   {area.name}
                 </Text>
+                {areasWithOpenOrder.has(area.id) && (
+                  <Box
+                    position="absolute"
+                    top="-3px"
+                    right="-3px"
+                    boxSize="10px"
+                    rounded="full"
+                    bg="orange.solid"
+                    borderWidth="2px"
+                    borderColor="bg"
+                  />
+                )}
               </Box>
             );
           })}
