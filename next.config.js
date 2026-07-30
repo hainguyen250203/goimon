@@ -10,7 +10,9 @@ const config = {
   // như "postgres" khỏi client bundle như webpack trước đây — phải khai báo
   // tường minh, nếu không build sẽ lỗi "Module not found: Can't resolve 'tls'".
   // "escpos"/"escpos-network" cùng lý do (raw TCP socket qua "net"), CommonJS.
-  serverExternalPackages: ["postgres", "escpos", "escpos-network"],
+  // "@napi-rs/canvas" load native binding (.node qua js-binding.js) — Turbopack
+  // báo lỗi "non-ecmascript placeable asset" nếu cố bundle thay vì external hoá.
+  serverExternalPackages: ["postgres", "escpos", "escpos-network", "@napi-rs/canvas"],
   allowedDevOrigins: ['low-institutes-alcohol-kyle.trycloudflare.com'],
   experimental: {
     // Mặc định Next 16 để staleTimes.dynamic = 0 — mọi trang trong app đều

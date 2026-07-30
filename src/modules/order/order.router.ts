@@ -23,6 +23,15 @@ import { transferOrderItems } from "./application/transfer-order-items.usecase";
 import { mergeOrders } from "./application/merge-orders.usecase";
 import { orderDrizzleRepository } from "./infrastructure/order.drizzle-repository";
 import { shiftDrizzleRepository } from "~/modules/shift/infrastructure/shift.drizzle-repository";
+import { paymentConfigDrizzleRepository } from "~/modules/payment-config/infrastructure/payment-config.drizzle-repository";
+import { printerDrizzleRepository } from "~/modules/printer/infrastructure/printer.drizzle-repository";
+import { escposBillPrinter } from "~/modules/printer/infrastructure/escpos-bill-printer";
+import { printBillToPrinters } from "~/modules/printer/application/print-bill-to-printers.usecase";
+import { printKitchenTicket } from "~/modules/printer/application/print-kitchen-ticket.usecase";
+import { escposKitchenTicketPrinter } from "~/modules/printer/infrastructure/escpos-kitchen-ticket-printer";
+import { SHOP_INFO } from "~/modules/printer/domain/shop-info";
+import type { BillPrintPayload } from "~/modules/printer/domain/bill-print-payload";
+import { buildVietQrImageUrl } from "~/lib/vietqr";
 import {
   InvalidOrderStatusTransitionError,
   OrderItemNotFoundError,
@@ -30,7 +39,14 @@ import {
   PromotionNotAvailableError,
   InvalidTableTransferError,
 } from "./domain/order.errors";
-import type { Order } from "./domain/order.entity";
+import type { Order, OrderPromotion } from "./domain/order.entity";
+
+// Chỉ hiện nhãn chung "Khuyến mãi" trên hoá đơn — không in tên/tỉ lệ khuyến
+// mãi cụ thể (số tiền giảm đã tự hiện riêng ở cột bên phải, xem
+// bill-image-renderer.ts). null nếu đơn không áp dụng khuyến mãi nào.
+function buildDiscountLabel(promotion: OrderPromotion | null): string | null {
+  return promotion ? "Khuyến mãi" : null;
+}
 
 // Domain error → TRPCError BAD_REQUEST với message tiếng Việt gốc thay vì
 // để lộ generic 500 — áp dụng cho mọi mutation đụng vào state machine order.
@@ -158,14 +174,32 @@ export const orderRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const shiftId = await requireOpenShift();
-      return runOrderAction(() =>
-        addOrderItems(orderDrizzleRepository, restaurantTableDrizzleRepository, menuItemDrizzleRepository, {
-          tableId: input.tableId,
-          actorId: ctx.session.user.id,
-          shiftId,
-          items: input.items,
-        }),
-      );
+      try {
+        const { order, addedItems } = await addOrderItems(
+          orderDrizzleRepository,
+          restaurantTableDrizzleRepository,
+          menuItemDrizzleRepository,
+          {
+            tableId: input.tableId,
+            actorId: ctx.session.user.id,
+            shiftId,
+            items: input.items,
+          },
+        );
+        const orderDetail = order.toDetail();
+        const table = await restaurantTableDrizzleRepository.findById(input.tableId);
+        const printResult = await printKitchenTicket(printerDrizzleRepository, escposKitchenTicketPrinter, {
+          title: "PHIẾU GỌI MÓN",
+          orderId: orderDetail.id,
+          tableName: table.name,
+          staffName: ctx.session.user.name,
+          createdAt: new Date(),
+          items: addedItems,
+        });
+        return { ...orderDetail, printResult };
+      } catch (error) {
+        mapOrderDomainError(error);
+      }
     }),
 
   // UI gom sửa số lượng/xoá món cục bộ (màn Món đã gọi), gọi 1 lần khi bấm
@@ -185,23 +219,91 @@ export const orderRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       await requireOpenShift();
-      return runOrderAction(() =>
-        updateOrderItems(orderDrizzleRepository, {
+      try {
+        const { order, addedItems, removedItems } = await updateOrderItems(orderDrizzleRepository, {
           orderId: input.orderId,
           actorId: ctx.session.user.id,
           changes: input.changes,
           removedItemIds: input.removedItemIds,
-        }),
-      );
+        });
+        const orderDetail = order.toDetail();
+        const table = await restaurantTableDrizzleRepository.findById(orderDetail.tableId);
+        const baseTicket = {
+          orderId: orderDetail.id,
+          tableName: table.name,
+          staffName: ctx.session.user.name,
+          createdAt: new Date(),
+        };
+        // 1 lần "Xác nhận" có thể vừa gọi thêm vừa trả bớt món cùng lúc — in
+        // riêng từng loại phiếu nếu mảng tương ứng không rỗng, gộp kết quả in
+        // lại làm 1 để UI chỉ hiện 1 toast tổng.
+        const [addedResult, removedResult] = await Promise.all([
+          addedItems.length > 0
+            ? printKitchenTicket(printerDrizzleRepository, escposKitchenTicketPrinter, {
+                ...baseTicket,
+                title: "PHIẾU GỌI MÓN",
+                items: addedItems,
+              })
+            : [],
+          removedItems.length > 0
+            ? printKitchenTicket(printerDrizzleRepository, escposKitchenTicketPrinter, {
+                ...baseTicket,
+                title: "PHIẾU HUỶ MÓN",
+                items: removedItems,
+              })
+            : [],
+        ]);
+        return { ...orderDetail, printResult: [...addedResult, ...removedResult] };
+      } catch (error) {
+        mapOrderDomainError(error);
+      }
     }),
 
   printBill: userProcedure
     .input(z.object({ orderId: z.number().int().positive() }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       await requireOpenShift();
-      return runOrderAction(() =>
+      const orderDetail = await runOrderAction(() =>
         printOrder(orderDrizzleRepository, { orderId: input.orderId }),
       );
+
+      // Gửi lệnh in thật là 1 side-effect BEST-EFFORT — lỗi máy in (mất kết
+      // nối, hết giấy...) không được throw ở đây, vì printedAt đã set xong
+      // và đơn phải tiếp tục thanh toán được bất kể máy in có phản hồi hay
+      // không (xem printBillToPrinters/escposBillPrinter). Router tự lắp
+      // payload thay vì đưa việc này vào printOrder usecase vì đây là composition
+      // xuyên nhiều module (table/payment-config/printer), không phải nghiệp
+      // vụ của riêng order.
+      const table = await restaurantTableDrizzleRepository.findById(orderDetail.tableId);
+      const paymentConfig = await paymentConfigDrizzleRepository.get();
+      const payload: BillPrintPayload = {
+        ...SHOP_INFO,
+        orderId: orderDetail.id,
+        tableName: table.name,
+        staffName: ctx.session.user.name,
+        createdAt: orderDetail.createdAt,
+        items: orderDetail.items.map((item) => ({
+          itemName: item.itemName,
+          unitPrice: item.unitPrice,
+          quantity: item.quantity,
+          note: item.note,
+        })),
+        subtotal: orderDetail.subtotal,
+        discountAmount: orderDetail.discountAmount,
+        discountLabel: buildDiscountLabel(orderDetail.promotion),
+        totalAmount: orderDetail.payableAmount,
+        qrImageUrl: paymentConfig
+          ? buildVietQrImageUrl(
+              paymentConfig.bankCode,
+              paymentConfig.bankAccountNumber,
+              paymentConfig.bankAccountName,
+              orderDetail.payableAmount,
+            )
+          : null,
+      };
+      const printResult = await printBillToPrinters(printerDrizzleRepository, escposBillPrinter, payload);
+
+      return { ...orderDetail, printResult };
     }),
 
   confirmPayment: userProcedure
@@ -276,13 +378,30 @@ export const orderRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       await requireOpenShift();
-      return runOrderAction(() =>
-        moveOrderTable(orderDrizzleRepository, restaurantTableDrizzleRepository, {
-          orderId: input.orderId,
-          targetTableId: input.targetTableId,
-          actorId: ctx.session.user.id,
-        }),
-      );
+      try {
+        const { order, fromTable, toTable } = await moveOrderTable(
+          orderDrizzleRepository,
+          restaurantTableDrizzleRepository,
+          {
+            orderId: input.orderId,
+            targetTableId: input.targetTableId,
+            actorId: ctx.session.user.id,
+          },
+        );
+        const orderDetail = order.toDetail();
+        const printResult = await printKitchenTicket(printerDrizzleRepository, escposKitchenTicketPrinter, {
+          title: "PHIẾU CHUYỂN BÀN",
+          orderId: orderDetail.id,
+          tableName: toTable.name,
+          staffName: ctx.session.user.name,
+          createdAt: new Date(),
+          items: orderDetail.items.map((i) => ({ itemName: i.itemName, quantity: i.quantity, note: i.note })),
+          transferInfo: `${fromTable ? fromTable.name : "?"} -> ${toTable.name}`,
+        });
+        return { ...orderDetail, printResult };
+      } catch (error) {
+        mapOrderDomainError(error);
+      }
     }),
 
   // Chuyển 1 phần món (có thể chỉ 1 phần số lượng) từ đơn bàn này sang
@@ -307,7 +426,7 @@ export const orderRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       const shiftId = await requireOpenShift();
       try {
-        const { source, target } = await transferOrderItems(
+        const { source, target, transferredItems, sourceTableName, targetTableName } = await transferOrderItems(
           orderDrizzleRepository,
           restaurantTableDrizzleRepository,
           {
@@ -318,7 +437,18 @@ export const orderRouter = createTRPCRouter({
             shiftId,
           },
         );
-        return { source: source?.toDetail() ?? null, target: target.toDetail() };
+        const targetDetail = target.toDetail();
+        const targetTable = await restaurantTableDrizzleRepository.findById(input.targetTableId);
+        const printResult = await printKitchenTicket(printerDrizzleRepository, escposKitchenTicketPrinter, {
+          title: "PHIẾU CHUYỂN MÓN",
+          orderId: targetDetail.id,
+          tableName: targetTable.name,
+          staffName: ctx.session.user.name,
+          createdAt: new Date(),
+          items: transferredItems,
+          transferInfo: `${sourceTableName} -> ${targetTableName}`,
+        });
+        return { source: source?.toDetail() ?? null, target: targetDetail, printResult };
       } catch (error) {
         mapOrderDomainError(error);
       }

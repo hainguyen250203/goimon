@@ -8,6 +8,14 @@ export type UpdateOrderItemsParams = {
   removedItemIds: number[];
 };
 
+export type UpdateOrderItemsResult = {
+  order: Order;
+  /** Món tăng số lượng (gọi thêm) — in "PHIẾU GỌI MÓN" nếu không rỗng. */
+  addedItems: { itemName: string; quantity: number; note: string | null }[];
+  /** Món xoá hẳn/giảm số lượng (trả bớt) — in "PHIẾU HUỶ MÓN" nếu không rỗng. */
+  removedItems: { itemName: string; quantity: number; note: string | null }[];
+};
+
 /**
  * Lưu một loạt thay đổi (sửa số lượng + xoá món) trong 1 lần "Xác nhận" ở
  * màn hình Món đã gọi — UI gom sửa cục bộ rồi gọi 1 lần thay vì lưu ngay mỗi
@@ -31,7 +39,7 @@ export type UpdateOrderItemsParams = {
 export async function updateOrderItems(
   orderRepository: OrderRepository,
   params: UpdateOrderItemsParams,
-): Promise<Order> {
+): Promise<UpdateOrderItemsResult> {
   const orderEntity = await orderRepository.findById(params.orderId);
   if (!orderEntity) throw new Error("Không tìm thấy đơn hàng.");
 
@@ -105,5 +113,9 @@ export async function updateOrderItems(
     });
   }
 
-  return saved;
+  return {
+    order: saved,
+    addedItems: allAdded.map((i) => ({ itemName: i.itemName, quantity: i.quantity, note: i.note })),
+    removedItems: allRemoved.map((i) => ({ itemName: i.itemName, quantity: i.quantity, note: i.note })),
+  };
 }

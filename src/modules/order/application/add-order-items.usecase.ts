@@ -11,6 +11,12 @@ export type AddOrderItemsParams = {
   items: { menuItemId: number; quantity: number; note?: string | null }[];
 };
 
+export type AddOrderItemsResult = {
+  order: Order;
+  /** Đúng các món vừa gọi thêm (không phải toàn bộ đơn) — dùng in phiếu bếp "PHIẾU GỌI MÓN". */
+  addedItems: { itemName: string; quantity: number; note: string | null }[];
+};
+
 /**
  * Mở order mới cho bàn nếu chưa có (hoặc dùng order "open" đang có),
  * thêm/gộp các món vào — giá/tên lấy từ menu thật (KHÔNG tin client) để
@@ -21,7 +27,7 @@ export async function addOrderItems(
   tableRepository: RestaurantTableRepository,
   menuItemRepository: MenuItemRepository,
   params: AddOrderItemsParams,
-): Promise<Order> {
+): Promise<AddOrderItemsResult> {
   if (params.items.length === 0) {
     throw new Error("Chưa chọn món nào.");
   }
@@ -76,5 +82,8 @@ export async function addOrderItems(
     itemsSummary: resolvedItems.map((i) => `${i.itemName} ×${i.quantity}`).join(", "),
   });
 
-  return saved;
+  return {
+    order: saved,
+    addedItems: resolvedItems.map((i) => ({ itemName: i.itemName, quantity: i.quantity, note: i.note })),
+  };
 }

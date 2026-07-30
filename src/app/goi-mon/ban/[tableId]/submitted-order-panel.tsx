@@ -20,6 +20,7 @@ import type { RouterOutputs } from "~/trpc/react";
 import { formatDiscount, formatVnd, PAYMENT_METHOD_LABEL } from "~/lib/format-order";
 import { OrderLineItemCard } from "./order-line-item-card";
 import { PromotionPickerDialog } from "./promotion-picker-dialog";
+import { showPrintResultToast } from "./print-result-toast";
 
 type Order = NonNullable<RouterOutputs["order"]["getTableOrder"]>;
 type OrderItems = Order["items"];
@@ -90,7 +91,8 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
   };
 
   const updateItemsMutation = api.order.updateItems.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      showPrintResultToast(data.printResult, { label: "phiếu bếp", silentOnSuccess: true });
       setHasConflict(false);
       // Đánh dấu NGAY những gì mình vừa lưu là bản đã đồng bộ — nếu không,
       // lúc invalidate() bên dưới refetch xong sẽ mang về đúng order.items
@@ -159,9 +161,14 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
   const handleConfirmPayment = async () => {
     try {
       // In bill trước nếu chưa in (printedAt null) — điều kiện bắt buộc để
-      // thanh toán trong state machine (xem CLAUDE.md), chưa gọi máy in thật.
+      // thanh toán trong state machine (xem CLAUDE.md). Lỗi in KHÔNG chặn
+      // luồng xác nhận thanh toán tiếp theo — chỉ báo thêm 1 toast để nhân
+      // viên biết khách có thể chưa nhận được hoá đơn giấy.
       if (order.printedAt === null) {
-        await printBill.mutateAsync({ orderId: order.id });
+        const result = await printBill.mutateAsync({ orderId: order.id });
+        if (result.printResult.some((r) => !r.success)) {
+          showPrintResultToast(result.printResult, { label: "hoá đơn" });
+        }
       }
       await confirmPayment.mutateAsync({ orderId: order.id, paymentMethod });
       setPaymentOpen(false);

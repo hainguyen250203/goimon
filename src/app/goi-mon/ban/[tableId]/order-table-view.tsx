@@ -18,6 +18,7 @@ import {
 
 import { toaster } from "~/components/ui/toaster";
 import { OrderHistoryDialog } from "~/components/order-timeline/order-history-dialog";
+import { showPrintResultToast } from "./print-result-toast";
 import { api } from "~/trpc/react";
 import { EMPTY_DRAFT_ITEMS, getCartTotalItems, useOrderCartStore } from "../../order-cart.store";
 import { MenuBrowserPanel } from "./menu-browser";
@@ -115,14 +116,10 @@ export function OrderTableView({ tableId }: { tableId: number }) {
   const printBill = api.order.printBill.useMutation({
     // Giữ lại toast NÀY (khác các mutation khác trong luồng gọi món đã bỏ
     // toast success) — in bill không có phản hồi UI nào khác (không chuyển
-    // trang/đổi tab/hiện thêm gì), và cần truyền đạt caveat "chưa có máy in
-    // thật" mà không chỗ nào khác trong UI nói tới.
-    onSuccess: () => {
-      toaster.create({
-        title: "Đã in hoá đơn",
-        description: "Chưa kết nối máy in thật",
-        type: "success",
-      });
+    // trang/đổi tab/hiện thêm gì), nên phải tự báo kết quả in (thành công/lỗi
+    // từng máy) qua toast, xem showPrintResultToast.
+    onSuccess: (data) => {
+      showPrintResultToast(data.printResult, { label: "hoá đơn" });
       void utils.order.getTableOrder.invalidate({ tableId });
     },
     onError: (error) => {

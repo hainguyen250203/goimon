@@ -14,6 +14,7 @@ import {
 import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
 import { TablePickerGrid } from "./table-picker-grid";
+import { showPrintResultToast } from "./print-result-toast";
 
 /**
  * Chuyển THẬT đơn đang phục vụ ở bàn hiện tại sang 1 bàn khác đang trống
@@ -38,7 +39,8 @@ export function MoveOrderTableDialog({
   const { data: tables } = api.order.listTablesForOrdering.useQuery(undefined, { enabled: open });
 
   const moveTable = api.order.moveTable.useMutation({
-    onSuccess: async (_data, variables) => {
+    onSuccess: async (data, variables) => {
+      showPrintResultToast(data.printResult, { label: "phiếu bếp", silentOnSuccess: true });
       onOpenChange(false);
       void utils.order.listTablesForOrdering.invalidate();
       void utils.order.getTableOrder.invalidate({ tableId: currentTableId });

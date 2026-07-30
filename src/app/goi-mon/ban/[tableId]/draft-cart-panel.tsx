@@ -9,6 +9,7 @@ import { api } from "~/trpc/react";
 import { formatVnd } from "~/lib/format-order";
 import { useOrderCartStore, getCartTotalAmount, EMPTY_DRAFT_ITEMS } from "../../order-cart.store";
 import { OrderLineItemCard } from "./order-line-item-card";
+import { showPrintResultToast } from "./print-result-toast";
 
 export function DraftCartPanel({
   tableId,
@@ -29,7 +30,8 @@ export function DraftCartPanel({
   // "Chưa có món nào" trong lúc chờ rồi mới nhảy tab, trông như đứng hình.
   const [finalizing, setFinalizing] = useState(false);
   const addItems = api.order.addItems.useMutation({
-    onSuccess: async () => {
+    onSuccess: async (data) => {
+      showPrintResultToast(data.printResult, { label: "phiếu bếp", silentOnSuccess: true });
       setFinalizing(true);
       clearCart(tableId);
       void utils.order.listTablesForOrdering.invalidate();

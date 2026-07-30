@@ -17,6 +17,10 @@ export type TransferOrderItemsResult = {
   /** null nếu đơn nguồn hết món sau khi chuyển (tự "transferred" — xem Order.removeItem()). */
   source: Order | null;
   target: Order;
+  /** Dùng in phiếu bếp "PHIẾU CHUYỂN MÓN" — router đã có sẵn, không cần query lại. */
+  transferredItems: { itemName: string; quantity: number; note: string | null }[];
+  sourceTableName: string;
+  targetTableName: string;
 };
 
 /**
@@ -120,5 +124,11 @@ export async function transferOrderItems(
     });
   }
 
-  return { source: sourceBecameEmpty ? null : savedSource, target: savedTarget };
+  return {
+    source: sourceBecameEmpty ? null : savedSource,
+    target: savedTarget,
+    transferredItems: transferredItems.map((i) => ({ itemName: i.itemName, quantity: i.quantity, note: i.note })),
+    sourceTableName,
+    targetTableName,
+  };
 }

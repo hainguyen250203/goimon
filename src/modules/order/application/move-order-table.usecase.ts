@@ -1,4 +1,5 @@
 import type { RestaurantTableRepository } from "~/modules/table/domain/restaurant-table.repository";
+import type { RestaurantTable } from "~/modules/table/domain/restaurant-table.entity";
 import { InvalidTableTransferError } from "../domain/order.errors";
 import type { Order } from "../domain/order.entity";
 import type { OrderRepository } from "../domain/order.repository";
@@ -9,11 +10,18 @@ export type MoveOrderTableParams = {
   actorId: string;
 };
 
+export type MoveOrderTableResult = {
+  order: Order;
+  /** Dùng in phiếu bếp "PHIẾU CHUYỂN BÀN" — router đã sẵn tên bàn, không cần query lại. */
+  fromTable: RestaurantTable | undefined;
+  toTable: RestaurantTable;
+};
+
 export async function moveOrderTable(
   orderRepository: OrderRepository,
   tableRepository: RestaurantTableRepository,
   params: MoveOrderTableParams,
-): Promise<Order> {
+): Promise<MoveOrderTableResult> {
   const orderEntity = await orderRepository.findById(params.orderId);
   if (!orderEntity) throw new Error("Không tìm thấy đơn hàng.");
 
@@ -53,5 +61,5 @@ export async function moveOrderTable(
     },
   });
 
-  return saved;
+  return { order: saved, fromTable, toTable };
 }
