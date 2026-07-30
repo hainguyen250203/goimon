@@ -11,6 +11,7 @@ import type {
   ListTablesParams,
   ListTablesResult,
   RestaurantTableRepository,
+  TableStatusCounts,
   UpdateAreaParams,
   UpdateTableParams,
 } from "../domain/restaurant-table.repository";
@@ -158,6 +159,16 @@ export const restaurantTableDrizzleRepository: RestaurantTableRepository = {
       .leftJoin(area, eq(restaurantTable.areaId, area.id))
       .orderBy(asc(area.name), ...naturalTableNameOrderBy);
     return rows.map(toEntity);
+  },
+
+  async countByStatus(): Promise<TableStatusCounts> {
+    const rows = await db
+      .select({ status: restaurantTable.status, value: count() })
+      .from(restaurantTable)
+      .groupBy(restaurantTable.status);
+    const available = rows.find((r) => r.status === "available")?.value ?? 0;
+    const occupied = rows.find((r) => r.status === "occupied")?.value ?? 0;
+    return { available, occupied, total: available + occupied };
   },
 
   async listAreasFull(): Promise<Area[]> {

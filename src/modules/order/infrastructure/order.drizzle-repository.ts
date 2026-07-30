@@ -21,6 +21,7 @@ import type {
   OrderRepository,
   OrderTimelineEvent,
   RecordOrderEventParams,
+  ShiftOrderStats,
   ShiftSummary,
 } from "../domain/order.repository";
 import { order, orderEvent, orderItem } from "./order.schema";
@@ -361,6 +362,26 @@ export const orderDrizzleRepository: OrderRepository = {
       .from(order)
       .where(and(eq(order.shiftId, shiftId), eq(order.status, "paid")));
     return { orderCount: row?.orderCount ?? 0, totalRevenue: row?.totalRevenue ?? 0 };
+  },
+
+  async getShiftOrderStats(shiftId: number): Promise<ShiftOrderStats> {
+    const rows = await db
+      .select({
+        status: order.status,
+        orderCount: count(),
+        revenue: sql<number>`coalesce(sum(${order.totalAmount}), 0)`.mapWith(Number),
+      })
+      .from(order)
+      .where(eq(order.shiftId, shiftId))
+      .groupBy(order.status);
+
+    const byStatus = new Map(rows.map((r) => [r.status, r]));
+    return {
+      totalRevenue: byStatus.get("paid")?.revenue ?? 0,
+      paidOrderCount: byStatus.get("paid")?.orderCount ?? 0,
+      openOrderCount: byStatus.get("open")?.orderCount ?? 0,
+      cancelledOrderCount: byStatus.get("cancelled")?.orderCount ?? 0,
+    };
   },
 
   async listOrderItemEvents({

@@ -38,7 +38,7 @@ export default async function TroLyAiPage({
             chat chiếm toàn bộ chiều cao (khác các trang danh sách thường,
             tự thêm p={{ base: 4, md: 6 }} bằng tay). */}
         <Box h="full">
-          <AssistantShell activeSessionId={sessionId} />
+          <AssistantShell activeSessionId={sessionId} userName={session.user.name} />
         </Box>
       </Suspense>
     </HydrateClient>

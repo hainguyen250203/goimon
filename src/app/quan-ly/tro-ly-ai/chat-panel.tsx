@@ -53,9 +53,11 @@ function ThinkingIndicator() {
 export function ChatPanel({
   sessionId,
   onSessionCreated,
+  userName,
 }: {
   sessionId?: number;
   onSessionCreated: (id: number) => void;
+  userName: string;
 }) {
   const { data, isLoading } = api.assistant.getSession.useQuery(
     { id: sessionId! },
@@ -84,7 +86,12 @@ export function ChatPanel({
     })) ?? [];
 
   return (
-    <ChatPanelInner sessionId={sessionId} onSessionCreated={onSessionCreated} initialMessages={initialMessages} />
+    <ChatPanelInner
+      sessionId={sessionId}
+      onSessionCreated={onSessionCreated}
+      initialMessages={initialMessages}
+      userName={userName}
+    />
   );
 }
 
@@ -92,10 +99,12 @@ function ChatPanelInner({
   sessionId,
   onSessionCreated,
   initialMessages,
+  userName,
 }: {
   sessionId?: number;
   onSessionCreated: (id: number) => void;
   initialMessages: LocalMessage[];
+  userName: string;
 }) {
   const utils = api.useUtils();
   const [input, setInput] = useState("");
@@ -159,10 +168,10 @@ function ChatPanelInner({
           <FloatingAssistantAvatar />
           <Stack gap={1} textAlign="center">
             <Text fontSize="lg" fontWeight="semibold">
-              Chào bạn! Tôi có thể giúp gì cho bạn?
+              Dạ, chào anh {userName}! Anh cần em giúp gì ạ?
             </Text>
             <Text fontSize="sm" color="fg.muted">
-              Hỏi về đơn hàng, doanh thu, món ăn, khuyến mãi... Tôi chỉ đọc dữ liệu, không thể sửa/xoá gì.
+              Đơn hàng, doanh thu, món ăn, khuyến mãi... anh cứ hỏi em thoải mái nha!
             </Text>
           </Stack>
           <Stack gap={2} w="full" maxW="32rem">

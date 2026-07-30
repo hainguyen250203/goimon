@@ -4,6 +4,7 @@ import {
   publicProcedure,
 } from "~/server/api/trpc";
 import { assistantRouter } from "~/modules/assistant/assistant.router";
+import { dashboardRouter } from "~/modules/dashboard/dashboard.router";
 import { menuRouter } from "~/modules/menu/menu.router";
 import { tableRouter } from "~/modules/table/table.router";
 import { printerRouter } from "~/modules/printer/printer.router";
@@ -21,6 +22,7 @@ import { activityLogRouter } from "~/modules/activity-log/activity-log.router";
  */
 export const appRouter = createTRPCRouter({
   health: publicProcedure.query(() => ({ ok: true })),
+  dashboard: dashboardRouter,
   menu: menuRouter,
   table: tableRouter,
   printer: printerRouter,

@@ -12,7 +12,13 @@ import { ChatPanel } from "./chat-panel";
  * `router.push`), để không bao giờ làm gián đoạn 1 câu trả lời đang stream
  * dở (giống cách Lensy — bản tham khảo — xử lý).
  */
-export function AssistantShell({ activeSessionId }: { activeSessionId?: number }) {
+export function AssistantShell({
+  activeSessionId,
+  userName,
+}: {
+  activeSessionId?: number;
+  userName: string;
+}) {
   const [sessionId, setSessionId] = useState<number | undefined>(activeSessionId);
   // key ép ChatPanel remount — CHỈ đổi khi người dùng chủ động chọn phiên
   // khác/bấm "Trò chuyện mới", KHÔNG đổi khi phiên được tạo ngầm lúc gửi tin
@@ -43,7 +49,7 @@ export function AssistantShell({ activeSessionId }: { activeSessionId?: number }
         onSelectSession={handleSelectSession}
         onNewChat={handleNewChat}
       />
-      <ChatPanel key={instanceKey} sessionId={sessionId} onSessionCreated={handleSessionCreated} />
+      <ChatPanel key={instanceKey} sessionId={sessionId} onSessionCreated={handleSessionCreated} userName={userName} />
     </Flex>
   );
 }

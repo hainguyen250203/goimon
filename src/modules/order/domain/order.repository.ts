@@ -39,6 +39,13 @@ export type ShiftSummary = {
   totalRevenue: number;
 };
 
+export type ShiftOrderStats = {
+  totalRevenue: number;
+  paidOrderCount: number;
+  openOrderCount: number;
+  cancelledOrderCount: number;
+};
+
 /**
  * 1 dòng "gọi món"/"trả món" (event items_added hoặc items_removed) — cho
  * trang Lịch sử gọi món. Tăng/giảm số lượng món đã gọi cũng được ghi vào 2
@@ -126,6 +133,9 @@ export interface OrderRepository {
   listActive(): Promise<ActiveOrderSummary[]>;
   /** Số đơn + doanh thu đã thanh toán trong 1 ca — cho màn hình đóng ca/lịch sử ca. */
   getShiftSummary(shiftId: number): Promise<ShiftSummary>;
+  /** Toàn bộ số liệu đơn hàng của 1 ca theo từng trạng thái (đã thanh toán/đang
+   * mở/đã huỷ) — cho trang Tổng quan, luôn theo ca đang mở, không theo ngày. */
+  getShiftOrderStats(shiftId: number): Promise<ShiftOrderStats>;
   /** Lịch sử gọi món (event items_added + items_removed), phân trang + tìm không dấu server-side. */
   listOrderItemEvents(
     params: ListOrderItemEventsParams,

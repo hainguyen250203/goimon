@@ -12,6 +12,12 @@ export type ListTablesResult = {
   total: number;
 };
 
+export type TableStatusCounts = {
+  available: number;
+  occupied: number;
+  total: number;
+};
+
 export type AreaOption = {
   id: number;
   name: string;
@@ -56,6 +62,8 @@ export interface RestaurantTableRepository {
    * list-tables-for-ordering.usecase.ts — tránh table module phải import
    * schema của order module, gây circular import giữa 2 module). */
   listAll(): Promise<RestaurantTable[]>;
+  /** Số bàn theo từng trạng thái (đang phục vụ/trống) — cho trang Tổng quan. */
+  countByStatus(): Promise<TableStatusCounts>;
 
   // --- Quản trị khu vực (Area) — dùng cho dialog "Quản lý khu vực" ở /quan-ly/ban ---
   /** Toàn bộ khu vực (kể cả đang ẩn) — cho dialog quản lý, khác listAreaOptions (chỉ active). */

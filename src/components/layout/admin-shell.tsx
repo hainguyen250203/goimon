@@ -103,20 +103,25 @@ function SidebarCollapseToggle({
 
 // Nhãn nhóm — chữ hoa nhỏ + 1 đường kẻ mờ chiếm hết phần còn lại, đúng
 // pattern tham khảo từ alix-bo-frontend-v2 (components/admin/AdminSidebarItem.tsx).
-function GroupLabel({ label }: { label: string }) {
+// Chiều cao CỐ ĐỊNH, giống nhau ở cả 2 trạng thái (chỉ ẩn/hiện chữ nhãn) — để
+// chiều cao chỉ khác nhau lúc thu gọn/mở rộng thì các icon bên dưới mỗi ranh
+// giới nhóm sẽ bị "giật" lên xuống theo, do khoảng trống nhãn nhóm co giãn.
+function GroupLabel({ label, collapsed }: { label: string; collapsed: boolean }) {
   return (
-    <Flex align="center" gap={2} px={4} pt={3} pb={1}>
-      <Text
-        fontSize="xs"
-        fontWeight="medium"
-        color="fg.subtle"
-        letterSpacing="0.06em"
-        textTransform="uppercase"
-        lineHeight="1"
-        flexShrink={0}
-      >
-        {label}
-      </Text>
+    <Flex align="center" gap={2} h="28px" px={collapsed ? 2 : 4}>
+      {!collapsed && (
+        <Text
+          fontSize="xs"
+          fontWeight="medium"
+          color="fg.subtle"
+          letterSpacing="0.06em"
+          textTransform="uppercase"
+          lineHeight="1"
+          flexShrink={0}
+        >
+          {label}
+        </Text>
+      )}
       <Box flex={1} h="1px" bg="border" />
     </Flex>
   );
@@ -141,8 +146,7 @@ function SidebarNav({
         const isFirstInGroup = item.group !== undefined && item.group !== prevGroup;
         return (
           <Fragment key={item.key}>
-            {isFirstInGroup && !collapsed && <GroupLabel label={item.group!} />}
-            {isFirstInGroup && collapsed && <Box h="1px" bg="border" mx={2} my={1} />}
+            {isFirstInGroup && <GroupLabel label={item.group!} collapsed={collapsed} />}
             <Box my="1px">
               <AdminSidebarItem item={item} collapsed={collapsed} onNavigate={onNavigate} />
             </Box>
