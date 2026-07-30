@@ -1,17 +1,14 @@
 import { z } from "zod";
-import { TRPCError } from "@trpc/server";
 
 import { adminProcedure, createTRPCRouter } from "~/server/api/trpc";
 import { logActivity } from "~/modules/activity-log/log-activity";
 
-import { AssistantSessionNotFoundError } from "./domain/assistant.errors";
 import { createSession } from "./application/create-session.usecase";
 import { listSessions } from "./application/list-sessions.usecase";
 import { renameSession } from "./application/rename-session.usecase";
 import { deleteSession } from "./application/delete-session.usecase";
 import { getSessionWithMessages } from "./application/get-session-with-messages.usecase";
 import { getUsageSummary } from "./application/get-usage-summary.usecase";
-import { AssistantRateLimitError, sendMessage } from "./application/send-message.usecase";
 import { assistantDrizzleRepository } from "./infrastructure/assistant.drizzle-repository";
 
 export const assistantRouter = createTRPCRouter({
@@ -66,27 +63,9 @@ export const assistantRouter = createTRPCRouter({
     getUsageSummary(assistantDrizzleRepository, ctx.session.user.id),
   ),
 
-  // Xử lý 1 lượt chat hoàn toàn phía server, như mọi action khác trong app —
-  // không có Route Handler/API riêng, không streaming (xem send-message.usecase.ts).
-  sendMessage: adminProcedure
-    .input(z.object({ sessionId: z.number().int().positive(), text: z.string().min(1).max(4000) }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        return await sendMessage(assistantDrizzleRepository, {
-          sessionId: input.sessionId,
-          userId: ctx.session.user.id,
-          text: input.text,
-        });
-      } catch (error) {
-        if (error instanceof AssistantSessionNotFoundError) {
-          throw new TRPCError({ code: "NOT_FOUND", message: error.message });
-        }
-        if (error instanceof AssistantRateLimitError) {
-          throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: error.message });
-        }
-        throw error;
-      }
-    }),
+  // Lượt chat thật (gọi model, chạy tool, lưu DB) đi qua Route Handler riêng
+  // `api/assistant/chat` — tRPC mutation không stream token/tool-call theo
+  // thời gian thực được (xem send-message.usecase.ts).
 
   deleteSession: adminProcedure
     .input(z.object({ id: z.number().int().positive() }))

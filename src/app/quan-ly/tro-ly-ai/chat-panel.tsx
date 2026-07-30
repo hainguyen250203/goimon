@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Box, Flex, IconButton, Image, Spinner, Stack, Text, Textarea } from "@chakra-ui/react";
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, Square } from "lucide-react";
+import { useChat } from "@ai-sdk/react";
+import { DefaultChatTransport, isToolUIPart, type UIMessage } from "ai";
 
 import { api } from "~/trpc/react";
 import { toaster } from "~/components/ui/toaster";
 import { MessagePart } from "./message-part";
 import { FloatingAssistantAvatar } from "~/modules/assistant/ui/floating-avatar";
-import type { StoredMessagePart } from "~/modules/assistant/infrastructure/build-message-parts";
 
 const SUGGESTIONS = [
   "Doanh thu ca gần nhất hôm nay là bao nhiêu?",
@@ -17,15 +18,8 @@ const SUGGESTIONS = [
   "Món ăn nào bán chạy nhất tuần này?",
 ];
 
-type LocalMessage = {
-  id: string;
-  role: "user" | "assistant";
-  parts: StoredMessagePart[];
-};
-
-// Không streaming (xem send-message.usecase.ts) nên không biết model đang làm
-// gì thật sự — xoay vòng vài câu để phần chờ đỡ "trơ", đỡ cảm giác giật cục
-// khi câu trả lời hiện ra 1 lần. Không phải tiến trình thật.
+// Chỉ hiện ở khoảng lặng THẬT (chưa có chữ/tool chip nào nói lên việc đang
+// làm) — xoay vòng vài câu cho đỡ "trơ", không phải tiến trình thật.
 const THINKING_LINES = [
   "Đang tra cứu dữ liệu...",
   "Đang tổng hợp thông tin...",
@@ -59,18 +53,23 @@ export function ChatPanel({
   onSessionCreated: (id: number) => void;
   userName: string;
 }) {
+  // CHỈ chốt sessionId lúc MOUNT — nếu dùng thẳng prop `sessionId` sống, lúc
+  // phiên được tạo NGẦM khi gửi tin đầu (xem submit() ở ChatPanelInner), query
+  // này sẽ tự chuyển enabled=true/isLoading=true NGAY GIỮA LÚC đang stream, ép
+  // nhánh dưới trả về Spinner → unmount ChatPanelInner → mất luôn câu trả lời
+  // đang chảy dở (bug thật: phải bấm 2 lần mới thấy trả lời). Phiên tự tạo
+  // trong chính component này thì chắc chắn rỗng, không cần fetch lại làm gì.
+  const [initialSessionId] = useState(sessionId);
   const { data, isLoading } = api.assistant.getSession.useQuery(
-    { id: sessionId! },
-    { enabled: sessionId !== undefined },
+    { id: initialSessionId! },
+    { enabled: initialSessionId !== undefined },
   );
 
-  // `ChatPanelInner` chỉ đọc `initialMessages` MỘT LẦN lúc mount (useState) —
-  // nếu mount trong lúc query còn đang tải (sessionId có nhưng data chưa về),
-  // nó sẽ "chốt" nhầm mảng rỗng mãi mãi dù data đến sau đó, gây 2 lỗi cùng lúc:
-  // (1) phải bấm F5 mới thấy lại lịch sử, (2) màn hình chào bị "chớp" qua rồi
-  // mới tới lịch sử thật. Chặn render ChatPanelInner tới khi biết chắc chắn
-  // nội dung — sessionId undefined (chat mới) thì biết ngay là rỗng, không cần chờ.
-  if (sessionId !== undefined && isLoading) {
+  // Chặn render ChatPanelInner (và mount useChat) tới khi biết chắc nội dung —
+  // nếu không, useChat sẽ "chốt" initialMessages=[] trong lúc query còn tải,
+  // gây chớp màn hình chào rồi mới tới lịch sử thật (sessionId undefined =
+  // chat mới thì biết ngay là rỗng, không cần chờ).
+  if (initialSessionId !== undefined && isLoading) {
     return (
       <Flex flex={1} align="center" justify="center" h="full">
         <Spinner />
@@ -78,12 +77,8 @@ export function ChatPanel({
     );
   }
 
-  const initialMessages: LocalMessage[] =
-    data?.messages.map((m) => ({
-      id: String(m.id),
-      role: m.role,
-      parts: m.parts as StoredMessagePart[],
-    })) ?? [];
+  const initialMessages: UIMessage[] =
+    data?.messages.map((m) => ({ id: String(m.id), role: m.role, parts: m.parts }) as UIMessage) ?? [];
 
   return (
     <ChatPanelInner
@@ -103,63 +98,97 @@ function ChatPanelInner({
 }: {
   sessionId?: number;
   onSessionCreated: (id: number) => void;
-  initialMessages: LocalMessage[];
+  initialMessages: UIMessage[];
   userName: string;
 }) {
   const utils = api.useUtils();
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<LocalMessage[]>(initialMessages);
   const [followups, setFollowups] = useState<string[]>([]);
 
-  const createSession = api.assistant.createSession.useMutation();
-  const send = api.assistant.sendMessage.useMutation();
+  // Phiên có thể được tạo NGẦM lúc gửi tin đầu (xem submit()) — dùng ref thay
+  // vì `prepareSendMessagesRequest` cần đọc giá trị MỚI NHẤT tại thời điểm gửi
+  // request, không phải giá trị lúc transport được tạo (chỉ tạo 1 lần).
+  const sessionIdRef = useRef(sessionId);
+  useEffect(() => {
+    sessionIdRef.current = sessionId;
+  }, [sessionId]);
 
-  const isBusy = send.isPending;
+  const createSession = api.assistant.createSession.useMutation();
+
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/assistant/chat",
+        prepareSendMessagesRequest: ({ messages }) => {
+          const last = messages[messages.length - 1];
+          const text =
+            last?.role === "user"
+              ? last.parts
+                  .filter((p): p is Extract<typeof p, { type: "text" }> => p.type === "text")
+                  .map((p) => p.text)
+                  .join("\n")
+              : "";
+          return { body: { sessionId: sessionIdRef.current, text } };
+        },
+      }),
+    [],
+  );
+
+  const { messages, sendMessage, status, error, stop, regenerate, clearError } = useChat({
+    messages: initialMessages,
+    transport,
+    onData: (part) => {
+      if (part.type === "data-followups" && Array.isArray(part.data)) {
+        setFollowups(part.data.filter((q): q is string => typeof q === "string"));
+      }
+    },
+    onFinish: () => {
+      // Cập nhật sidebar: phiên mới + tên tự đặt sau lượt đầu.
+      void utils.assistant.listSessions.invalidate();
+    },
+  });
+
+  const busy = status === "submitted" || status === "streaming";
 
   const submit = async (text: string) => {
     const trimmed = text.trim();
-    if (!trimmed || isBusy) return;
+    if (!trimmed || busy) return;
     setInput("");
     setFollowups([]);
 
-    let currentSessionId = sessionId;
-    if (!currentSessionId) {
+    if (!sessionIdRef.current) {
       try {
-        const session = await createSession.mutateAsync({});
-        currentSessionId = session.id;
-        onSessionCreated(session.id);
+        const created = await createSession.mutateAsync({});
+        sessionIdRef.current = created.id;
+        onSessionCreated(created.id);
         void utils.assistant.listSessions.invalidate();
-      } catch (error) {
+      } catch (err) {
         toaster.create({
           title: "Không thể bắt đầu trò chuyện",
-          description: error instanceof Error ? error.message : undefined,
+          description: err instanceof Error ? err.message : undefined,
           type: "error",
         });
         return;
       }
     }
 
-    // Hiện tin nhắn của người dùng ngay — không cần đợi model trả lời xong.
-    setMessages((prev) => [...prev, { id: `local-${Date.now()}`, role: "user", parts: [{ type: "text", text: trimmed }] }]);
-
-    try {
-      const result = await send.mutateAsync({ sessionId: currentSessionId, text: trimmed });
-      setMessages((prev) => [
-        ...prev,
-        { id: `local-${Date.now()}-a`, role: "assistant", parts: result.assistantParts },
-      ]);
-      setFollowups(result.followups);
-      void utils.assistant.listSessions.invalidate();
-    } catch (error) {
-      toaster.create({
-        title: "Không trả lời được",
-        description: error instanceof Error ? error.message : undefined,
-        type: "error",
-      });
-    }
+    void sendMessage({ text: trimmed });
   };
 
   const isEmpty = messages.length === 0;
+
+  // "Đang nghĩ" chỉ hiện ở khoảng lặng THẬT — không hiện khi chữ đang chảy
+  // hoặc tool đang chạy (tool chip đã có spinner riêng của nó), tránh cảm
+  // giác lặp/đứng yên như bản cũ hiện suốt cả lúc đợi.
+  const lastMessage = messages[messages.length - 1];
+  const lastPart =
+    busy && lastMessage?.role === "assistant" ? lastMessage.parts[lastMessage.parts.length - 1] : undefined;
+  const textFlowing = lastPart?.type === "text" && lastPart.state !== "done";
+  const toolInProgress =
+    !!lastPart &&
+    isToolUIPart(lastPart) &&
+    (lastPart.state === "input-streaming" || lastPart.state === "input-available");
+  const showThinking = busy && !textFlowing && !toolInProgress;
 
   return (
     <Flex direction="column" flex={1} minW={0} h="full">
@@ -212,7 +241,30 @@ function ChatPanelInner({
               </Box>
             </Flex>
           ))}
-          {isBusy && <ThinkingIndicator />}
+          {showThinking && <ThinkingIndicator />}
+          {error && (
+            <Flex align="center" gap={3} borderWidth="1px" borderColor="red.muted" bg="red.subtle" rounded="l2" px={3} py={2}>
+              <Text flex={1} fontSize="sm" color="fg.error">
+                {error.message || "Có lỗi xảy ra."}
+              </Text>
+              <Box
+                as="button"
+                fontSize="xs"
+                fontWeight="medium"
+                px={3}
+                py={1.5}
+                rounded="l2"
+                borderWidth="1px"
+                _hover={{ bg: "bg.muted" }}
+                onClick={() => {
+                  clearError();
+                  void regenerate();
+                }}
+              >
+                Thử lại
+              </Box>
+            </Flex>
+          )}
         </Stack>
       )}
 
@@ -256,15 +308,15 @@ function ChatPanelInner({
               }
             }}
           />
-          <IconButton
-            aria-label="Gửi"
-            rounded="full"
-            size="sm"
-            onClick={() => submit(input)}
-            disabled={isBusy || !input.trim()}
-          >
-            <ArrowUp size={16} />
-          </IconButton>
+          {busy ? (
+            <IconButton aria-label="Dừng" rounded="full" size="sm" variant="outline" onClick={() => void stop()}>
+              <Square size={14} />
+            </IconButton>
+          ) : (
+            <IconButton aria-label="Gửi" rounded="full" size="sm" onClick={() => void submit(input)} disabled={!input.trim()}>
+              <ArrowUp size={16} />
+            </IconButton>
+          )}
         </Flex>
       </Flex>
     </Flex>

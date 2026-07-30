@@ -1,9 +1,10 @@
 import type { StepResult, ToolSet } from "ai";
 
 /**
- * Vì không dùng streaming (`generateText` thay vì `streamText`), không có sẵn
- * "UIMessage parts" như trước — tự dựng lại từ `result.steps` để lưu DB và
- * render UI theo đúng thứ tự đã diễn ra (tool call nào, rồi tới đoạn text nào).
+ * Dựng lại mảng "UI message parts" từ `result.steps` (có sau khi
+ * `streamText`'s stream đã tiêu thụ xong) để LƯU DB — client nhận parts trực
+ * tiếp qua UI message stream lúc đang chạy (xem send-message.usecase.ts),
+ * hàm này chỉ phục vụ việc load lại lịch sử đúng thứ tự đã diễn ra.
  */
 export type StoredMessagePart =
   | { type: "text"; text: string }

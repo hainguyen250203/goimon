@@ -1,9 +1,16 @@
-import { convertToModelMessages, generateText, stepCountIs, type UIMessage } from "ai";
+import {
+  convertToModelMessages,
+  streamText,
+  stepCountIs,
+  toUIMessageStream,
+  type UIMessage,
+  type UIMessageStreamWriter,
+} from "ai";
 import { openai } from "@ai-sdk/openai";
 
 import { AssistantSessionNotFoundError } from "../domain/assistant.errors";
 import type { AssistantRepository } from "../domain/assistant.repository";
-import { buildMessageParts, type StoredMessagePart } from "../infrastructure/build-message-parts";
+import { buildMessageParts } from "../infrastructure/build-message-parts";
 import { generateFollowups } from "../infrastructure/generate-followups";
 import { generateTitle } from "../infrastructure/generate-title";
 import { checkRateLimit } from "../infrastructure/rate-limit";
@@ -25,23 +32,18 @@ export type SendMessageParams = {
   text: string;
 };
 
-export type SendMessageResult = {
-  assistantParts: StoredMessagePart[];
-  followups: string[];
-  /** Chỉ có giá trị khi đây là lượt đầu tiên của phiên — sidebar dùng để cập nhật ngay không cần fetch lại. */
-  title: string | null;
-};
-
 /**
- * Không dùng streaming (xem generate-title.ts/generate-followups.ts để biết lý
- * do đổi sang tRPC mutation thường thay vì Route Handler + streamText) — toàn
- * bộ lượt chat (gọi model, chạy tool, lưu DB, đặt tên phiên, gợi ý câu hỏi
- * tiếp theo) chạy trong 1 lần gọi, trả về khi đã xong hết.
+ * Chạy 1 lượt chat và stream trực tiếp xuống `writer` (UI message stream) —
+ * dùng bởi Route Handler `api/assistant/chat` (không phải tRPC, vì tRPC
+ * mutation không stream được token/tool-call theo thời gian thực). `writer`
+ * do `createUIMessageStream` cấp; hàm này chỉ có tác dụng phụ (ghi vào writer
+ * + persist DB), không trả kết quả — client nhận toàn bộ qua stream.
  */
-export async function sendMessage(
+export async function streamAssistantReply(
   repository: AssistantRepository,
   { sessionId, userId, text }: SendMessageParams,
-): Promise<SendMessageResult> {
+  writer: UIMessageStreamWriter,
+): Promise<void> {
   if (!checkRateLimit(userId).allowed) {
     throw new AssistantRateLimitError();
   }
@@ -62,34 +64,45 @@ export async function sendMessage(
   ];
   const modelMessages = await convertToModelMessages(uiMessages);
 
-  const result = await generateText({
+  const tools = assistantTools();
+  const result = streamText({
     model: openai(MODEL),
     system: SYSTEM_PROMPT + buildCurrentTimeContext(),
     messages: modelMessages,
-    tools: assistantTools(),
+    tools,
     stopWhen: stepCountIs(6),
   });
 
-  const assistantParts = buildMessageParts(result.steps);
+  // merge() bơm chunk (text-delta/tool-call/tool-result) xuống client NGAY khi
+  // có, chạy nền song song — không chặn dòng code bên dưới.
+  writer.merge(toUIMessageStream({ stream: result.stream, tools }));
+
+  // `result.text`/`result.steps`/`result.usage` đều "tự tiêu thụ" stream nếu
+  // chưa ai đọc — an toàn gọi song song với merge() ở trên vì cùng đọc từ 1
+  // nguồn generation dùng chung (không tạo thêm lệnh gọi model nào khác).
+  const [finalText, steps, usage] = await Promise.all([result.text, result.steps, result.usage]);
+
+  const assistantParts = buildMessageParts(steps);
   await repository.appendMessage({
     sessionId,
     role: "assistant",
     parts: assistantParts,
     usage: {
-      inputTokens: result.usage.inputTokens ?? 0,
-      outputTokens: result.usage.outputTokens ?? 0,
+      inputTokens: usage.inputTokens ?? 0,
+      outputTokens: usage.outputTokens ?? 0,
     },
     model: MODEL,
   });
   await repository.touchSessionUpdatedAt(sessionId);
 
-  const followups = await generateFollowups(result.text);
-
-  let title: string | null = null;
-  if (isFirstMessage) {
-    title = await generateTitle(text);
-    if (title) await repository.renameSession(sessionId, userId, title);
+  // Gợi ý câu hỏi tiếp theo — transient part, không lưu DB (xem generate-followups.ts).
+  const followups = await generateFollowups(finalText);
+  if (followups.length > 0) {
+    writer.write({ type: "data-followups", data: followups, transient: true });
   }
 
-  return { assistantParts, followups, title };
+  if (isFirstMessage) {
+    const title = await generateTitle(text);
+    if (title) await repository.renameSession(sessionId, userId, title);
+  }
 }
