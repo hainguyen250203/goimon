@@ -6,8 +6,14 @@ import { listPrinters } from "./application/list-printers.usecase";
 import { createPrinter } from "./application/create-printer.usecase";
 import { updatePrinter } from "./application/update-printer.usecase";
 import { deletePrinter } from "./application/delete-printer.usecase";
+import { scanNetworkForPrinters } from "./application/scan-network-for-printers.usecase";
 import { printerDrizzleRepository } from "./infrastructure/printer.drizzle-repository";
+import { tcpPrinterScanner } from "./infrastructure/tcp-printer-scanner";
 import { logActivity } from "~/modules/activity-log/log-activity";
+
+// Cổng raw/JetDirect chuẩn của máy in mạng (ESC/POS) — khớp cổng mặc định
+// đang dùng khi tạo máy in thủ công (xem printer-form-dialog.tsx).
+const DEFAULT_SCAN_PORT = 9100;
 
 // Xem menu.router.ts — drizzle-zod@0.8 sinh schema kiểu zod/v4, không
 // .extend() tương thích được với `z` classic nên viết tay thay vì sinh.
@@ -25,6 +31,13 @@ const printerInputSchema = z.object({
 });
 
 export const printerRouter = createTRPCRouter({
+  // Quét mạng LAN tìm IP máy in đang mở cổng 9100 — máy chạy server này vừa
+  // nối Wi-Fi vừa nối dây LAN thẳng tới máy in (xem tcp-printer-scanner.ts),
+  // nên phải chạy trên server chứ không thể quét từ trình duyệt người dùng.
+  scanNetwork: managerProcedure
+    .input(z.object({ port: z.number().int().min(1).max(65535).default(DEFAULT_SCAN_PORT) }).optional())
+    .mutation(({ input }) => scanNetworkForPrinters(tcpPrinterScanner, input?.port ?? DEFAULT_SCAN_PORT)),
+
   list: managerProcedure
     .input(
       z.object({

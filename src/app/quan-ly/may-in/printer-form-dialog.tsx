@@ -26,11 +26,11 @@ type FormState = {
   isActive: boolean;
 };
 
-function toFormState(item?: Printer): FormState {
+function toFormState(item?: Printer, prefill?: { ipAddress: string; port: number }): FormState {
   return {
     name: item?.name ?? "",
-    ipAddress: item?.ipAddress ?? "",
-    port: item ? String(item.port) : "",
+    ipAddress: item?.ipAddress ?? prefill?.ipAddress ?? "",
+    port: item ? String(item.port) : prefill ? String(prefill.port) : "",
     isActive: item?.isActive ?? true,
   };
 }
@@ -51,13 +51,16 @@ export function PrinterFormDialog({
   open,
   onOpenChange,
   item,
+  prefill,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   item?: Printer;
+  /** Điền sẵn IP/cổng khi thêm mới từ kết quả quét mạng — bỏ qua nếu đang sửa (`item` có giá trị). */
+  prefill?: { ipAddress: string; port: number };
 }) {
   const isEdit = !!item;
-  const [form, setForm] = useState<FormState>(() => toFormState(item));
+  const [form, setForm] = useState<FormState>(() => toFormState(item, prefill));
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
 
   const utils = api.useUtils();
@@ -67,10 +70,11 @@ export function PrinterFormDialog({
 
   useEffect(() => {
     if (open) {
-      setForm(toFormState(item));
+      setForm(toFormState(item, prefill));
       setErrors({});
     }
-  }, [open, item]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, item, prefill?.ipAddress, prefill?.port]);
 
   const handleSubmit = () => {
     const nextErrors: Partial<Record<keyof FormState, string>> = {};

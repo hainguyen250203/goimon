@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "nextjs-toploader/app";
 import { keepPreviousData } from "@tanstack/react-query";
 import { Button, Stack } from "@chakra-ui/react";
-import { Plus } from "lucide-react";
+import { Plus, ScanSearch } from "lucide-react";
 
 import {
   ListViewTable,
@@ -16,8 +16,10 @@ import { FilterSelect } from "~/components/data-table/filter-select";
 import { StatusDot } from "~/components/ui/status-dot";
 import { api } from "~/trpc/react";
 import type { Printer } from "~/modules/printer/domain/printer.entity";
+import type { PrinterScanResult } from "~/modules/printer/domain/printer-scanner";
 import { PrinterFormDialog } from "./printer-form-dialog";
 import { PrinterRowActions } from "./printer-row-actions";
+import { PrinterScanDialog } from "./printer-scan-dialog";
 
 const PAGE_SIZE = 20;
 const ALL_STATUS = "all";
@@ -48,6 +50,8 @@ export function PrinterList({
 
   const [editingItem, setEditingItem] = useState<Printer | undefined>();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [scanDialogOpen, setScanDialogOpen] = useState(false);
+  const [prefill, setPrefill] = useState<PrinterScanResult | undefined>();
 
   const columns: ListViewColumn<Printer>[] = [
     { key: "id", header: "ID", cell: (row) => row.id, width: "4rem" },
@@ -94,15 +98,22 @@ export function PrinterList({
     <Stack gap={4}>
       <ListViewToolbar
         end={
-          <Button
-            onClick={() => {
-              setEditingItem(undefined);
-              setDialogOpen(true);
-            }}
-          >
-            <Plus size={16} />
-            Thêm máy in
-          </Button>
+          <>
+            <Button variant="outline" onClick={() => setScanDialogOpen(true)}>
+              <ScanSearch size={16} />
+              Quét tìm máy in
+            </Button>
+            <Button
+              onClick={() => {
+                setEditingItem(undefined);
+                setPrefill(undefined);
+                setDialogOpen(true);
+              }}
+            >
+              <Plus size={16} />
+              Thêm máy in
+            </Button>
+          </>
         }
       >
         <FilterSelect
@@ -148,6 +159,19 @@ export function PrinterList({
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         item={editingItem}
+        prefill={prefill}
+      />
+
+      <PrinterScanDialog
+        open={scanDialogOpen}
+        onOpenChange={setScanDialogOpen}
+        existingIpAddresses={items.map((item) => item.ipAddress)}
+        onPick={(result) => {
+          setScanDialogOpen(false);
+          setEditingItem(undefined);
+          setPrefill(result);
+          setDialogOpen(true);
+        }}
       />
     </Stack>
   );
