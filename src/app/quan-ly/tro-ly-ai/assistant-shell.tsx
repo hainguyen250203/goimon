@@ -1,10 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import { Box, Flex, IconButton, VisuallyHidden } from "@chakra-ui/react";
+import { Box, Flex, IconButton } from "@chakra-ui/react";
 import { PanelLeft } from "lucide-react";
 
-import { DrawerBody, DrawerContent, DrawerRoot, DrawerTitle } from "~/components/ui/drawer";
+import {
+  DrawerBody,
+  DrawerCloseTrigger,
+  DrawerContent,
+  DrawerHeader,
+  DrawerRoot,
+  DrawerTitle,
+} from "~/components/ui/drawer";
 import { SessionSidebar } from "./session-sidebar";
 import { ChatPanel } from "./chat-panel";
 
@@ -72,9 +79,12 @@ export function AssistantShell({
         onOpenChange={(e) => setMobileSidebarOpen(e.open)}
       >
         <DrawerContent maxW="17rem" p={0}>
-          <VisuallyHidden>
-            <DrawerTitle>Danh sách trò chuyện</DrawerTitle>
-          </VisuallyHidden>
+          <DrawerHeader borderBottomWidth="1px" borderColor="border" py={3} px={4}>
+            <DrawerTitle fontSize="sm" fontWeight="medium">
+              Lịch sử trò chuyện
+            </DrawerTitle>
+          </DrawerHeader>
+          <DrawerCloseTrigger />
           <DrawerBody p={0}>
             <SessionSidebar
               activeSessionId={sessionId}

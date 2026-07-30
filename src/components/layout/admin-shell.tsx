@@ -201,7 +201,7 @@ export function AdminShell({
       </DrawerRoot>
 
       {/* Main content */}
-      <Flex flex={1} direction="column" h="full" minW={0} overflowY="auto">
+      <Flex flex={1} direction="column" h="full" minW={0} overflow="hidden">
         <Flex
           as="header"
           h="56px"
@@ -246,8 +246,14 @@ export function AdminShell({
         {/* Không quy định padding ở đây — mỗi page tự set padding của mình
             (xem CLAUDE.md / hướng dẫn tro-ly-ai). Trang có lịch sử/chat cần
             chiếm toàn bộ chiều cao (không padding trên dưới) trong khi các
-            trang danh sách bình thường tự thêm `p={{ base: 4, md: 6 }}`. */}
-        <Box as="main" flex={1}>
+            trang danh sách bình thường tự thêm `p={{ base: 4, md: 6 }}`.
+            `minH={0}` bắt buộc phải có: flex item trong flex column mặc định
+            `min-height: auto` (co theo nội dung), nếu thiếu thì nội dung dài
+            (vd lịch sử chat) sẽ đẩy `main` cao hơn viewport thay vì bị giới
+            hạn đúng phần còn lại — khi đó `overflowY="auto"` bên trong từng
+            trang (sidebar lịch sử, khung chat) không bao giờ kích hoạt được,
+            cả trang cuộn chung làm sidebar trôi mất theo nội dung chat. */}
+        <Box as="main" flex={1} minH={0} overflowY="auto">
           {children}
         </Box>
       </Flex>
