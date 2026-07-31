@@ -30,6 +30,7 @@ const menuItemInputSchema = z.object({
   price: z.number().positive("Giá phải lớn hơn 0"),
   isAvailable: z.boolean(),
   isPublished: z.boolean(),
+  printToKitchen: z.boolean(),
 });
 
 export const menuRouter = createTRPCRouter({
@@ -82,6 +83,7 @@ export const menuRouter = createTRPCRouter({
             price: before.price,
             isAvailable: before.isAvailable,
             isPublished: before.isPublished,
+            printToKitchen: before.printToKitchen,
           },
           after: {
             name: after.name,
@@ -89,6 +91,7 @@ export const menuRouter = createTRPCRouter({
             price: after.price,
             isAvailable: after.isAvailable,
             isPublished: after.isPublished,
+            printToKitchen: after.printToKitchen,
           },
         },
       });

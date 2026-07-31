@@ -25,6 +25,7 @@ type FormState = {
   price: string;
   isAvailable: boolean;
   isPublished: boolean;
+  printToKitchen: boolean;
 };
 
 function toFormState(item?: MenuItem): FormState {
@@ -34,6 +35,7 @@ function toFormState(item?: MenuItem): FormState {
     price: item ? String(item.price) : "",
     isAvailable: item?.isAvailable ?? true,
     isPublished: item?.isPublished ?? true,
+    printToKitchen: item?.printToKitchen ?? true,
   };
 }
 
@@ -89,6 +91,7 @@ export function MenuItemFormDialog({
       price,
       isAvailable: form.isAvailable,
       isPublished: form.isPublished,
+      printToKitchen: form.printToKitchen,
     };
 
     const mutation = isEdit
@@ -167,6 +170,17 @@ export function MenuItemFormDialog({
                 }
               >
                 Hiển thị trong menu
+              </Switch>
+            </Field>
+
+            <Field orientation="horizontal">
+              <Switch
+                checked={form.printToKitchen}
+                onCheckedChange={(details) =>
+                  setForm((f) => ({ ...f, printToKitchen: details.checked }))
+                }
+              >
+                In bếp
               </Switch>
             </Field>
           </Stack>

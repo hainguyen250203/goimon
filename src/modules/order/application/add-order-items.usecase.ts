@@ -13,8 +13,10 @@ export type AddOrderItemsParams = {
 
 export type AddOrderItemsResult = {
   order: Order;
-  /** Đúng các món vừa gọi thêm (không phải toàn bộ đơn) — dùng in phiếu bếp "PHIẾU GỌI MÓN". */
-  addedItems: { itemName: string; quantity: number; note: string | null }[];
+  /** Đúng các món vừa gọi thêm (không phải toàn bộ đơn) — dùng in phiếu bếp
+   * "PHIẾU GỌI MÓN". `menuItemId` để router lọc theo `printToKitchen` trước
+   * khi in — xem order.router.ts. */
+  addedItems: { menuItemId: number; itemName: string; quantity: number; note: string | null }[];
 };
 
 /**
@@ -67,6 +69,7 @@ export async function addOrderItems(
   const resolvedItems = params.items.map((i) => {
     const menuItem = menuItemById.get(i.menuItemId)!;
     return {
+      menuItemId: menuItem.id,
       itemName: menuItem.name,
       unitPrice: menuItem.price,
       quantity: i.quantity,
@@ -84,6 +87,11 @@ export async function addOrderItems(
 
   return {
     order: saved,
-    addedItems: resolvedItems.map((i) => ({ itemName: i.itemName, quantity: i.quantity, note: i.note })),
+    addedItems: resolvedItems.map((i) => ({
+      menuItemId: i.menuItemId,
+      itemName: i.itemName,
+      quantity: i.quantity,
+      note: i.note,
+    })),
   };
 }

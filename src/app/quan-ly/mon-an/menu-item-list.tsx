@@ -105,6 +105,15 @@ export function MenuItemList({
       ),
     },
     {
+      key: "printToKitchen",
+      header: "In bếp",
+      cell: (row) => (
+        <StatusDot color={row.printToKitchen ? "green.500" : "gray.400"}>
+          {row.printToKitchen ? "Có" : "Không"}
+        </StatusDot>
+      ),
+    },
+    {
       key: "actions",
       header: "",
       width: "3rem",

@@ -34,6 +34,10 @@ export const menuItem = pgTable(
     isAvailable: boolean("is_available").notNull().default(true),
     // Có hiển thị/bán trong menu hay bị ẩn (soft-delete), khác isAvailable.
     isPublished: boolean("is_published").notNull().default(true),
+    // Món này có in ra phiếu bếp không — vd bia/nước ngọt thường tắt vì bếp
+    // không cần pha chế/chuẩn bị. Không ảnh hưởng hoá đơn thanh toán, chỉ
+    // lọc lúc build phiếu bếp (xem order.router.ts).
+    printToKitchen: boolean("print_to_kitchen").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()

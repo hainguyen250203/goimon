@@ -10,10 +10,11 @@ export type UpdateOrderItemsParams = {
 
 export type UpdateOrderItemsResult = {
   order: Order;
-  /** Món tăng số lượng (gọi thêm) — in "PHIẾU GỌI MÓN" nếu không rỗng. */
-  addedItems: { itemName: string; quantity: number; note: string | null }[];
+  /** Món tăng số lượng (gọi thêm) — in "PHIẾU GỌI MÓN" nếu không rỗng.
+   * `menuItemId` để router lọc theo `printToKitchen` trước khi in. */
+  addedItems: { menuItemId: number; itemName: string; quantity: number; note: string | null }[];
   /** Món xoá hẳn/giảm số lượng (trả bớt) — in "PHIẾU HUỶ MÓN" nếu không rỗng. */
-  removedItems: { itemName: string; quantity: number; note: string | null }[];
+  removedItems: { menuItemId: number; itemName: string; quantity: number; note: string | null }[];
 };
 
 /**
@@ -51,6 +52,7 @@ export async function updateOrderItems(
     .map((id) => itemById.get(id))
     .filter((item): item is NonNullable<typeof item> => item != null)
     .map((item) => ({
+      menuItemId: item.menuItemId,
       itemName: item.itemName,
       unitPrice: item.unitPrice,
       quantity: item.quantity,
@@ -67,6 +69,7 @@ export async function updateOrderItems(
     const delta = change.quantity - item.quantity;
     if (delta > 0) {
       addedFromQuantityChange.push({
+        menuItemId: item.menuItemId,
         itemName: item.itemName,
         unitPrice: item.unitPrice,
         quantity: delta,
@@ -74,6 +77,7 @@ export async function updateOrderItems(
       });
     } else if (delta < 0) {
       removedFromQuantityChange.push({
+        menuItemId: item.menuItemId,
         itemName: item.itemName,
         unitPrice: item.unitPrice,
         quantity: -delta,
@@ -113,9 +117,16 @@ export async function updateOrderItems(
     });
   }
 
+  const toKitchenItem = (i: (typeof allAdded)[number]) => ({
+    menuItemId: i.menuItemId,
+    itemName: i.itemName,
+    quantity: i.quantity,
+    note: i.note,
+  });
+
   return {
     order: saved,
-    addedItems: allAdded.map((i) => ({ itemName: i.itemName, quantity: i.quantity, note: i.note })),
-    removedItems: allRemoved.map((i) => ({ itemName: i.itemName, quantity: i.quantity, note: i.note })),
+    addedItems: allAdded.map(toKitchenItem),
+    removedItems: allRemoved.map(toKitchenItem),
   };
 }

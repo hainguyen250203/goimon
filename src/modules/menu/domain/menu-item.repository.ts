@@ -36,6 +36,7 @@ export type CreateMenuItemParams = {
   price: number;
   isAvailable: boolean;
   isPublished: boolean;
+  printToKitchen: boolean;
 };
 
 export type UpdateMenuItemParams = CreateMenuItemParams & { id: number };

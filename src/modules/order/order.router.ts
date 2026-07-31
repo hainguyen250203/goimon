@@ -31,6 +31,8 @@ import { printKitchenTicket } from "~/modules/printer/application/print-kitchen-
 import { escposKitchenTicketPrinter } from "~/modules/printer/infrastructure/escpos-kitchen-ticket-printer";
 import { SHOP_INFO } from "~/modules/printer/domain/shop-info";
 import type { BillPrintPayload } from "~/modules/printer/domain/bill-print-payload";
+import type { KitchenTicketPayload } from "~/modules/printer/domain/kitchen-ticket-payload";
+import type { PrintOutcome } from "~/modules/printer/domain/print-outcome";
 import { buildVietQrImageUrl } from "~/lib/vietqr";
 import {
   InvalidOrderStatusTransitionError,
@@ -46,6 +48,33 @@ import type { Order, OrderPromotion } from "./domain/order.entity";
 // bill-image-renderer.ts). null nếu đơn không áp dụng khuyến mãi nào.
 function buildDiscountLabel(promotion: OrderPromotion | null): string | null {
   return promotion ? "Khuyến mãi" : null;
+}
+
+// Một số món (bia, nước ngọt...) không cần bếp chuẩn bị — lọc theo cờ
+// `printToKitchen` của menu item trước khi build phiếu bếp. CHỈ ảnh hưởng
+// phiếu bếp, không đụng tới hoá đơn thanh toán (buildBillPayload không gọi
+// hàm này). Dùng generic để tái dùng cho cả 4 điểm gọi (gọi món/huỷ món/
+// chuyển bàn/chuyển món), input chỉ cần có `menuItemId`.
+async function filterPrintableToKitchen<
+  T extends { menuItemId: number; itemName: string; quantity: number; note: string | null },
+>(items: T[]): Promise<{ itemName: string; quantity: number; note: string | null }[]> {
+  if (items.length === 0) return [];
+  const menuItems = await menuItemDrizzleRepository.findByIds(items.map((i) => i.menuItemId));
+  const printableIds = new Set(menuItems.filter((m) => m.printToKitchen).map((m) => m.id));
+  return items
+    .filter((i) => printableIds.has(i.menuItemId))
+    .map((i) => ({ itemName: i.itemName, quantity: i.quantity, note: i.note }));
+}
+
+// Bọc printKitchenTicket — KHÔNG gọi máy in nếu sau khi lọc printToKitchen
+// không còn món nào (vd cả đơn/cả lượt chuyển chỉ toàn bia/nước ngọt). Tránh
+// tốn giấy in 1 phiếu trống chỉ có tiêu đề, và tránh gọi mạng tới máy in vô ích.
+async function printKitchenTicketIfAny(
+  items: KitchenTicketPayload["items"],
+  payload: Omit<KitchenTicketPayload, "items">,
+): Promise<PrintOutcome[]> {
+  if (items.length === 0) return [];
+  return printKitchenTicket(printerDrizzleRepository, escposKitchenTicketPrinter, { ...payload, items });
 }
 
 // Domain error → TRPCError BAD_REQUEST với message tiếng Việt gốc thay vì
@@ -188,13 +217,12 @@ export const orderRouter = createTRPCRouter({
         );
         const orderDetail = order.toDetail();
         const table = await restaurantTableDrizzleRepository.findById(input.tableId);
-        const printResult = await printKitchenTicket(printerDrizzleRepository, escposKitchenTicketPrinter, {
+        const printResult = await printKitchenTicketIfAny(await filterPrintableToKitchen(addedItems), {
           title: "PHIẾU GỌI MÓN",
           orderId: orderDetail.id,
           tableName: table.name,
           staffName: ctx.session.user.name,
           createdAt: new Date(),
-          items: addedItems,
         });
         return { ...orderDetail, printResult };
       } catch (error) {
@@ -235,23 +263,18 @@ export const orderRouter = createTRPCRouter({
           createdAt: new Date(),
         };
         // 1 lần "Xác nhận" có thể vừa gọi thêm vừa trả bớt món cùng lúc — in
-        // riêng từng loại phiếu nếu mảng tương ứng không rỗng, gộp kết quả in
-        // lại làm 1 để UI chỉ hiện 1 toast tổng.
+        // riêng từng loại phiếu, gộp kết quả in lại làm 1 để UI chỉ hiện 1
+        // toast tổng. printKitchenTicketIfAny tự bỏ qua nếu lọc hết sạch món
+        // (vd cả lượt gọi/trả chỉ toàn bia, nước ngọt) — không in phiếu trống.
         const [addedResult, removedResult] = await Promise.all([
-          addedItems.length > 0
-            ? printKitchenTicket(printerDrizzleRepository, escposKitchenTicketPrinter, {
-                ...baseTicket,
-                title: "PHIẾU GỌI MÓN",
-                items: addedItems,
-              })
-            : [],
-          removedItems.length > 0
-            ? printKitchenTicket(printerDrizzleRepository, escposKitchenTicketPrinter, {
-                ...baseTicket,
-                title: "PHIẾU HUỶ MÓN",
-                items: removedItems,
-              })
-            : [],
+          printKitchenTicketIfAny(await filterPrintableToKitchen(addedItems), {
+            ...baseTicket,
+            title: "PHIẾU GỌI MÓN",
+          }),
+          printKitchenTicketIfAny(await filterPrintableToKitchen(removedItems), {
+            ...baseTicket,
+            title: "PHIẾU HUỶ MÓN",
+          }),
         ]);
         return { ...orderDetail, printResult: [...addedResult, ...removedResult] };
       } catch (error) {
@@ -393,13 +416,12 @@ export const orderRouter = createTRPCRouter({
           },
         );
         const orderDetail = order.toDetail();
-        const printResult = await printKitchenTicket(printerDrizzleRepository, escposKitchenTicketPrinter, {
+        const printResult = await printKitchenTicketIfAny(await filterPrintableToKitchen(orderDetail.items), {
           title: "PHIẾU CHUYỂN BÀN",
           orderId: orderDetail.id,
           tableName: toTable.name,
           staffName: ctx.session.user.name,
           createdAt: new Date(),
-          items: orderDetail.items.map((i) => ({ itemName: i.itemName, quantity: i.quantity, note: i.note })),
           transferInfo: `${fromTable ? fromTable.name : "?"} -> ${toTable.name}`,
         });
         return { ...orderDetail, printResult };
@@ -443,13 +465,12 @@ export const orderRouter = createTRPCRouter({
         );
         const targetDetail = target.toDetail();
         const targetTable = await restaurantTableDrizzleRepository.findById(input.targetTableId);
-        const printResult = await printKitchenTicket(printerDrizzleRepository, escposKitchenTicketPrinter, {
+        const printResult = await printKitchenTicketIfAny(await filterPrintableToKitchen(transferredItems), {
           title: "PHIẾU CHUYỂN MÓN",
           orderId: targetDetail.id,
           tableName: targetTable.name,
           staffName: ctx.session.user.name,
           createdAt: new Date(),
-          items: transferredItems,
           transferInfo: `${sourceTableName} -> ${targetTableName}`,
         });
         return { source: source?.toDetail() ?? null, target: targetDetail, printResult };

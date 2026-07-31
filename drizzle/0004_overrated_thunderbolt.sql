@@ -1,0 +1,1 @@
+ALTER TABLE "menu_items" ADD COLUMN "print_to_kitchen" boolean DEFAULT true NOT NULL;

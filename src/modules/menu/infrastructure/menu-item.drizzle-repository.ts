@@ -24,6 +24,7 @@ function toEntity(row: {
   price: number;
   isAvailable: boolean;
   isPublished: boolean;
+  printToKitchen: boolean;
 }): MenuItem {
   return {
     id: row.id,
@@ -33,6 +34,7 @@ function toEntity(row: {
     price: row.price,
     isAvailable: row.isAvailable,
     isPublished: row.isPublished,
+    printToKitchen: row.printToKitchen,
   };
 }
 
@@ -46,6 +48,7 @@ async function findById(id: number): Promise<MenuItem> {
       price: menuItem.price,
       isAvailable: menuItem.isAvailable,
       isPublished: menuItem.isPublished,
+      printToKitchen: menuItem.printToKitchen,
     })
     .from(menuItem)
     .leftJoin(category, eq(menuItem.categoryId, category.id))
@@ -84,6 +87,7 @@ export const menuItemDrizzleRepository: MenuItemRepository = {
           price: menuItem.price,
           isAvailable: menuItem.isAvailable,
           isPublished: menuItem.isPublished,
+          printToKitchen: menuItem.printToKitchen,
         })
         .from(menuItem)
         .leftJoin(category, eq(menuItem.categoryId, category.id))
@@ -119,6 +123,7 @@ export const menuItemDrizzleRepository: MenuItemRepository = {
         price: menuItem.price,
         isAvailable: menuItem.isAvailable,
         isPublished: menuItem.isPublished,
+        printToKitchen: menuItem.printToKitchen,
       })
       .from(menuItem)
       .leftJoin(category, eq(menuItem.categoryId, category.id))
@@ -138,6 +143,7 @@ export const menuItemDrizzleRepository: MenuItemRepository = {
         price: menuItem.price,
         isAvailable: menuItem.isAvailable,
         isPublished: menuItem.isPublished,
+        printToKitchen: menuItem.printToKitchen,
       })
       .from(menuItem)
       .leftJoin(category, eq(menuItem.categoryId, category.id))
