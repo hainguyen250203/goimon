@@ -91,10 +91,7 @@ export function OrderRowActions({
           <DialogHeader>
             <DialogTitle>Xoá đơn hàng #{row.id}?</DialogTitle>
           </DialogHeader>
-          <DialogBody>
-            Đơn hàng sẽ bị ẩn khỏi danh sách và không còn tính vào doanh thu/báo cáo. Hành động này
-            chỉ superadmin xem lại được.
-          </DialogBody>
+          <DialogBody>Đơn hàng này sẽ bị xoá. Hành động này không thể hoàn tác.</DialogBody>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteConfirmOpen(false)}>
               Huỷ

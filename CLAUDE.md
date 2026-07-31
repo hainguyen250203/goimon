@@ -39,6 +39,13 @@ Hệ thống POS quản lý nhà hàng: order món, tạo hóa đơn, in bill, x
 
 - `/quan-ly/layout.tsx` chỉ chặn role `user` (đẩy sang `/goi-mon`), không phân biệt `manager` vs `admin`. Route admin-only (vd: `nguoi-dung`, `bao-cao`) phải tự check `session.user.role !== "admin"` và `redirect("/quan-ly")` ngay trong `page.tsx` — nếu không, `manager` vẫn vào được UI nhưng mọi gọi tRPC (`adminProcedure`) đều FORBIDDEN, kẹt loading vô thời hạn thay vì bị chặn rõ ràng.
 - Trang danh sách có phân trang/filter: dùng `useQuery` + `placeholderData: keepPreviousData` (KHÔNG `useSuspenseQuery`) cho query đó — Suspense không có khái niệm giữ data cũ trong lúc fetch data mới. Điều hướng phân trang/filter phải qua `router.push` (client-side), không dùng `<a href>` thô — gây full page reload, nháy trắng màn hình.
+- **`superadmin` là vai trò giám sát ẨN — cấm tuyệt đối để lộ sự tồn tại của nó** ra bất kỳ
+  text/UI nào mà người xem không phải superadmin nhìn thấy được (dialog xác nhận, toast, tooltip,
+  label, error message...), kể cả gián tiếp qua câu chữ — vd dialog xoá đơn từng ghi "hành động này
+  chỉ superadmin xem lại được" là sai, vì ngay việc nhắc TÊN role đã xác nhận nó tồn tại cho admin
+  đọc thấy. Chặn truy cập phải luôn ở tầng server (không chỉ ẩn ở UI), và không bao giờ trả lỗi xác
+  nhận role này có thật cho non-superadmin — trả kết quả rỗng thay vì `FORBIDDEN` (xem
+  `user.router.ts`'s `list`).
 
 ## Responsive / Mobile
 

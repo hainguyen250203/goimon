@@ -79,6 +79,25 @@ async function printKitchenTicketIfAny(
   return printKitchenTicket(printerDrizzleRepository, escposKitchenTicketPrinter, { ...payload, items });
 }
 
+// Chặn CỨNG (throw trước khi mutate) nếu thao tác có ít nhất 1 món cần bếp
+// chuẩn bị (printToKitchen=true) mà chưa cấu hình máy in bếp nào — khác hẳn
+// printKitchenTicketIfAny (best-effort, không throw): đây là điều kiện tiên
+// quyết để ĐƯỢC PHÉP thao tác, không phải kết quả của việc in. Đơn/thao tác
+// toàn món không cần bếp (bia, nước ngọt...) vẫn qua bình thường.
+async function requireKitchenPrinterFor(menuItemIds: number[], actionLabel: string): Promise<void> {
+  if (menuItemIds.length === 0) return;
+  const menuItems = await menuItemDrizzleRepository.findByIds(menuItemIds);
+  const needsKitchen = menuItems.some((m) => m.printToKitchen);
+  if (!needsKitchen) return;
+  const printers = await printerDrizzleRepository.listActiveByType("kitchen");
+  if (printers.length === 0) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: `Chưa cấu hình máy in bếp, không thể ${actionLabel}.`,
+    });
+  }
+}
+
 // Domain error → TRPCError BAD_REQUEST với message tiếng Việt gốc thay vì
 // để lộ generic 500 — áp dụng cho mọi mutation đụng vào state machine order.
 function mapOrderDomainError(error: unknown): never {
@@ -227,6 +246,7 @@ export const orderRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const shiftId = await requireOpenShift();
+      await requireKitchenPrinterFor(input.items.map((i) => i.menuItemId), "gọi món");
       try {
         const { order, addedItems } = await addOrderItems(
           orderDrizzleRepository,
@@ -271,6 +291,13 @@ export const orderRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       await requireOpenShift();
+      const existingOrder = await orderDrizzleRepository.findById(input.orderId);
+      if (!existingOrder) throw new TRPCError({ code: "NOT_FOUND", message: "Không tìm thấy đơn hàng." });
+      const affectedItemIds = new Set([...input.changes.map((c) => c.itemId), ...input.removedItemIds]);
+      const affectedMenuItemIds = existingOrder.items
+        .filter((item) => item.id !== null && affectedItemIds.has(item.id))
+        .map((item) => item.menuItemId);
+      await requireKitchenPrinterFor(affectedMenuItemIds, "cập nhật món");
       try {
         const { order, addedItems, removedItems } = await updateOrderItems(orderDrizzleRepository, {
           orderId: input.orderId,
@@ -429,6 +456,9 @@ export const orderRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       await requireOpenShift();
+      const existingOrder = await orderDrizzleRepository.findById(input.orderId);
+      if (!existingOrder) throw new TRPCError({ code: "NOT_FOUND", message: "Không tìm thấy đơn hàng." });
+      await requireKitchenPrinterFor(existingOrder.items.map((i) => i.menuItemId), "chuyển bàn");
       try {
         const { order, fromTable, toTable } = await moveOrderTable(
           orderDrizzleRepository,
@@ -475,6 +505,13 @@ export const orderRouter = createTRPCRouter({
     )
     .mutation(async ({ ctx, input }) => {
       const shiftId = await requireOpenShift();
+      const sourceOrder = await orderDrizzleRepository.findById(input.sourceOrderId);
+      if (!sourceOrder) throw new TRPCError({ code: "NOT_FOUND", message: "Không tìm thấy đơn hàng." });
+      const transferItemIds = new Set(input.items.map((i) => i.itemId));
+      const affectedMenuItemIds = sourceOrder.items
+        .filter((item) => item.id !== null && transferItemIds.has(item.id))
+        .map((item) => item.menuItemId);
+      await requireKitchenPrinterFor(affectedMenuItemIds, "chuyển món");
       try {
         const { source, target, transferredItems, sourceTableName, targetTableName } = await transferOrderItems(
           orderDrizzleRepository,
