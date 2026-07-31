@@ -1,8 +1,71 @@
 "use client";
 
-import { Box, Code, Heading, Link, List, Separator, Stack, Table, Text } from "@chakra-ui/react";
+import { useState, type ReactNode } from "react";
+import { Box, Code, Heading, IconButton, Link, List, Separator, Stack, Table, Text } from "@chakra-ui/react";
+import { Check, Copy } from "lucide-react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+
+/** react-markdown truyền `children` của node code dạng string (hoặc mảng
+ * string/element lồng nhau) — gom lại thành text thuần để copy vào clipboard. */
+function toPlainText(node: ReactNode): string {
+  if (typeof node === "string") return node;
+  if (typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(toPlainText).join("");
+  if (node && typeof node === "object" && "props" in node) {
+    return toPlainText((node as { props?: { children?: ReactNode } }).props?.children);
+  }
+  return "";
+}
+
+function CodeBlock({ className, children }: { className?: string; children: ReactNode }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(toPlainText(children));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard API có thể bị chặn (context không secure) — bỏ qua lặng lẽ.
+    }
+  };
+
+  return (
+    <Box position="relative" w="full" minW={0}>
+      <IconButton
+        aria-label="Sao chép code"
+        size="xs"
+        variant="subtle"
+        position="absolute"
+        top={2}
+        right={2}
+        onClick={handleCopy}
+      >
+        {copied ? <Check size={14} /> : <Copy size={14} />}
+      </IconButton>
+      <Box
+        as="pre"
+        w="full"
+        maxW="full"
+        minW={0}
+        fontSize="xs"
+        fontFamily="mono"
+        bg="bg.muted"
+        color="fg"
+        p={3}
+        pr={10}
+        rounded="l2"
+        overflowX="auto"
+        whiteSpace="pre"
+      >
+        <Box as="code" className={className}>
+          {children}
+        </Box>
+      </Box>
+    </Box>
+  );
+}
 
 // Map thẻ markdown -> component Chakra, giữ cùng size chữ (fontSize="sm")
 // với phần còn lại của khung chat (xem message-part.tsx) — model hay trả lời
@@ -61,25 +124,8 @@ const MARKDOWN_COMPONENTS: Components = {
     // Code block (```lang) đi kèm className "language-xxx" do remark gắn —
     // code inline (`x`) thì không có className, tách 2 trường hợp ở đây vì
     // react-markdown gọi chung 1 component "code" cho cả 2 dạng.
-    const isBlock = !!className;
-    if (isBlock) {
-      return (
-        <Box
-          as="pre"
-          fontSize="xs"
-          fontFamily="mono"
-          bg="bg.muted"
-          color="fg"
-          p={3}
-          rounded="l2"
-          overflowX="auto"
-          whiteSpace="pre"
-        >
-          <Box as="code" className={className}>
-            {children}
-          </Box>
-        </Box>
-      );
+    if (className) {
+      return <CodeBlock className={className}>{children}</CodeBlock>;
     }
     return (
       <Code fontSize="xs" rounded="l1">
@@ -88,7 +134,7 @@ const MARKDOWN_COMPONENTS: Components = {
     );
   },
   table: ({ children }) => (
-    <Box overflowX="auto" borderWidth="1px" rounded="l2">
+    <Box overflowX="auto" minW={0} borderWidth="1px" rounded="l2">
       <Table.Root size="sm" variant="outline">
         {children}
       </Table.Root>
@@ -103,7 +149,7 @@ const MARKDOWN_COMPONENTS: Components = {
 
 export function AssistantMarkdown({ text }: { text: string }) {
   return (
-    <Stack gap={2}>
+    <Stack gap={2} minW={0}>
       <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS}>
         {text}
       </ReactMarkdown>

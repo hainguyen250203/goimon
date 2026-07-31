@@ -240,15 +240,16 @@ function ChatPanelInner({
       ) : (
         <Stack flex={1} overflowY="auto" gap={5} px={{ base: 4, md: 8 }} py={6}>
           {messages.map((message) => (
-            <Flex key={message.id} justify={message.role === "user" ? "flex-end" : "flex-start"}>
+            <Flex key={message.id} justify={message.role === "user" ? "flex-end" : "flex-start"} minW={0}>
               <Box
                 maxW="42rem"
+                minW={0}
                 rounded="l3"
                 px={message.role === "user" ? 4 : 0}
                 py={message.role === "user" ? 3 : 0}
                 bg={message.role === "user" ? "bg.emphasized" : undefined}
               >
-                <Stack gap={2}>
+                <Stack gap={2} minW={0}>
                   {message.parts.map((part, i) => (
                     <MessagePart key={i} part={part} role={message.role} />
                   ))}
