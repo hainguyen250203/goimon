@@ -7,10 +7,10 @@ import {
   eq,
   gt,
   gte,
+  ilike,
   inArray,
   isNotNull,
   isNull,
-  like,
   lt,
   lte,
   max,
@@ -163,8 +163,16 @@ function buildConditionSql(
       return gte(column, coerceValue(column, node.value));
     case "<=":
       return lte(column, coerceValue(column, node.value));
-    case "LIKE":
-      return like(column, String(node.value ?? ""));
+    case "LIKE": {
+      // Model hay quên tự thêm "%" và Postgres LIKE mặc định phân biệt hoa
+      // thường — dùng ILIKE (không phân biệt hoa/thường) + tự bọc "%...%" nếu
+      // model chưa tự bọc, để LIKE luôn hoạt động như tìm kiếm gần đúng thay
+      // vì vô tình thành so khớp chính xác (từng gây lỗi: lọc danh mục "bia"
+      // không khớp được tên thật "Bia & Nước Giải Khát").
+      const raw = String(node.value ?? "");
+      const pattern = raw.includes("%") ? raw : `%${raw}%`;
+      return ilike(column, pattern);
+    }
     case "IN":
       if (!node.values) throw new AssistantQueryError('Toán tử IN cần trường "values".');
       return inArray(

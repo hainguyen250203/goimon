@@ -3,6 +3,7 @@ import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 
 import { getSession } from "~/server/better-auth/server";
 import { assistantDrizzleRepository } from "~/modules/assistant/infrastructure/assistant.drizzle-repository";
+import { menuItemDrizzleRepository } from "~/modules/menu/infrastructure/menu-item.drizzle-repository";
 import {
   AssistantRateLimitError,
   streamAssistantReply,
@@ -49,7 +50,12 @@ export async function POST(req: NextRequest) {
 
   const stream = createUIMessageStream({
     execute: ({ writer }) =>
-      streamAssistantReply(assistantDrizzleRepository, { sessionId: sessionId as number, userId, text }, writer),
+      streamAssistantReply(
+        assistantDrizzleRepository,
+        menuItemDrizzleRepository,
+        { sessionId: sessionId as number, userId, text },
+        writer,
+      ),
     onError: (error) => {
       if (error instanceof AssistantRateLimitError) return error.message;
       if (error instanceof AssistantSessionNotFoundError) return error.message;

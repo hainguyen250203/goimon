@@ -23,6 +23,11 @@ filter: (Condition | { or: Condition[] })[] (optional)
       range?: [value, value],                  // cho BETWEEN
     }
   — { or: [...] } gộp nhiều Condition bằng OR, KHÔNG lồng thêm and/or bên trong nhóm or.
+  — LIKE là so khớp GẦN ĐÚNG, không phân biệt hoa/thường, dấu tiếng Việt vẫn phải đúng
+    (server tự bọc "%" quanh value nếu chưa có). ƯU TIÊN dùng "LIKE" thay vì "=" cho
+    mọi cột tên/nhãn dạng text tự do (categories.name, menuItems.name, tables.name,
+    promotions.name...) khi người dùng mô tả gần đúng/không chắc chắn chính tả —
+    KHÔNG dùng "=" cho các cột này trừ khi người dùng đưa ra tên chính xác 100%.
 join: { table: string, left: string, right: string, type?: "inner"|"left" }[] (optional)
   — left/right BẮT BUỘC dạng "table.column". Chỉ join được nếu 2 bảng có khoá ngoại thật.
 sort: [string, "ASC"|"DESC"][] (optional)

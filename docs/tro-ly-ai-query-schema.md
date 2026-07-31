@@ -37,6 +37,12 @@ type Condition = {
 type OrGroup = { or: Condition[] };   // 2-5 điều kiện, KHÔNG lồng thêm and/or bên trong
 ```
 
+**`LIKE` là so khớp gần đúng, không phân biệt hoa/thường** — implement bằng `ilike()`
+của Drizzle (không phải `like()`), và server tự bọc `%...%` quanh `value` nếu model
+chưa tự bọc. Nên ưu tiên `LIKE` (thay vì `=`) cho mọi cột tên/nhãn dạng text tự do
+(`categories.name`, `menuItems.name`, `tables.name`, `promotions.name`...) trừ khi
+người dùng cho tên chính xác 100% — xem mục 5 để biết lý do lịch sử.
+
 **Vì sao không hỗ trợ lồng `and`/`or` nhiều cấp**: khi chuyển Zod schema đệ quy sang
 JSON Schema gửi cho OpenAI, phần đệ quy bị thư viện "default về `any`" (mất hết ràng
 buộc kiểu) — từng gây lỗi ngẫu nhiên khó tái hiện vì model có thể gửi input sai hình
@@ -115,3 +121,4 @@ thức `SUM(...)`/`COUNT(...)` khi ORDER BY — xem `resolveSortTarget()` trong
 | `Không có khoá ngoại nào liên kết...` | Cố join 2 bảng không có quan hệ FK thật. | Chỉ join các cặp bảng có khoá ngoại — xem "Khoá ngoại" trong schema context. |
 | Lỗi Postgres kiểu ép kiểu ngày giờ | Trước đây do gửi chuỗi ngày cho cột timestamp mà không convert — **đã fix** ở `coerceValue()` trong `run-structured-query.ts`, tự chuyển string hợp lệ sang `Date`. | Không cần làm gì thêm — nếu vẫn gặp, kiểm tra định dạng chuỗi ngày có hợp lệ (`YYYY-MM-DD` hoặc ISO) không. |
 | Model dùng sai case cho cột enum (vd `"OPEN"` thay vì `"open"`) | Trước đây schema context không liệt kê giá trị enum hợp lệ — **đã fix**, mỗi cột enum giờ hiện kèm `giá trị hợp lệ: a/b/c`. | Không cần làm gì thêm. |
+| Lọc/loại trừ theo tên danh mục (vd "bia", "nước giải khát") không khớp dù danh mục thật sự tồn tại (tên thật: "Bia & Nước Giải Khát") | Hai nguyên nhân cộng lại: (1) `categories.name` là cột text tự do, schema context (chỉ liệt kê giá trị cột enum) không cho model biết tên thật; (2) toán tử `LIKE` trước đây map thẳng sang SQL `LIKE` — phân biệt hoa/thường và không tự thêm `%`, nên hoá thành so khớp CHÍNH XÁC, model đoán `"bia"` không bao giờ khớp `"Bia & Nước Giải Khát"`. **Đã fix cả 2**: `buildCategoryContext()` (`system-prompt.ts`) liệt kê tên danh mục thật vào system prompt mỗi lượt chat (giống cách `buildCurrentTimeContext()` nối thêm phần động); `LIKE` đổi sang `ilike()` + tự bọc `%...%`. | Không cần làm gì thêm — nếu vẫn gặp với cột text tự do khác, kiểm tra model có đang dùng `"="` thay vì `"LIKE"` không. |

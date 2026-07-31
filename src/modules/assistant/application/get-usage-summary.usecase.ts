@@ -2,10 +2,11 @@ import type { AssistantRepository, UsageSummaryRow } from "../domain/assistant.r
 
 export type UsageSummaryItem = UsageSummaryRow & { estimatedCostUsd: number };
 
-// USD / 1.000.000 token — giá tham khảo lúc viết tính năng này, cần kiểm tra
-// lại giá thật tại https://openai.com/api/pricing trước khi dùng để báo cáo
-// chi phí chính thức, vì OpenAI có thể đổi giá.
-const PRICING_USD_PER_1M_TOKENS = { input: 2.0, output: 8.0 };
+// USD / 1.000.000 token — giá model đang dùng (gpt-5.5, xem MODEL trong
+// send-message.usecase.ts), tra cứu 31/07/2026. Đổi model thì PHẢI cập nhật
+// lại giá ở đây — kiểm tra giá thật tại https://openai.com/api/pricing vì
+// OpenAI có thể đổi giá bất kỳ lúc nào.
+const PRICING_USD_PER_1M_TOKENS = { input: 5.0, output: 30.0 };
 
 function estimateCostUsd(inputTokens: number, outputTokens: number): number {
   return (

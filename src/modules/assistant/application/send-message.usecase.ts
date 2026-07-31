@@ -8,16 +8,17 @@ import {
 } from "ai";
 import { openai } from "@ai-sdk/openai";
 
+import type { MenuItemRepository } from "~/modules/menu/domain/menu-item.repository";
 import { AssistantSessionNotFoundError } from "../domain/assistant.errors";
 import type { AssistantRepository } from "../domain/assistant.repository";
 import { buildMessageParts } from "../infrastructure/build-message-parts";
 import { generateFollowups } from "../infrastructure/generate-followups";
 import { generateTitle } from "../infrastructure/generate-title";
 import { checkRateLimit } from "../infrastructure/rate-limit";
-import { buildCurrentTimeContext, SYSTEM_PROMPT } from "../infrastructure/system-prompt";
+import { buildCategoryContext, buildCurrentTimeContext, SYSTEM_PROMPT } from "../infrastructure/system-prompt";
 import { assistantTools } from "../infrastructure/tools";
 
-const MODEL = "gpt-4.1";
+const MODEL = "gpt-5.5";
 
 export class AssistantRateLimitError extends Error {
   constructor() {
@@ -41,6 +42,7 @@ export type SendMessageParams = {
  */
 export async function streamAssistantReply(
   repository: AssistantRepository,
+  menuItemRepository: MenuItemRepository,
   { sessionId, userId, text }: SendMessageParams,
   writer: UIMessageStreamWriter,
 ): Promise<void> {
@@ -65,9 +67,10 @@ export async function streamAssistantReply(
   const modelMessages = await convertToModelMessages(uiMessages);
 
   const tools = assistantTools();
+  const categories = await menuItemRepository.listCategoryOptions();
   const result = streamText({
     model: openai(MODEL),
-    system: SYSTEM_PROMPT + buildCurrentTimeContext(),
+    system: SYSTEM_PROMPT + buildCurrentTimeContext() + buildCategoryContext(categories),
     messages: modelMessages,
     tools,
     stopWhen: stepCountIs(6),

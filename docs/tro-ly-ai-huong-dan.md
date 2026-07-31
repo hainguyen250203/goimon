@@ -16,7 +16,7 @@ Bạn gõ câu hỏi trên UI
 Trình duyệt gửi request tới  /api/assistant/chat
         │
         ▼
-Server gọi OpenAI (model gpt-4.1), kèm theo:
+Server gọi OpenAI (model gpt-5.5), kèm theo:
   - "system prompt" (chỉ dẫn cách trả lời)
   - lịch sử hội thoại
   - danh sách "tool" model được phép gọi (vd: query_data)
@@ -53,7 +53,7 @@ không bao giờ có thể đọc dữ liệu nhạy cảm hay phá hoại dữ 
 
 **LLM** (Large Language Model — mô hình ngôn ngữ lớn) là một chương trình AI được huấn
 luyện để "đoán chữ tiếp theo" cực kỳ giỏi, tới mức có thể trò chuyện, giải thích, viết
-code... Ở đây ta dùng model `gpt-4.1` của OpenAI, gọi qua API (không chạy trên máy bạn).
+code... Ở đây ta dùng model `gpt-5.5` của OpenAI, gọi qua API (không chạy trên máy bạn).
 
 Vấn đề: LLM **không tự nó** biết dữ liệu thật trong database của quán bạn (nó không có
 kết nối tới Postgres). Nếu chỉ hỏi suông, nó sẽ bịa số liệu.
@@ -413,8 +413,9 @@ chứng điều này lúc xây dựng tính năng).
 - **Rate limit dùng bộ nhớ trong (`Map`)**: chỉ đúng khi chạy 1 tiến trình server duy
   nhất — nếu sau này deploy nhiều instance (load balancing), cần chuyển sang lưu ở
   Redis hoặc database.
-- **Dashboard thống kê chi phí** hiện tính theo giá `gpt-4.1` cứng trong code — nên
-  kiểm tra lại giá thật trên trang giá của OpenAI trước khi dùng con số này để báo cáo
+- **Dashboard thống kê chi phí** hiện tính theo giá `gpt-5.5` cứng trong code
+  (`get-usage-summary.usecase.ts`) — đổi model thì PHẢI sửa giá này theo, và nên kiểm
+  tra lại giá thật trên trang giá của OpenAI trước khi dùng con số này để báo cáo
   chính thức, vì giá có thể thay đổi.
 - **Postgres role riêng chỉ có quyền SELECT** cho tool `query_data` (mục 9) — lớp phòng
   thủ bổ sung, chưa cấp thiết ở quy mô hiện tại.

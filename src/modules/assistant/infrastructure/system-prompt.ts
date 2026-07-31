@@ -86,3 +86,18 @@ export function buildCurrentTimeContext(now = new Date()): string {
   }).format(now);
   return `\n## Thời gian hiện tại\nBây giờ là ${formatted} (giờ Việt Nam). Dùng mốc này để tính "hôm nay"/"tuần này"/"tháng này" khi lọc dữ liệu theo thời gian.\n`;
 }
+
+/**
+ * Nối thêm SAU SYSTEM_PROMPT tĩnh, cùng lý do với buildCurrentTimeContext()
+ * (giữ phần cache-được ở đầu prompt không đổi). `categories.name` là cột
+ * varchar tự do (không phải enum) nên schema-context.ts không tự liệt kê
+ * được giá trị thật — model từng đoán sai tên danh mục (vd lọc "bia" thay vì
+ * tên thật "Bia & Nước Giải Khát") vì query_data chỉ so khớp CHÍNH XÁC,
+ * không fuzzy match. Liệt kê thẳng tên thật ở đây để model luôn dùng đúng
+ * chuỗi, không cần đoán hay tự query categories trước.
+ */
+export function buildCategoryContext(categories: { name: string }[]): string {
+  if (categories.length === 0) return "";
+  const names = categories.map((c) => `"${c.name}"`).join(", ");
+  return `\n## Danh mục món ăn hiện có (tên CHÍNH XÁC — khi lọc/loại trừ theo danh mục PHẢI copy nguyên văn 1 trong các tên sau, không tự đoán/rút gọn/đổi chữ hoa-thường)\n${names}\n`;
+}
