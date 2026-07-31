@@ -282,6 +282,7 @@ export const orderRouter = createTRPCRouter({
         tableName: table.name,
         staffName: ctx.session.user.name,
         createdAt: orderDetail.createdAt,
+        printedAt: new Date(),
         items: orderDetail.items.map((item) => ({
           itemName: item.itemName,
           unitPrice: item.unitPrice,
@@ -292,6 +293,9 @@ export const orderRouter = createTRPCRouter({
         discountAmount: orderDetail.discountAmount,
         discountLabel: buildDiscountLabel(orderDetail.promotion),
         totalAmount: orderDetail.payableAmount,
+        bankCode: paymentConfig?.bankCode ?? null,
+        bankAccountNumber: paymentConfig?.bankAccountNumber ?? null,
+        bankAccountName: paymentConfig?.bankAccountName ?? null,
         qrImageUrl: paymentConfig
           ? buildVietQrImageUrl(
               paymentConfig.bankCode,

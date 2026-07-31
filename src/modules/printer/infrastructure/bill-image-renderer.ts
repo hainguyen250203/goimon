@@ -1,41 +1,48 @@
 import { createCanvas, loadImage, type SKRSContext2D } from "@napi-rs/canvas";
 
-import { formatDateTime, formatVnd } from "~/lib/format-order";
 import type { BillPrintPayload } from "../domain/bill-print-payload";
 import { ensureFontsRegistered, receiptFont as font, wrapText } from "./receipt-canvas-utils";
 
 ensureFontsRegistered();
 
 // Khổ giấy 80mm — 576px là chiều rộng dot chuẩn của máy in nhiệt 80mm phổ
-// biến (203dpi), khớp cách pos-be tham khảo render bill.
+// biến (203dpi). Cấu trúc/nội dung tham khảo sát theo bill mẫu đang dùng ở
+// pos-be (render-bill-image.action.ts) theo yêu cầu — viết lại code mới,
+// không copy, nhưng giữ đúng các phần: tiêu đề, Mã HĐ/TN/Bàn/Ngày/Giờ vào
+// giờ ra, bảng có khung kẻ đủ, khối ngân hàng phía trên QR, footer.
 const WIDTH = 576;
 const PAD_X = 24;
 const CONTENT_WIDTH = WIDTH - PAD_X * 2;
 
-const COL_STT = 36;
-const COL_QTY = 50;
-const COL_PRICE = 112;
-const COL_TOTAL = 122;
+const COL_STT = 45;
+const COL_QTY = 40;
+const COL_PRICE = 110;
+const COL_TOTAL = 120;
 const COL_NAME = CONTENT_WIDTH - COL_STT - COL_QTY - COL_PRICE - COL_TOTAL;
 
-const ROW_FONT_SIZE = 15;
+const ROW_FONT_SIZE = 16;
 const NOTE_FONT_SIZE = 12;
 const ROW_LINE_HEIGHT = 24;
 const NOTE_LINE_HEIGHT = 20;
-const ROW_PAD_TOP = 18;
-const HEADER_HEIGHT = 32;
-// Khoảng cách sau ảnh QR trước khi vào footer — cố tình nhỏ hơn hẳn
-// LINE.divider vì QR đã tự có khoảng trắng thị giác riêng quanh nó rồi.
-const QR_TO_FOOTER_GAP = 10;
+const ROW_PAD_TOP = 19;
+const HEADER_HEIGHT = 34;
 
 const LINE = {
-  title: 40,
+  title: 34,
+  subtitle: 30,
   meta: 26,
   divider: 20,
-  total: 26,
-  grandTotal: 38,
+  // Khoảng cách riêng, nhỏ hơn divider — giữa tiêu đề/Số HĐ với khối
+  // Mã HĐ/Bàn..., và giữa khối đó với bảng món — cố tình sát nhau hơn.
+  sectionGap: 8,
+  total: 28,
+  grandTotal: 32,
+  bank: 26,
+  bankName: 20,
+  gapSmall: 10,
+  gapTiny: 6,
   footerName: 24,
-  footer: 22,
+  footer: 20,
 };
 
 type RowInfo = { lines: string[]; note: string | null; height: number };
@@ -49,14 +56,23 @@ function measureRows(ctx: SKRSContext2D, payload: BillPrintPayload): RowInfo[] {
   });
 }
 
+function formatDateVi(d: Date) {
+  return new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", day: "2-digit", month: "2-digit", year: "numeric" }).format(d);
+}
+
+function formatTimeVi(d: Date) {
+  return new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", hour: "2-digit", minute: "2-digit", hour12: false }).format(d);
+}
+
 /**
  * Render hoá đơn thành PNG buffer để in dạng ảnh (không dùng lệnh text
  * ESC/POS thô) — đảm bảo tiếng Việt có dấu hiển thị đúng trên mọi máy in
  * nhiệt, bất kể máy có hỗ trợ codepage tiếng Việt hay không.
  */
 export async function renderBillImage(payload: BillPrintPayload): Promise<Buffer> {
-  const qrImage = payload.qrImageUrl ? await loadImage(payload.qrImageUrl).catch(() => null) : null;
-  const qrDisplaySize = 220;
+  const hasBankInfo = !!(payload.bankCode && payload.bankAccountNumber);
+  const qrImage = hasBankInfo && payload.qrImageUrl ? await loadImage(payload.qrImageUrl).catch(() => null) : null;
+  const qrDisplaySize = 200;
 
   // Pass 1 — đo trước để biết chiều cao canvas thật cần dùng (canvas không
   // tự co giãn theo nội dung như DOM, phải biết trước kích thước).
@@ -66,21 +82,22 @@ export async function renderBillImage(payload: BillPrintPayload): Promise<Buffer
 
   let height = PAD_X;
   height += LINE.title;
-  height += LINE.divider;
-  height += LINE.meta * 2; // 2 dòng, mỗi dòng 2 cột (mã HĐ/bàn, NV/thời gian)
-  height += LINE.divider;
+  height += LINE.subtitle;
+  height += LINE.sectionGap;
+  height += LINE.meta * 3; // Mã HĐ/TN, Bàn/Ngày, Giờ vào/Giờ ra
+  height += LINE.sectionGap;
   height += tableHeight;
   height += LINE.divider;
-  height += LINE.total; // tạm tính
+  height += LINE.total; // Thành tiền
   if (payload.discountLabel) height += LINE.total;
-  height += LINE.grandTotal;
-  if (qrImage) {
-    height += LINE.meta; // nhãn "Quét mã..." phía trên QR
-    height += qrDisplaySize + QR_TO_FOOTER_GAP;
-  } else {
-    height += LINE.divider;
+  height += LINE.grandTotal; // Tổng tiền
+  if (hasBankInfo) {
+    height += LINE.gapSmall + LINE.bank * 2 + LINE.bankName; // mã NH + số TK + tên TK
+    if (qrImage) height += qrDisplaySize + LINE.gapTiny;
   }
-  height += LINE.footerName + LINE.footer * 2; // tên quán + địa chỉ + SĐT
+  height += LINE.gapSmall;
+  height += LINE.footerName + LINE.footer; // tên quán + địa chỉ
+  height += payload.contactNote.length * NOTE_LINE_HEIGHT + LINE.gapSmall;
   height += LINE.footer; // câu cảm ơn
   height += PAD_X;
 
@@ -97,36 +114,38 @@ export async function renderBillImage(payload: BillPrintPayload): Promise<Buffer
   const centerX = WIDTH / 2;
 
   ctx.textAlign = "center";
-  ctx.font = font(26, true);
-  y += 26;
-  ctx.fillText("PHIẾU HOÁ ĐƠN", centerX, y);
-  y += LINE.title - 26;
+  ctx.font = font(24, true);
+  y += 24;
+  ctx.fillText("HÓA ĐƠN THANH TOÁN", centerX, y);
+  y += LINE.title - 24;
 
-  y += LINE.divider / 2;
-  ctx.beginPath();
-  ctx.moveTo(PAD_X, y);
-  ctx.lineTo(WIDTH - PAD_X, y);
-  ctx.stroke();
-  y += LINE.divider / 2;
+  ctx.font = font(17, true);
+  y += 17;
+  ctx.fillText(`Số HĐ: #${payload.orderId}`, centerX, y);
+  y += LINE.subtitle - 17;
 
-  // Meta 2 cột — tận dụng hết chiều ngang thay vì xếp dọc 3 dòng riêng lẻ,
-  // giống cách pos-be tham khảo bố trí (Mã HĐ/NV cùng hàng, Bàn/Thời gian
-  // cùng hàng).
+  y += LINE.sectionGap;
+
+  // Meta 3 dòng x 2 cột — Mã HĐ/TN, Bàn/Ngày, Giờ vào/Giờ ra, đúng bố cục
+  // bill mẫu tham khảo.
   const metaLeftX = PAD_X;
   const metaRightX = PAD_X + CONTENT_WIDTH / 2 + 8;
+  const shortId = String(payload.orderId).slice(-5).toUpperCase();
   ctx.textAlign = "left";
   ctx.font = font(15);
   y += LINE.meta;
-  ctx.fillText(`Mã HĐ: #${payload.orderId}`, metaLeftX, y - LINE.meta + 15);
-  ctx.fillText(`Bàn: ${payload.tableName}`, metaRightX, y - LINE.meta + 15);
+  ctx.fillText(`Mã HĐ: #${shortId}`, metaLeftX, y - LINE.meta + 15);
+  ctx.fillText(`TN: ${payload.staffName}`, metaRightX, y - LINE.meta + 15);
   y += LINE.meta;
-  ctx.fillText(`Nhân viên: ${payload.staffName}`, metaLeftX, y - LINE.meta + 15);
-  ctx.fillText(`Thời gian: ${formatDateTime(payload.createdAt)}`, metaRightX, y - LINE.meta + 15);
+  ctx.fillText(`Bàn: ${payload.tableName}`, metaLeftX, y - LINE.meta + 15);
+  ctx.fillText(`Ngày: ${formatDateVi(payload.createdAt)}`, metaRightX, y - LINE.meta + 15);
+  y += LINE.meta;
+  ctx.fillText(`Giờ vào: ${formatTimeVi(payload.createdAt)}`, metaLeftX, y - LINE.meta + 15);
+  ctx.fillText(`Giờ ra: ${formatTimeVi(payload.printedAt)}`, metaRightX, y - LINE.meta + 15);
 
-  y += LINE.divider;
+  y += LINE.sectionGap;
 
-  // Bảng món — khung viền đủ 4 cạnh + kẻ dòng/cột, giống cách pos-be tham
-  // khảo trình bày (không chỉ 1 đường kẻ dưới tiêu đề như bản trước).
+  // Bảng món — khung viền đủ 4 cạnh + kẻ dòng/cột.
   const colX = [PAD_X, PAD_X + COL_STT, PAD_X + COL_STT + COL_NAME, PAD_X + COL_STT + COL_NAME + COL_QTY, PAD_X + COL_STT + COL_NAME + COL_QTY + COL_PRICE, WIDTH - PAD_X];
   const tableTop = y;
 
@@ -169,8 +188,8 @@ export async function renderBillImage(payload: BillPrintPayload): Promise<Buffer
     ctx.textAlign = "center";
     ctx.fillText(String(item.quantity), (colX[2]! + colX[3]!) / 2, rowTop + ROW_PAD_TOP);
     ctx.textAlign = "right";
-    ctx.fillText(formatVnd(item.unitPrice), colX[4]! - 6, rowTop + ROW_PAD_TOP);
-    ctx.fillText(formatVnd(item.unitPrice * item.quantity), colX[5]! - 6, rowTop + ROW_PAD_TOP);
+    ctx.fillText(item.unitPrice.toLocaleString("vi-VN"), colX[4]! - 6, rowTop + ROW_PAD_TOP);
+    ctx.fillText((item.unitPrice * item.quantity).toLocaleString("vi-VN"), colX[5]! - 6, rowTop + ROW_PAD_TOP);
 
     if (row.note) {
       ctx.textAlign = "left";
@@ -192,45 +211,58 @@ export async function renderBillImage(payload: BillPrintPayload): Promise<Buffer
 
   ctx.font = font(16);
   ctx.textAlign = "left";
-  ctx.fillText("Tạm tính", PAD_X, (y += LINE.total) - LINE.total + 16);
+  ctx.fillText("Thành tiền:", PAD_X, (y += LINE.total) - LINE.total + 16);
   ctx.textAlign = "right";
-  ctx.fillText(formatVnd(payload.subtotal), WIDTH - PAD_X, y - LINE.total + 16);
+  ctx.fillText(`${payload.subtotal.toLocaleString("vi-VN")} đ`, WIDTH - PAD_X, y - LINE.total + 16);
 
   if (payload.discountLabel) {
     ctx.textAlign = "left";
     ctx.fillText(payload.discountLabel, PAD_X, (y += LINE.total) - LINE.total + 16);
     ctx.textAlign = "right";
-    ctx.fillText(`-${formatVnd(payload.discountAmount)}`, WIDTH - PAD_X, y - LINE.total + 16);
+    ctx.fillText(`-${payload.discountAmount.toLocaleString("vi-VN")} đ`, WIDTH - PAD_X, y - LINE.total + 16);
   }
 
-  ctx.font = font(22, true);
+  ctx.font = font(20, true);
   ctx.textAlign = "left";
-  ctx.fillText("Tổng cộng", PAD_X, (y += LINE.grandTotal) - LINE.grandTotal + 22);
+  ctx.fillText("Tổng tiền:", PAD_X, (y += LINE.grandTotal) - LINE.grandTotal + 20);
   ctx.textAlign = "right";
-  ctx.fillText(formatVnd(payload.totalAmount), WIDTH - PAD_X, y - LINE.grandTotal + 22);
+  ctx.fillText(`${payload.totalAmount.toLocaleString("vi-VN")} đ`, WIDTH - PAD_X, y - LINE.grandTotal + 20);
 
-  if (qrImage) {
-    ctx.font = font(15);
+  if (hasBankInfo) {
+    y += LINE.gapSmall;
     ctx.textAlign = "center";
-    ctx.fillText("Quét mã để chuyển khoản", centerX, (y += LINE.meta) - LINE.meta + 15);
-    const qrX = centerX - qrDisplaySize / 2;
-    ctx.drawImage(qrImage, qrX, y, qrDisplaySize, qrDisplaySize);
-    y += qrDisplaySize + QR_TO_FOOTER_GAP;
-  } else {
-    y += LINE.divider;
+    ctx.font = font(18, true);
+    ctx.fillText(payload.bankCode!, centerX, (y += LINE.bank) - LINE.bank + 18);
+    ctx.fillText(payload.bankAccountNumber!, centerX, (y += LINE.bank) - LINE.bank + 18);
+    ctx.font = font(15);
+    ctx.fillText(payload.bankAccountName ?? "", centerX, (y += LINE.bankName) - LINE.bankName + 15);
+
+    if (qrImage) {
+      y += LINE.gapTiny;
+      const qrX = centerX - qrDisplaySize / 2;
+      ctx.drawImage(qrImage, qrX, y, qrDisplaySize, qrDisplaySize);
+      y += qrDisplaySize;
+    }
   }
 
-  // Thông tin quán dời xuống cuối (footer) — đầu phiếu chỉ còn tiêu đề
-  // chung "PHIẾU HOÁ ĐƠN", giống bố cục các phiếu bếp.
+  y += LINE.gapSmall;
+
+  // Footer — tên quán, địa chỉ, ghi chú liên hệ, câu cảm ơn.
   ctx.textAlign = "center";
   ctx.font = font(18, true);
   ctx.fillText(payload.shopName, centerX, (y += LINE.footerName) - LINE.footerName + 18);
   ctx.font = font(14);
-  ctx.fillText(payload.shopAddress, centerX, (y += LINE.footer) - LINE.footer + 14);
-  ctx.fillText(`ĐT: ${payload.shopPhone}`, centerX, (y += LINE.footer) - LINE.footer + 14);
+  ctx.fillText(`Địa chỉ: ${payload.shopAddress}`, centerX, (y += LINE.footer) - LINE.footer + 14);
 
-  ctx.font = font(15, true);
-  ctx.fillText(payload.footerNote, centerX, (y += LINE.footer) - LINE.footer + 15);
+  y += LINE.gapSmall;
+  ctx.font = `italic 12px "Be Vietnam Pro"`;
+  payload.contactNote.forEach((line) => {
+    ctx.fillText(line, centerX, (y += NOTE_LINE_HEIGHT) - NOTE_LINE_HEIGHT + 12);
+  });
+
+  y += LINE.gapSmall;
+  ctx.font = font(14);
+  ctx.fillText(payload.footerNote, centerX, (y += LINE.footer) - LINE.footer + 14);
 
   return canvas.toBuffer("image/png");
 }
