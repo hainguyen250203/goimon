@@ -105,13 +105,11 @@ function ChatPanelInner({
   const [input, setInput] = useState("");
   const [followups, setFollowups] = useState<string[]>([]);
 
-  // Phiên có thể được tạo NGẦM lúc gửi tin đầu (xem submit()) — dùng ref thay
-  // vì `prepareSendMessagesRequest` cần đọc giá trị MỚI NHẤT tại thời điểm gửi
-  // request, không phải giá trị lúc transport được tạo (chỉ tạo 1 lần).
+  // Phiên có thể được tạo NGẦM lúc gửi tin đầu (xem submit(), nơi DUY NHẤT
+  // gán lại ref này) — dùng ref thay vì state vì `prepareSendMessagesRequest`
+  // cần đọc giá trị MỚI NHẤT tại thời điểm gửi request, không phải giá trị
+  // lúc transport được tạo (chỉ tạo 1 lần).
   const sessionIdRef = useRef(sessionId);
-  useEffect(() => {
-    sessionIdRef.current = sessionId;
-  }, [sessionId]);
 
   const createSession = api.assistant.createSession.useMutation();
 

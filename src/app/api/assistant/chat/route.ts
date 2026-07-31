@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
   }
 
   const sessionId = body.sessionId;
-  if (!Number.isInteger(sessionId) || (sessionId as number) <= 0) {
+  if (typeof sessionId !== "number" || !Number.isInteger(sessionId) || sessionId <= 0) {
     return new Response("Session id không hợp lệ.", { status: 400 });
   }
 
@@ -53,12 +53,16 @@ export async function POST(req: NextRequest) {
       streamAssistantReply(
         assistantDrizzleRepository,
         menuItemDrizzleRepository,
-        { sessionId: sessionId as number, userId, text },
+        { sessionId, userId, text },
         writer,
       ),
     onError: (error) => {
       if (error instanceof AssistantRateLimitError) return error.message;
       if (error instanceof AssistantSessionNotFoundError) return error.message;
+      // Log thẳng Error object — Node tự in kèm .cause lồng nhau, không cần tự
+      // đào tay. Lỗi thật (OpenAI, DB, tool, schema...) không được che hết
+      // chi tiết cho client.
+      console.error("[assistant/chat] lỗi không xác định:", error);
       return error instanceof Error ? error.message : "Trợ lý gặp lỗi không xác định.";
     },
   });
