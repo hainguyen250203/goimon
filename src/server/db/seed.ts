@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { category, menuItem } from "~/modules/menu/infrastructure/menu.schema";
+import { paymentConfig } from "~/modules/payment-config/infrastructure/payment-config.schema";
 import { printer } from "~/modules/printer/infrastructure/printer.schema";
 import { area, restaurantTable } from "~/modules/table/infrastructure/table.schema";
 import { auth } from "~/server/better-auth/config";
@@ -156,6 +157,20 @@ async function seedPrinters() {
   });
 }
 
+/** Chỉ 1 dòng duy nhất trong bảng này (xem payment-config.schema.ts) — bỏ qua nếu đã có. */
+async function seedPaymentConfig() {
+  const existing = await db.query.paymentConfig.findFirst();
+  if (existing) {
+    console.log("  payment_config đã có dữ liệu, bỏ qua");
+    return;
+  }
+  await db.insert(paymentConfig).values({
+    bankCode: "ACB",
+    bankAccountNumber: "48188847",
+    bankAccountName: "HKD NHA DAU 3 NI",
+  });
+}
+
 async function main() {
   console.log("Seeding users...");
   await seedUsers();
@@ -168,6 +183,9 @@ async function main() {
 
   console.log("Seeding printers...");
   await seedPrinters();
+
+  console.log("Seeding payment config...");
+  await seedPaymentConfig();
 
   console.log("Done.");
 }
