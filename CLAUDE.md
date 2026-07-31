@@ -28,12 +28,20 @@ Hệ thống POS quản lý nhà hàng: order món, tạo hóa đơn, in bill, x
 
 - Không có tích hợp cổng thanh toán. Khách tự thanh toán ngoài hệ thống (tiền mặt hoặc chuyển khoản), nhân viên xác nhận thủ công.
 - **Không có entity "hóa đơn" (invoice) riêng** — `order` tự mang toàn bộ vòng đời từ gọi món đến thanh toán, vì order↔invoice luôn là quan hệ 1:1 và cùng một vòng đời, tách 2 entity là dư thừa.
-- Trạng thái `order` tối thiểu: `open` (đang gọi món) → `printed` (đã in bill, chờ thanh toán) → `paid` / `cancelled` (hủy được từ `open` hoặc `printed`).
+- Trạng thái `order` tối thiểu: `open` (đang gọi món/chờ thanh toán) → `paid` / `cancelled`.
+- **In hoá đơn (`printBill()`) là 1 hành động ĐỘC LẬP, không phải điều kiện tiên quyết để thanh
+  toán** — chỉ set `printedAt`/tính lại `totalAmount`, không ràng buộc gì với `confirmPayment()`.
+  Đã từng bắt buộc phải in trước khi thanh toán — bỏ theo yêu cầu người dùng, in hay không không
+  liên quan tới việc xác nhận thanh toán.
 - Rule nghiệp vụ nằm trong entity `Order`, không phải constraint DB:
-  - `printBill()`: `open→printed` hoặc `printed→printed` (in lại) — tính lại `totalAmount` từ các món hiện tại, set `printedAt`.
-  - `addItem()/updateItem()/removeItem()`: nếu đang `printed` thì tự động quay về `open` (phải in lại mới thanh toán được).
-  - `confirmPayment(staffId)`: chỉ hợp lệ khi đang `printed` → `paid`, ghi lại `paidConfirmedBy` và `paidConfirmedAt`. Gọi khi không phải `printed` phải throw domain error, không đổi state. Không có trạng thái nào tự động chuyển thành `paid`.
-  - `cancel()`: hợp lệ từ `open` hoặc `printed` → `cancelled`.
+  - `printBill()`: chỉ hợp lệ khi đang `open` — tính lại `totalAmount` từ các món hiện tại, set
+    `printedAt`. In lại bao nhiêu lần cũng được khi đơn còn `open`.
+  - `addItem()/updateItem()/removeItem()`: nếu đã in (`printedAt` khác null) thì xoá `printedAt` để
+    phải in lại nếu muốn hoá đơn khớp món mới — không đổi status, không ảnh hưởng thanh toán.
+  - `confirmPayment(staffId)`: chỉ hợp lệ khi đang `open` → `paid`, ghi lại `paidConfirmedBy` và
+    `paidConfirmedAt` — KHÔNG yêu cầu đã in bill. Gọi khi không phải `open` phải throw domain error,
+    không đổi state. Không có trạng thái nào tự động chuyển thành `paid`.
+  - `cancel()`: hợp lệ từ `open` → `cancelled`.
 
 ## Route guard & trang danh sách
 

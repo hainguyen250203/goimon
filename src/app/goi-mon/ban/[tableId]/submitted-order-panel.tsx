@@ -159,8 +159,10 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
     try {
       await confirmPayment.mutateAsync({ orderId: order.id, paymentMethod });
       setPaymentOpen(false);
+      // Ở lại ngay tại bàn thay vì điều hướng về sơ đồ tầng — order vừa "paid"
+      // nên getTableOrder trả về null, OrderTableView tự chuyển tab về "Chọn
+      // món" (xem useEffect ở đó), không cần push route gây giật màn hình.
       invalidate();
-      router.push("/goi-mon");
     } catch (error) {
       toaster.create({
         title: "Không thể xác nhận thanh toán",
@@ -336,20 +338,14 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
             size={{ base: "sm", lg: "md" }}
             loading={updateItemsMutation.isPending}
             // Đơn đã lưu mà 0 món thì chưa có gì để thanh toán — "Xác nhận"
-            // (lưu thay đổi, kể cả trả hết món) vẫn luôn bấm được. Chưa in bill
-            // (order.printedAt null) thì khoá "Thanh toán" — phải in trước qua
-            // nút in ở header (xem CLAUDE.md: confirmPayment() yêu cầu đã in).
-            disabled={!isDirty && (localItems.length === 0 || order.printedAt === null)}
+            // (lưu thay đổi, kể cả trả hết món) vẫn luôn bấm được. Thanh toán
+            // không phụ thuộc đã in bill hay chưa — 2 hành động độc lập.
+            disabled={!isDirty && localItems.length === 0}
             onClick={() => (isDirty ? handleConfirmChanges() : handleOpenPayment())}
           >
             {isDirty ? "Xác nhận" : "Thanh toán"}
           </Button>
         </Flex>
-        {!isDirty && localItems.length > 0 && order.printedAt === null && (
-          <Text fontSize="xs" color="fg.muted" mt={1} textAlign="center">
-            Cần in hoá đơn trước khi thanh toán — dùng nút in ở trên.
-          </Text>
-        )}
       </Box>
 
       <DialogRoot open={paymentOpen} onOpenChange={(e) => setPaymentOpen(e.open)}>

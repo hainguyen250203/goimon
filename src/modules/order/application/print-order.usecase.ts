@@ -6,8 +6,9 @@ export type PrintOrderParams = {
 };
 
 /**
- * Set printedAt trên order (điều kiện bắt buộc để thanh toán) — KHÔNG đổi
- * status, in bill chỉ là 1 hành động, đơn vẫn "open" trước/sau khi in.
+ * Set printedAt trên order — KHÔNG đổi status, in bill chỉ là 1 hành động độc
+ * lập với việc thanh toán (đơn vẫn "open" trước/sau khi in, và confirmPayment
+ * không yêu cầu đã in).
  * CHƯA gọi máy in thật (cần thư viện `escpos` — xem package.json của
  * pos-be — và cấu hình IP máy in từ module Máy in). Việc đẩy lệnh in ESC/POS
  * thật sự để làm ở task riêng; usecase này chỉ đảm bảo state machine đúng.

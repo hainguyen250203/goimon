@@ -250,15 +250,13 @@ export class Order {
     this.printedAt = new Date();
   }
 
-  /** Chỉ hợp lệ khi đơn đang "open" VÀ đã in bill (printedAt khác null) → "paid". */
+  /** Chỉ hợp lệ khi đơn đang "open" → "paid". In bill hay không không liên
+   * quan tới việc thanh toán — 2 hành động độc lập, xem printBill(). */
   confirmPayment(staffId: string, paymentMethod: PaymentMethod) {
     if (this.status !== "open") {
       throw new InvalidOrderStatusTransitionError(
         `Không thể xác nhận thanh toán khi đơn đã ở trạng thái "${this.status}".`,
       );
-    }
-    if (this.printedAt === null) {
-      throw new InvalidOrderStatusTransitionError("Phải in bill trước khi xác nhận thanh toán.");
     }
     this.status = "paid";
     this.paymentMethod = paymentMethod;
