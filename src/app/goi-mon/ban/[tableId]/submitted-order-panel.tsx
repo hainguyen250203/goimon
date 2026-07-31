@@ -105,9 +105,6 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
     onError: (error) =>
       toaster.create({ title: "Không lưu được thay đổi", description: error.message, type: "error" }),
   });
-  const printBill = api.order.printBill.useMutation({
-    onError: (error) => toaster.create({ title: "Không in được bill", description: error.message, type: "error" }),
-  });
   const confirmPayment = api.order.confirmPayment.useMutation();
   const cancelOrder = api.order.cancel.useMutation({
     onError: (error) => toaster.create({ title: "Không huỷ được đơn", description: error.message, type: "error" }),
@@ -130,7 +127,7 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
   const [promotionPickerOpen, setPromotionPickerOpen] = useState(false);
 
   const isBusy =
-    updateItemsMutation.isPending || printBill.isPending || applyPromotion.isPending || removePromotion.isPending;
+    updateItemsMutation.isPending || applyPromotion.isPending || removePromotion.isPending;
 
   const { subtotal, discountAmount, payableAmount } = computeTotals(localItems, order.promotion);
 
@@ -160,16 +157,6 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
 
   const handleConfirmPayment = async () => {
     try {
-      // In bill trước nếu chưa in (printedAt null) — điều kiện bắt buộc để
-      // thanh toán trong state machine (xem CLAUDE.md). Lỗi in KHÔNG chặn
-      // luồng xác nhận thanh toán tiếp theo — chỉ báo thêm 1 toast để nhân
-      // viên biết khách có thể chưa nhận được hoá đơn giấy.
-      if (order.printedAt === null) {
-        const result = await printBill.mutateAsync({ orderId: order.id });
-        if (result.printResult.some((r) => !r.success)) {
-          showPrintResultToast(result.printResult, { label: "hoá đơn" });
-        }
-      }
       await confirmPayment.mutateAsync({ orderId: order.id, paymentMethod });
       setPaymentOpen(false);
       invalidate();
@@ -349,13 +336,20 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
             size={{ base: "sm", lg: "md" }}
             loading={updateItemsMutation.isPending}
             // Đơn đã lưu mà 0 món thì chưa có gì để thanh toán — "Xác nhận"
-            // (lưu thay đổi, kể cả trả hết món) vẫn luôn bấm được.
-            disabled={!isDirty && localItems.length === 0}
+            // (lưu thay đổi, kể cả trả hết món) vẫn luôn bấm được. Chưa in bill
+            // (order.printedAt null) thì khoá "Thanh toán" — phải in trước qua
+            // nút in ở header (xem CLAUDE.md: confirmPayment() yêu cầu đã in).
+            disabled={!isDirty && (localItems.length === 0 || order.printedAt === null)}
             onClick={() => (isDirty ? handleConfirmChanges() : handleOpenPayment())}
           >
             {isDirty ? "Xác nhận" : "Thanh toán"}
           </Button>
         </Flex>
+        {!isDirty && localItems.length > 0 && order.printedAt === null && (
+          <Text fontSize="xs" color="fg.muted" mt={1} textAlign="center">
+            Cần in hoá đơn trước khi thanh toán — dùng nút in ở trên.
+          </Text>
+        )}
       </Box>
 
       <DialogRoot open={paymentOpen} onOpenChange={(e) => setPaymentOpen(e.open)}>
@@ -399,7 +393,7 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
               size="md"
               colorPalette="blue"
               onClick={handleConfirmPayment}
-              loading={printBill.isPending || confirmPayment.isPending}
+              loading={confirmPayment.isPending}
             >
               Xác nhận thanh toán
             </Button>
