@@ -9,6 +9,7 @@ import { StatusDot } from "~/components/ui/status-dot";
 import { ThemeToggle } from "~/components/layout/theme-toggle";
 import { ROLE_LABEL, ROLE_DOT_COLOR } from "~/components/layout/nav-user";
 import { authClient } from "~/server/better-auth/client";
+import { hasMinRole } from "~/server/better-auth/role-rank";
 import { ShiftSection } from "./shift-section";
 
 export function StoreView({
@@ -17,7 +18,7 @@ export function StoreView({
   user: { name: string; role: string; phoneNumber?: string | null };
 }) {
   const router = useRouter();
-  const canManage = user.role === "manager" || user.role === "admin";
+  const canManage = hasMinRole(user.role, "manager");
 
   const handleSignOut = async () => {
     await authClient.signOut();

@@ -5,11 +5,12 @@ import { Skeleton } from "~/components/ui/skeleton";
 
 import { api, HydrateClient } from "~/trpc/server";
 import { getSession } from "~/server/better-auth/server";
+import { hasMinRole } from "~/server/better-auth/role-rank";
 import { UsageSummaryTable } from "./usage-summary-table";
 
 export default async function ThongKeTroLyAiPage() {
   const session = await getSession();
-  if (session?.user.role !== "admin") {
+  if (!hasMinRole(session?.user.role, "admin")) {
     redirect("/quan-ly");
   }
 

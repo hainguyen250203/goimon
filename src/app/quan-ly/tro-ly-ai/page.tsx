@@ -5,6 +5,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 
 import { api, HydrateClient } from "~/trpc/server";
 import { getSession } from "~/server/better-auth/server";
+import { hasMinRole } from "~/server/better-auth/role-rank";
 import { AssistantShell } from "./assistant-shell";
 
 const PAGE_SIZE = 20;
@@ -19,7 +20,7 @@ export default async function TroLyAiPage({
   // Không chặn thì manager vẫn vào được UI nhưng gọi tRPC FORBIDDEN, kẹt
   // loading vô thời hạn thay vì bị chặn rõ ràng (xem CLAUDE.md).
   const session = await getSession();
-  if (session?.user.role !== "admin") {
+  if (!hasMinRole(session?.user.role, "admin")) {
     redirect("/quan-ly");
   }
 
@@ -38,7 +39,7 @@ export default async function TroLyAiPage({
             chat chiếm toàn bộ chiều cao (khác các trang danh sách thường,
             tự thêm p={{ base: 4, md: 6 }} bằng tay). */}
         <Box h="full">
-          <AssistantShell activeSessionId={sessionId} userName={session.user.name} />
+          <AssistantShell activeSessionId={sessionId} userName={session!.user.name} />
         </Box>
       </Suspense>
     </HydrateClient>

@@ -5,13 +5,14 @@ import { Skeleton } from "~/components/ui/skeleton";
 
 import { api, HydrateClient } from "~/trpc/server";
 import { getSession } from "~/server/better-auth/server";
+import { hasMinRole } from "~/server/better-auth/role-rank";
 import type { UserRole } from "~/modules/user/domain/user-account.entity";
 import { UserList } from "./user-list";
 
 const PAGE_SIZE = 20;
 
 function parseRole(value: string | undefined): UserRole | undefined {
-  return value === "user" || value === "manager" || value === "admin"
+  return value === "user" || value === "manager" || value === "admin" || value === "superadmin"
     ? value
     : undefined;
 }
@@ -32,7 +33,7 @@ export default async function NguoiDungPage({
   // Không chặn thì manager vẫn vào được UI nhưng mọi gọi tRPC (adminProcedure)
   // đều FORBIDDEN, kẹt ở trạng thái loading vô thời hạn — trải nghiệm tệ.
   const session = await getSession();
-  if (session?.user.role !== "admin") {
+  if (!hasMinRole(session?.user.role, "admin")) {
     redirect("/quan-ly");
   }
 
@@ -49,7 +50,7 @@ export default async function NguoiDungPage({
     <Box p={{ base: 4, md: 6 }}>
       <HydrateClient>
       <Suspense fallback={<Skeleton h={96} rounded="l3" />}>
-        <UserList page={page} role={role} banned={banned} />
+        <UserList page={page} role={role} banned={banned} viewerRole={session!.user.role as UserRole} />
       </Suspense>
       </HydrateClient>
     </Box>

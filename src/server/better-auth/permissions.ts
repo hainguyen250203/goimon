@@ -15,3 +15,6 @@ export const manager = ac.newRole({});
 export const admin = ac.newRole({
   ...adminAc.statements,
 });
+export const superadmin = ac.newRole({
+  ...adminAc.statements,
+});

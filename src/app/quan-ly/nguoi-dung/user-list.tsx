@@ -31,10 +31,14 @@ export function UserList({
   page,
   role,
   banned,
+  viewerRole,
 }: {
   page: number;
   role?: UserRole;
   banned?: boolean;
+  /** Role của người đang xem trang này — chỉ superadmin mới gán được
+   * superadmin cho người khác (xem create-user-dialog.tsx/user-row-actions.tsx). */
+  viewerRole: UserRole;
 }) {
   const router = useRouter();
   const { data, isFetching } = api.user.list.useQuery(
@@ -81,7 +85,7 @@ export function UserList({
       key: "actions",
       header: "",
       width: "3rem",
-      cell: (row) => <UserRowActions user={row} />,
+      cell: (row) => <UserRowActions user={row} viewerRole={viewerRole} />,
     },
   ];
 
@@ -129,6 +133,12 @@ export function UserList({
             { value: "user", label: "Nhân viên" },
             { value: "manager", label: "Quản lý" },
             { value: "admin", label: "Admin" },
+            // superadmin là vai trò giám sát ẨN — không lộ ra dropdown filter
+            // (cũng như dropdown gán role) với ai không phải chính superadmin,
+            // kể cả dạng "chỉ để xem" (xem user.router.ts's list()).
+            ...(viewerRole === "superadmin"
+              ? [{ value: "superadmin", label: "Super Admin" }]
+              : []),
           ]}
         />
 
@@ -166,7 +176,7 @@ export function UserList({
         buildHref={(p) => buildHref({ page: p })}
       />
 
-      <CreateUserDialog open={dialogOpen} onOpenChange={setDialogOpen} />
+      <CreateUserDialog open={dialogOpen} onOpenChange={setDialogOpen} viewerRole={viewerRole} />
     </Stack>
   );
 }

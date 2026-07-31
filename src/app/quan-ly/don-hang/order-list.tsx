@@ -29,6 +29,7 @@ import { OrderRowActions } from "./order-row-actions";
 
 const PAGE_SIZE = 20;
 const ALL_STATUS = "all";
+const DELETED_STATUS = "deleted";
 
 const STATUS_OPTIONS = [
   { value: ALL_STATUS, label: "Tất cả trạng thái" },
@@ -38,7 +39,8 @@ const STATUS_OPTIONS = [
   { value: "transferred", label: STATUS_LABEL.transferred },
 ];
 
-const columns: ListViewColumn<OrderListItem>[] = [
+function buildColumns(canDelete: boolean): ListViewColumn<OrderListItem>[] {
+  return [
   {
     key: "id",
     header: "ID",
@@ -106,32 +108,46 @@ const columns: ListViewColumn<OrderListItem>[] = [
     key: "actions",
     header: "",
     width: "3rem",
-    cell: (row) => <OrderRowActions row={row} />,
+    cell: (row) => <OrderRowActions row={row} canDelete={canDelete} />,
   },
 ];
+}
 
 export function OrderList({
   page,
   status,
   shiftId,
+  deleted,
+  canViewDeleted,
+  canDelete,
 }: {
   page: number;
   status?: OrderStatus;
   shiftId?: number;
+  /** true = đang xem filter "Đã xoá" (page.tsx đã tự kiểm tra canViewDeleted
+   * trước khi cho true, non-superadmin gõ tay ?status=deleted vẫn an toàn). */
+  deleted: boolean;
+  /** Chỉ superadmin thấy option filter "Đã xoá". */
+  canViewDeleted: boolean;
+  canDelete: boolean;
 }) {
   const router = useRouter();
   const { data, isFetching } = api.order.list.useQuery(
-    { page, pageSize: PAGE_SIZE, status, shiftId },
+    { page, pageSize: PAGE_SIZE, status, shiftId, deleted },
     // Giữ data trang cũ hiển thị trong lúc fetch trang mới — tránh nháy
     // skeleton/trắng màn hình khi đổi trang hoặc đổi filter.
     { placeholderData: keepPreviousData },
   );
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
+  const columns = buildColumns(canDelete);
 
-  const buildHref = (params: { page?: number; status?: OrderStatus; shiftId?: number }) => {
+  // "statusParam" là giá trị THÔ ghi vào URL — có thể là 1 OrderStatus thật
+  // hoặc sentinel "deleted" (page.tsx tự phân biệt lại 2 trường hợp này).
+  const currentStatusParam = deleted ? DELETED_STATUS : status;
+  const buildHref = (params: { page?: number; statusParam?: string; shiftId?: number }) => {
     const search = new URLSearchParams();
-    const nextStatus = "status" in params ? params.status : status;
+    const nextStatus = "statusParam" in params ? params.statusParam : currentStatusParam;
     const nextShiftId = "shiftId" in params ? params.shiftId : shiftId;
     if (nextStatus) search.set("status", nextStatus);
     if (nextShiftId) search.set("shiftId", String(nextShiftId));
@@ -164,16 +180,20 @@ export function OrderList({
         <FilterSelect
           width="14rem"
           placeholder="Trạng thái"
-          value={status ?? ALL_STATUS}
+          value={currentStatusParam ?? ALL_STATUS}
           onValueChange={(value) =>
             router.push(
               buildHref({
                 page: 1,
-                status: value === ALL_STATUS ? undefined : (value as OrderStatus),
+                statusParam: value === ALL_STATUS ? undefined : value,
               }),
             )
           }
-          options={STATUS_OPTIONS}
+          options={
+            canViewDeleted
+              ? [...STATUS_OPTIONS, { value: DELETED_STATUS, label: "Đã xoá" }]
+              : STATUS_OPTIONS
+          }
         />
         <Input
           width="10rem"

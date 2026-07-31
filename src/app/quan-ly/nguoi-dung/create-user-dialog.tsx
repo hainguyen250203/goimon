@@ -34,11 +34,6 @@ const EMPTY_FORM: FormState = {
 
 const PHONE_NUMBER_REGEX = /^0\d{9}$/;
 
-const ROLE_OPTIONS = (Object.keys(ROLE_LABEL) as UserRole[]).map((value) => ({
-  value,
-  label: ROLE_LABEL[value],
-}));
-
 /**
  * Chỉ có dialog tạo mới — không có dialog "sửa" đầy đủ vì tài khoản không
  * có dữ liệu hồ sơ nào khác đáng sửa ngoài vai trò, mật khẩu, và trạng thái
@@ -47,10 +42,18 @@ const ROLE_OPTIONS = (Object.keys(ROLE_LABEL) as UserRole[]).map((value) => ({
 export function CreateUserDialog({
   open,
   onOpenChange,
+  viewerRole,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Chỉ superadmin mới gán được vai trò superadmin cho người khác — ẩn hẳn
+   * option này khỏi dropdown nếu người xem không phải superadmin (server vẫn
+   * tự chặn lại ở user.router.ts, đây chỉ là UX). */
+  viewerRole: UserRole;
 }) {
+  const roleOptions = (Object.keys(ROLE_LABEL) as UserRole[])
+    .filter((r) => r !== "superadmin" || viewerRole === "superadmin")
+    .map((value) => ({ value, label: ROLE_LABEL[value] }));
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
 
@@ -150,7 +153,7 @@ export function CreateUserDialog({
                 onValueChange={(value) =>
                   setForm((f) => ({ ...f, role: value as UserRole }))
                 }
-                options={ROLE_OPTIONS}
+                options={roleOptions}
               />
             </Field>
           </Stack>

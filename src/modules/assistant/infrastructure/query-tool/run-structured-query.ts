@@ -322,9 +322,21 @@ export async function runStructuredQuery(
         : queryBuilder.leftJoin(joinCtx.table, on);
   }
 
-  if (input.filter && input.filter.length > 0) {
-    const conditions = input.filter.map((f) => buildFilterSql(f, base, joined));
-    queryBuilder = queryBuilder.where(and(...conditions));
+  // Bắt buộc loại đơn đã xoá mềm khỏi MỌI truy vấn đụng tới "orders" (base
+  // hoặc join) — không dựa vào model tự biết thêm filter deletedAt, vì model
+  // không được dạy về cột này trong schema-context.ts. Đây là chốt chặn CỨNG,
+  // không thể bỏ qua kể cả khi model cố tình không lọc.
+  const mandatoryConditions: SQL[] = [];
+  for (const ctx of [base, ...joined.values()]) {
+    if (ctx.name === "orders") {
+      mandatoryConditions.push(isNull(ctx.columns.deletedAt!));
+    }
+  }
+
+  const filterConditions = input.filter?.map((f) => buildFilterSql(f, base, joined)) ?? [];
+  const allConditions = [...mandatoryConditions, ...filterConditions];
+  if (allConditions.length > 0) {
+    queryBuilder = queryBuilder.where(and(...allConditions));
   }
 
   if (input.groupBy && input.groupBy.length > 0) {

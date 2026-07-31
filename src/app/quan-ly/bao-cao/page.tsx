@@ -5,6 +5,7 @@ import { Box } from "@chakra-ui/react";
 import { Skeleton } from "~/components/ui/skeleton";
 import { api, HydrateClient } from "~/trpc/server";
 import { getSession } from "~/server/better-auth/server";
+import { hasMinRole } from "~/server/better-auth/role-rank";
 import { getDefaultReportRange } from "~/modules/report/application/get-default-report-range.usecase";
 import { formatVNDateInputValue, toInclusiveEndDateInputValue, toQueryRange } from "./date-range";
 import { ReportView } from "./report-view";
@@ -17,7 +18,7 @@ export default async function BaoCaoPage({
   // Trang này admin-only — /quan-ly/layout.tsx chỉ chặn role "user", không
   // phân biệt manager/admin, nên phải tự chặn thêm ở đây (giống nguoi-dung).
   const session = await getSession();
-  if (session?.user.role !== "admin") {
+  if (!hasMinRole(session?.user.role, "admin")) {
     redirect("/quan-ly");
   }
 

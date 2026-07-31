@@ -1,15 +1,15 @@
 import { z } from "zod";
 
-import { adminProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { createTRPCRouter, superadminProcedure } from "~/server/api/trpc";
 import { listActivities } from "./application/list-activities.usecase";
 import { activityLogDrizzleRepository } from "./infrastructure/activity-log.drizzle-repository";
 
-// adminProcedure — nhật ký hoạt động phơi bày thao tác của MỌI người dùng
-// trên toàn hệ thống (kể cả thay đổi vai trò/mật khẩu ở module user), nhạy
-// cảm hơn các trang quản lý khác nên chỉ admin xem được, giống "Người dùng"/
-// "Báo cáo" (xem nav-config.ts).
+// superadminProcedure — nhật ký hoạt động phơi bày thao tác của MỌI người
+// dùng trên toàn hệ thống (kể cả admin xoá order/thay đổi vai trò/mật khẩu),
+// nên chỉ vai trò giám sát superadmin xem được — admin (người thực hiện thao
+// tác) không tự xem lại được nữa (xem CLAUDE.md).
 export const activityLogRouter = createTRPCRouter({
-  list: adminProcedure
+  list: superadminProcedure
     .input(
       z.object({
         page: z.number().int().min(1).default(1),

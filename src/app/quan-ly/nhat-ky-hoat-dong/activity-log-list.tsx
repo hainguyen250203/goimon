@@ -28,6 +28,7 @@ const ENTITY_TYPE_LABEL: Record<string, string> = {
   shift: "Ca làm việc",
   promotion: "Khuyến mãi",
   "payment-config": "Thanh toán",
+  order: "Đơn hàng",
 };
 
 const ACTION_LABEL: Record<string, string> = {

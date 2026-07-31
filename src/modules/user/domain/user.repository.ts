@@ -13,6 +13,9 @@ export type ListUsersParams = {
   pageSize: number;
   role?: UserRole;
   banned?: boolean;
+  /** Loại hẳn user role "superadmin" khỏi kết quả — vai trò giám sát ẩn,
+   * không cho admin biết nó tồn tại (xem user.router.ts). */
+  excludeSuperadmin?: boolean;
   headers: Headers;
 };
 

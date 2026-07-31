@@ -14,8 +14,7 @@
     "dev": "next dev -p 4466",
     "preview": "next build && next start",
     "start": "next start -p 4466",
-    "typecheck": "tsc --noEmit",
-    "vercel-build": "if [ \"$VERCEL_ENV\" = \"production\" ]; then npm run db:extensions && npm run db:migrate; fi && next build"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.24",

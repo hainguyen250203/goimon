@@ -1,6 +1,7 @@
 import { Flex, Stack, Text } from "@chakra-ui/react";
 
 import { getSession } from "~/server/better-auth/server";
+import { hasMinRole } from "~/server/better-auth/role-rank";
 import { api } from "~/trpc/server";
 
 /**
@@ -14,7 +15,7 @@ export async function ShiftGate({ children }: { children: React.ReactNode }) {
 
   if (shift) return <>{children}</>;
 
-  const canManage = session?.user.role === "manager" || session?.user.role === "admin";
+  const canManage = hasMinRole(session?.user.role, "manager");
 
   return (
     <Flex flex={1} align="center" justify="center" p={4}>

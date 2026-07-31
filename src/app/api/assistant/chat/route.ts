@@ -2,6 +2,7 @@ import { type NextRequest } from "next/server";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 
 import { getSession } from "~/server/better-auth/server";
+import { hasMinRole } from "~/server/better-auth/role-rank";
 import { assistantDrizzleRepository } from "~/modules/assistant/infrastructure/assistant.drizzle-repository";
 import { menuItemDrizzleRepository } from "~/modules/menu/infrastructure/menu-item.drizzle-repository";
 import {
@@ -27,10 +28,10 @@ type ChatRequestBody = {
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
-  if (session?.user.role !== "admin") {
+  if (!hasMinRole(session?.user.role, "admin")) {
     return new Response("Bạn không có quyền dùng trợ lý AI.", { status: 403 });
   }
-  const userId = session.user.id;
+  const userId = session!.user.id;
 
   let body: ChatRequestBody;
   try {

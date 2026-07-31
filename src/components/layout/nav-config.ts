@@ -15,9 +15,9 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 
-export type Role = "user" | "manager" | "admin";
+export type Role = "user" | "manager" | "admin" | "superadmin";
 
-const ROLE_RANK: Record<Role, number> = { user: 0, manager: 1, admin: 2 };
+const ROLE_RANK: Record<Role, number> = { user: 0, manager: 1, admin: 2, superadmin: 3 };
 
 export type NavItem = {
   key: string;
@@ -29,7 +29,7 @@ export type NavItem = {
   children?: NavItem[];
   group?: string;
   /** Vai trò tối thiểu để thấy mục này. Mặc định "manager" (sàn của cả layout /quan-ly). */
-  minRole?: Extract<Role, "manager" | "admin">;
+  minRole?: Extract<Role, "manager" | "admin" | "superadmin">;
 };
 
 // Nhóm theo nghiệp vụ, thứ tự cố định: Tổng quan đứng riêng trên cùng, rồi
@@ -128,7 +128,9 @@ export const ADMIN_NAV: NavItem[] = [
     icon: ScrollText,
     href: "/quan-ly/nhat-ky-hoat-dong",
     group: "Quản trị",
-    minRole: "admin",
+    // Chỉ superadmin — vai trò giám sát toàn hệ thống, admin không còn xem
+    // được nhật ký hoạt động nữa (xem CLAUDE.md).
+    minRole: "superadmin",
   },
   {
     key: "report",

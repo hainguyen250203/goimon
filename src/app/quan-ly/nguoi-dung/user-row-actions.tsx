@@ -27,17 +27,24 @@ import type { UserAccount, UserRole } from "~/modules/user/domain/user-account.e
 import { ROLE_LABEL } from "./role-label";
 import { ResetPasswordDialog } from "./reset-password-dialog";
 
-const ROLE_OPTIONS = (Object.keys(ROLE_LABEL) as UserRole[]).map((value) => ({
-  value,
-  label: ROLE_LABEL[value],
-}));
-
 /**
  * Không có khái niệm "xoá" tài khoản hợp lý ở đây (order.createdBy tham
  * chiếu user.id, BetterAuth cũng không kỳ vọng bị xoá thẳng qua adapter) —
  * Cấm/Bỏ cấm đóng vai trò tương đương xoá/khôi phục trong UI.
  */
-export function UserRowActions({ user }: { user: UserAccount }) {
+export function UserRowActions({
+  user,
+  viewerRole,
+}: {
+  user: UserAccount;
+  /** Chỉ superadmin mới gán được vai trò superadmin — ẩn option này khỏi
+   * dropdown nếu người xem không phải superadmin (server tự chặn lại ở
+   * user.router.ts, đây chỉ là UX). */
+  viewerRole: UserRole;
+}) {
+  const roleOptions = (Object.keys(ROLE_LABEL) as UserRole[])
+    .filter((r) => r !== "superadmin" || viewerRole === "superadmin")
+    .map((value) => ({ value, label: ROLE_LABEL[value] }));
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [banConfirmOpen, setBanConfirmOpen] = useState(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
@@ -142,7 +149,7 @@ export function UserRowActions({ user }: { user: UserAccount }) {
                 placeholder="Chọn vai trò"
                 value={selectedRole}
                 onValueChange={(value) => setSelectedRole(value as UserRole)}
-                options={ROLE_OPTIONS}
+                options={roleOptions}
               />
             </Field>
           </DialogBody>

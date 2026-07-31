@@ -59,31 +59,35 @@ export const userBetterAuthRepository: UserRepository = {
     return toEntity(result as RawUser);
   },
 
-  async list({ page, pageSize, role, banned, headers }: ListUsersParams): Promise<ListUsersResult> {
+  async list({ page, pageSize, role, banned, excludeSuperadmin, headers }: ListUsersParams): Promise<ListUsersResult> {
     const offset = (page - 1) * pageSize;
 
     // BetterAuth's admin listUsers endpoint chỉ hỗ trợ MỘT filterField tại
     // một thời điểm (không AND được 2 điều kiện) — verify từ query schema
-    // trong admin.d.mts. Khi cả role lẫn banned cùng được chọn, đẩy filter
-    // role xuống DB (rẻ, chỉ 3 giá trị) rồi lọc tiếp banned trong memory
-    // trên một batch đủ lớn — chấp nhận được vì danh sách nhân viên của một
-    // nhà hàng không bao giờ lớn tới mức cần phân trang thật ở DB.
-    if (role !== undefined && banned !== undefined) {
+    // trong admin.d.mts, và không có filterOperator "ne" để loại trừ 1 giá
+    // trị. Khi cần lọc thêm trong memory (banned cùng lúc với role, hoặc
+    // excludeSuperadmin — vai trò giám sát ẩn, không cho hiện ra với người
+    // xem không phải superadmin, xem user.router.ts), đẩy filter role (nếu
+    // có) xuống DB rồi lọc tiếp trên 1 batch đủ lớn — chấp nhận được vì danh
+    // sách nhân viên của một nhà hàng không bao giờ lớn tới mức cần phân
+    // trang thật ở DB.
+    if ((role !== undefined && banned !== undefined) || excludeSuperadmin) {
       const result = await auth.api.listUsers({
         query: {
           limit: 1000,
           offset: 0,
           sortBy: "createdAt",
           sortDirection: "desc",
-          filterField: "role",
-          filterValue: role,
-          filterOperator: "eq",
+          ...(role !== undefined
+            ? { filterField: "role" as const, filterValue: role, filterOperator: "eq" as const }
+            : {}),
         },
         headers,
       });
       const filtered = (result.users as RawUser[])
         .map(toEntity)
-        .filter((u) => u.banned === banned);
+        .filter((u) => banned === undefined || u.banned === banned)
+        .filter((u) => !excludeSuperadmin || u.role !== "superadmin");
       return {
         items: filtered.slice(offset, offset + pageSize),
         total: filtered.length,

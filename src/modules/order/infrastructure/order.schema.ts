@@ -73,6 +73,11 @@ export const order = pgTable(
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date()),
+    // Xoá mềm — trục độc lập với `status` (order ở bất kỳ trạng thái nào cũng
+    // xoá được). Chỉ admin/superadmin xoá được, chỉ superadmin xem lại được
+    // (xem order.router.ts). Không load qua entity vì không có rule nghiệp vụ
+    // nào cần validate lúc xoá.
+    deletedAt: timestamp("deleted_at"),
   },
   (t) => [
     index("orders_created_by_idx").on(t.createdBy),
@@ -82,10 +87,12 @@ export const order = pgTable(
       t.status,
       t.paidConfirmedAt,
     ),
-    // Mỗi bàn chỉ có tối đa 1 order đang hoạt động (chưa paid/cancelled).
+    // Mỗi bàn chỉ có tối đa 1 order đang hoạt động (chưa paid/cancelled) VÀ
+    // chưa bị xoá mềm — thiếu điều kiện deletedAt thì xoá 1 order "open" sẽ
+    // để lại row vẫn khớp status='open', khoá bàn đó không mở order mới được.
     uniqueIndex("orders_active_per_table_idx")
       .on(t.tableId)
-      .where(sql`${t.status} = 'open'`),
+      .where(sql`${t.status} = 'open' and ${t.deletedAt} is null`),
   ],
 );
 

@@ -14,12 +14,13 @@ export default async function NhatKyHoatDongPage({
 }: {
   searchParams: Promise<{ page?: string; entityType?: string }>;
 }) {
-  // /quan-ly/layout.tsx chỉ chặn role "user", không phân biệt manager/admin —
-  // route này chỉ admin (list dùng adminProcedure), phải tự chặn thêm ở đây.
-  // Không chặn thì manager vẫn vào được UI nhưng gọi tRPC FORBIDDEN, kẹt
-  // loading vô thời hạn thay vì bị chặn rõ ràng (xem CLAUDE.md).
+  // /quan-ly/layout.tsx chỉ chặn role "user" — route này CHỈ superadmin (list
+  // dùng superadminProcedure), admin không còn xem được nữa (khác các trang
+  // admin-only khác — đây là 1 trong số ít trang cần THU HẸP thay vì mở rộng,
+  // xem CLAUDE.md). Không chặn thì admin vẫn vào được UI nhưng gọi tRPC
+  // FORBIDDEN, kẹt loading vô thời hạn thay vì bị chặn rõ ràng.
   const session = await getSession();
-  if (session?.user.role !== "admin") {
+  if (session?.user.role !== "superadmin") {
     redirect("/quan-ly");
   }
 

@@ -11,6 +11,9 @@ export type ListOrdersParams = {
   shiftId?: number;
   /** Chỉ đơn do người này tạo — router tự set khi role "user" (nhân viên chỉ xem đơn mình tạo ở /goi-mon/cua-hang). */
   createdBy?: string;
+  /** true = CHỈ lấy đơn đã xoá mềm (superadmin-only, chặn ở order.router.ts).
+   * undefined/false = mặc định, LOẠI TRỪ đơn đã xoá khỏi mọi danh sách khác. */
+  deleted?: boolean;
 };
 
 export type ListOrdersResult = {
@@ -175,6 +178,10 @@ export interface OrderRepository {
   save(order: Order): Promise<Order>;
   /** Ghi 1 dòng vào order_events — timeline riêng của order, khác activity_logs. */
   recordEvent(params: RecordOrderEventParams): Promise<void>;
+  /** Xoá mềm — chỉ set deletedAt, không đổi status (status có thể là bất kỳ
+   * giá trị nào tại thời điểm xoá). Không load qua entity vì không có rule
+   * nghiệp vụ nào cần validate (xem order.entity.ts — không có method xoá). */
+  softDeleteOrder(id: number): Promise<void>;
   /** Mọi order đang "open" (toàn nhà hàng) — cho màn hình chọn bàn gọi món
    * ghép running total lên từng bàn, không phải table module tự query bảng orders. */
   listActive(): Promise<ActiveOrderSummary[]>;

@@ -134,7 +134,7 @@ export const protectedProcedure = t.procedure
  *
  * @see https://trpc.io/docs/procedures
  */
-const ROLE_RANK = { user: 0, manager: 1, admin: 2 } as const;
+const ROLE_RANK = { user: 0, manager: 1, admin: 2, superadmin: 3 } as const;
 type Role = keyof typeof ROLE_RANK;
 
 const minRoleProcedure = (minRole: Role) =>
@@ -150,5 +150,7 @@ const minRoleProcedure = (minRole: Role) =>
 export const userProcedure = minRoleProcedure("user");
 /** manager hoặc admin. */
 export const managerProcedure = minRoleProcedure("manager");
-/** Chỉ admin. */
+/** Chỉ admin (superadmin cũng qua được, rank cao hơn). */
 export const adminProcedure = minRoleProcedure("admin");
+/** Chỉ superadmin — vai trò giám sát toàn hệ thống (xem CLAUDE.md). */
+export const superadminProcedure = minRoleProcedure("superadmin");

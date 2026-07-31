@@ -8,10 +8,12 @@ export const ROLE_LABEL: Record<UserRole, string> = {
   user: "Nhân viên",
   manager: "Quản lý",
   admin: "Admin",
+  superadmin: "Super Admin",
 };
 
 export const ROLE_DOT_COLOR: Record<UserRole, string> = {
   user: "gray.400",
   manager: "blue.500",
   admin: "purple.500",
+  superadmin: "red.500",
 };

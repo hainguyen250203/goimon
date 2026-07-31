@@ -3,11 +3,11 @@ import "dotenv/config";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { auth } from "~/server/better-auth/config";
-import { db } from "~/server/db";
 import { category, menuItem } from "~/modules/menu/infrastructure/menu.schema";
 import { printer } from "~/modules/printer/infrastructure/printer.schema";
 import { area, restaurantTable } from "~/modules/table/infrastructure/table.schema";
+import { auth } from "~/server/better-auth/config";
+import { db } from "~/server/db";
 
 // Dữ liệu tham khảo từ pos-be/src/utils/data/menu.json (chỉ lấy DATA, không
 // copy code/logic seed của pos-be).
@@ -23,21 +23,21 @@ type SeedCategory = {
   products: SeedProduct[];
 };
 
-// Chỉ seed đúng 1 tài khoản admin — mật khẩu trùng số điện thoại (không
-// dùng mật khẩu chung yếu như trước) để không tạo tài khoản demo thừa/dễ
-// đoán trên môi trường không phải local dev.
-const SEED_USERS = [{ name: "Admin", phoneNumber: "0968916540", role: "admin" as const }];
+// Mỗi tài khoản mật khẩu trùng số điện thoại riêng của mình (không dùng mật
+// khẩu chung) để không tạo tài khoản demo thừa/dễ đoán trên môi trường không
+// phải local dev.
+const SEED_USERS = [
+  { name: "Nguyen Hai", phoneNumber: "0968916540", password: "0968916540", role: "superadmin" as const },
+  { name: "Khanh Lam", phoneNumber: "0397372410", password: "0397372410", role: "admin" as const },
+];
 
-const SEED_USER_PASSWORD = "0968916540";
-
-// Khu 1..Khu 9 (20 bàn/khu, tên "K1 - B1"..) + Mang về (4 bàn đại diện cho
+// Khu A..Khu I (20 bàn/khu, tên "Khu A - B1"..) + Mang về (4 bàn đại diện cho
 // khách chờ mang đi, không cần đánh số nhiều như khu ngồi tại chỗ).
 const SEED_LAYOUT = [
-  ...Array.from({ length: 9 }, (_, i) => ({
-    areaName: `Khu ${i + 1}`,
-    tablePrefix: `K${i + 1}`,
-    tableCount: 20,
-  })),
+  ...Array.from({ length: 9 }, (_, i) => {
+    const areaName = `Khu ${String.fromCharCode(65 + i)}`; // A, B, C... I
+    return { areaName, tablePrefix: areaName, tableCount: 20 };
+  }),
   { areaName: "Mang về", tablePrefix: "MV", tableCount: 4 },
 ];
 
@@ -59,7 +59,7 @@ async function seedUsers() {
     await auth.api.createUser({
       body: {
         email: `${seedUser.phoneNumber}@pos.internal`,
-        password: SEED_USER_PASSWORD,
+        password: seedUser.password,
         name: seedUser.name,
         role: seedUser.role,
         data: {

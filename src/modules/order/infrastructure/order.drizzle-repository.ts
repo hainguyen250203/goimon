@@ -1,4 +1,4 @@
-import { and, count, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
 
 import { db } from "~/server/db";
 import { area, restaurantTable } from "~/modules/table/infrastructure/table.schema";
@@ -46,6 +46,7 @@ function toEntity(
     createdAt: Date;
     printedAt: Date | null;
     paidConfirmedAt: Date | null;
+    deletedAt: Date | null;
   },
   items: OrderListItemLine[],
 ): OrderListItem {
@@ -62,6 +63,7 @@ function toEntity(
     createdAt: row.createdAt,
     printedAt: row.printedAt,
     paidConfirmedAt: row.paidConfirmedAt,
+    deletedAt: row.deletedAt,
     items,
   };
 }
@@ -113,7 +115,10 @@ async function loadOrder(
   executor: typeof db,
   orderId: number,
 ): Promise<Order | null> {
-  const [orderRow] = await executor.select().from(order).where(eq(order.id, orderId));
+  const [orderRow] = await executor
+    .select()
+    .from(order)
+    .where(and(eq(order.id, orderId), isNull(order.deletedAt)));
   if (!orderRow) return null;
   const itemRows = await executor
     .select()
@@ -130,9 +135,13 @@ export const orderDrizzleRepository: OrderRepository = {
     search,
     shiftId,
     createdBy,
+    deleted,
   }: ListOrdersParams): Promise<ListOrdersResult> {
     const offset = (page - 1) * pageSize;
-    const conditions = [];
+    // Luôn áp dụng — mặc định loại đơn đã xoá khỏi MỌI danh sách (kể cả
+    // /goi-mon/cua-hang), `deleted: true` (chỉ superadmin, chặn ở router) đảo
+    // ngược lại để CHỈ xem đơn đã xoá.
+    const conditions = [deleted ? isNotNull(order.deletedAt) : isNull(order.deletedAt)];
     if (status) conditions.push(eq(order.status, status));
     if (shiftId) conditions.push(eq(order.shiftId, shiftId));
     if (createdBy) conditions.push(eq(order.createdBy, createdBy));
@@ -168,6 +177,7 @@ export const orderDrizzleRepository: OrderRepository = {
           createdAt: order.createdAt,
           printedAt: order.printedAt,
           paidConfirmedAt: order.paidConfirmedAt,
+          deletedAt: order.deletedAt,
         })
         .from(order)
         .leftJoin(restaurantTable, eq(order.tableId, restaurantTable.id))
@@ -216,7 +226,7 @@ export const orderDrizzleRepository: OrderRepository = {
     const [orderRow] = await db
       .select()
       .from(order)
-      .where(and(eq(order.tableId, tableId), eq(order.status, "open")));
+      .where(and(eq(order.tableId, tableId), eq(order.status, "open"), isNull(order.deletedAt)));
     if (!orderRow) return null;
     const itemRows = await db
       .select()
@@ -342,6 +352,10 @@ export const orderDrizzleRepository: OrderRepository = {
     });
   },
 
+  async softDeleteOrder(id: number): Promise<void> {
+    await db.update(order).set({ deletedAt: new Date() }).where(eq(order.id, id));
+  },
+
   async listActive(): Promise<ActiveOrderSummary[]> {
     const rows = await db
       .select({
@@ -354,7 +368,7 @@ export const orderDrizzleRepository: OrderRepository = {
       })
       .from(order)
       .leftJoin(orderItem, eq(orderItem.orderId, order.id))
-      .where(eq(order.status, "open"))
+      .where(and(eq(order.status, "open"), isNull(order.deletedAt)))
       .groupBy(order.id, order.tableId, order.createdAt);
     return rows;
   },
@@ -366,7 +380,7 @@ export const orderDrizzleRepository: OrderRepository = {
         totalRevenue: sql<number>`coalesce(sum(${order.totalAmount}), 0)`.mapWith(Number),
       })
       .from(order)
-      .where(and(eq(order.shiftId, shiftId), eq(order.status, "paid")));
+      .where(and(eq(order.shiftId, shiftId), eq(order.status, "paid"), isNull(order.deletedAt)));
     return { orderCount: row?.orderCount ?? 0, totalRevenue: row?.totalRevenue ?? 0 };
   },
 
@@ -378,7 +392,7 @@ export const orderDrizzleRepository: OrderRepository = {
         revenue: sql<number>`coalesce(sum(${order.totalAmount}), 0)`.mapWith(Number),
       })
       .from(order)
-      .where(eq(order.shiftId, shiftId))
+      .where(and(eq(order.shiftId, shiftId), isNull(order.deletedAt)))
       .groupBy(order.status);
 
     const byStatus = new Map(rows.map((r) => [r.status, r]));
@@ -405,7 +419,7 @@ export const orderDrizzleRepository: OrderRepository = {
           revenue: sql<number>`coalesce(sum(${order.totalAmount}), 0)`.mapWith(Number),
         })
         .from(order)
-        .where(inArray(order.shiftId, shiftIds))
+        .where(and(inArray(order.shiftId, shiftIds), isNull(order.deletedAt)))
         .groupBy(order.shiftId, order.status, order.paymentMethod),
       // Tổng tiền món TRƯỚC giảm giá — cần join order_items riêng vì
       // orders.total_amount đã là số SAU giảm giá, không suy ra gross được
@@ -419,7 +433,7 @@ export const orderDrizzleRepository: OrderRepository = {
         })
         .from(orderItem)
         .innerJoin(order, eq(order.id, orderItem.orderId))
-        .where(and(inArray(order.shiftId, shiftIds), eq(order.status, "paid")))
+        .where(and(inArray(order.shiftId, shiftIds), eq(order.status, "paid"), isNull(order.deletedAt)))
         .groupBy(order.shiftId),
     ]);
 
@@ -469,7 +483,7 @@ export const orderDrizzleRepository: OrderRepository = {
     categoryIds?: number[],
   ): Promise<TopSellingItem[]> {
     if (shiftIds.length === 0) return [];
-    const conditions = [inArray(order.shiftId, shiftIds), eq(order.status, "paid")];
+    const conditions = [inArray(order.shiftId, shiftIds), eq(order.status, "paid"), isNull(order.deletedAt)];
     if (categoryIds && categoryIds.length > 0) {
       conditions.push(inArray(menuItem.categoryId, categoryIds));
     }
@@ -499,7 +513,7 @@ export const orderDrizzleRepository: OrderRepository = {
         orderCount: count(),
       })
       .from(order)
-      .where(and(inArray(order.shiftId, shiftIds), eq(order.status, "paid")))
+      .where(and(inArray(order.shiftId, shiftIds), eq(order.status, "paid"), isNull(order.deletedAt)))
       .groupBy(order.paymentMethod);
     return rows
       .filter((row): row is typeof row & { paymentMethod: NonNullable<typeof row.paymentMethod> } =>
@@ -518,7 +532,14 @@ export const orderDrizzleRepository: OrderRepository = {
         totalAmount: order.totalAmount,
       })
       .from(order)
-      .where(and(inArray(order.shiftId, shiftIds), eq(order.status, "paid"), isNotNull(order.promotionId)));
+      .where(
+        and(
+          inArray(order.shiftId, shiftIds),
+          eq(order.status, "paid"),
+          isNotNull(order.promotionId),
+          isNull(order.deletedAt),
+        ),
+      );
     if (paidOrders.length === 0) return [];
 
     const orderIds = paidOrders.map((o) => o.id);
@@ -552,7 +573,7 @@ export const orderDrizzleRepository: OrderRepository = {
 
   async getRevenueByCategory(shiftIds: number[], categoryIds?: number[]): Promise<CategoryRevenue[]> {
     if (shiftIds.length === 0) return [];
-    const conditions = [inArray(order.shiftId, shiftIds), eq(order.status, "paid")];
+    const conditions = [inArray(order.shiftId, shiftIds), eq(order.status, "paid"), isNull(order.deletedAt)];
     if (categoryIds && categoryIds.length > 0) {
       conditions.push(inArray(category.id, categoryIds));
     }

@@ -8,6 +8,7 @@ import {
   ac,
   admin as adminRole,
   manager as managerRole,
+  superadmin as superadminRole,
   user as userRole,
 } from "./permissions";
 
@@ -42,7 +43,7 @@ export const auth = betterAuth({
   plugins: [
     admin({
       ac,
-      roles: { admin: adminRole, manager: managerRole, user: userRole },
+      roles: { admin: adminRole, manager: managerRole, user: userRole, superadmin: superadminRole },
     }),
     phoneNumber({
       // Nhân viên đăng nhập bằng số điện thoại + mật khẩu, tài khoản do

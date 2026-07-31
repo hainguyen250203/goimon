@@ -22,12 +22,14 @@ export const ROLE_LABEL: Record<string, string> = {
   admin: "Admin",
   manager: "Quản lý",
   user: "Nhân viên",
+  superadmin: "Super Admin",
 };
 
 export const ROLE_DOT_COLOR: Record<string, string> = {
   admin: "purple.500",
   manager: "blue.500",
   user: "gray.400",
+  superadmin: "red.500",
 };
 
 export function NavUser({

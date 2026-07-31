@@ -14,7 +14,7 @@ import { logActivity } from "~/modules/activity-log/log-activity";
 // Module này toàn bộ admin-only (quản lý tài khoản), không như menu/table
 // dùng managerProcedure — xem adminProcedure trong ~/server/api/trpc.
 
-const roleSchema = z.enum(["user", "manager", "admin"]);
+const roleSchema = z.enum(["user", "manager", "admin", "superadmin"]);
 
 // Login bằng số điện thoại nên validate lỏng định dạng di động VN, tránh
 // nhập sai gây không đăng nhập được — không cần chuẩn hoá đầu số kỹ hơn.
@@ -32,9 +32,21 @@ export const userRouter = createTRPCRouter({
         banned: z.boolean().optional(),
       }),
     )
-    .query(({ ctx, input }) =>
-      listUsers(userBetterAuthRepository, { ...input, headers: ctx.headers }),
-    ),
+    .query(({ ctx, input }) => {
+      const isSuperadmin = ctx.session.user.role === "superadmin";
+      // superadmin là vai trò giám sát ẨN — không cho non-superadmin biết nó
+      // tồn tại. Lọc filter role="superadmin" thẳng ra kết quả rỗng (im lặng,
+      // không FORBIDDEN — báo lỗi sẽ xác nhận ngược lại rằng vai trò này có
+      // thật), và loại nó khỏi MỌI danh sách khác bất kể filter gì.
+      if (!isSuperadmin && input.role === "superadmin") {
+        return { items: [], total: 0 };
+      }
+      return listUsers(userBetterAuthRepository, {
+        ...input,
+        excludeSuperadmin: !isSuperadmin,
+        headers: ctx.headers,
+      });
+    }),
 
   create: adminProcedure
     .input(
@@ -46,6 +58,12 @@ export const userRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      if (input.role === "superadmin" && ctx.session.user.role !== "superadmin") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Chỉ superadmin mới có thể gán vai trò superadmin.",
+        });
+      }
       let created;
       try {
         created = await createUser(userBetterAuthRepository, input);
@@ -71,6 +89,12 @@ export const userRouter = createTRPCRouter({
   setRole: adminProcedure
     .input(z.object({ userId: z.string().min(1), role: roleSchema }))
     .mutation(async ({ ctx, input }) => {
+      if (input.role === "superadmin" && ctx.session.user.role !== "superadmin") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Chỉ superadmin mới có thể gán vai trò superadmin.",
+        });
+      }
       const { before, after } = await setUserRole(userBetterAuthRepository, {
         ...input,
         headers: ctx.headers,

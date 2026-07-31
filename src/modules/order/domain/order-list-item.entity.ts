@@ -30,5 +30,7 @@ export type OrderListItem = {
   createdAt: Date;
   printedAt: Date | null;
   paidConfirmedAt: Date | null;
+  /** Xoá mềm — null nếu chưa xoá. Chỉ superadmin xem được đơn có giá trị này. */
+  deletedAt: Date | null;
   items: OrderListItemLine[];
 };

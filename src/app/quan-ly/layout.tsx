@@ -15,7 +15,7 @@ export default async function QuanLyLayout({
   }
 
   const { role } = session.user;
-  if (role !== "manager" && role !== "admin") {
+  if (role !== "manager" && role !== "admin" && role !== "superadmin") {
     redirect("/goi-mon");
   }
 

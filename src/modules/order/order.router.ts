@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
-import { userProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { adminProcedure, userProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { logActivity } from "~/modules/activity-log/log-activity";
 import { menuItemDrizzleRepository } from "~/modules/menu/infrastructure/menu-item.drizzle-repository";
 import { restaurantTableDrizzleRepository } from "~/modules/table/infrastructure/restaurant-table.drizzle-repository";
 import { promotionDrizzleRepository } from "~/modules/promotion/infrastructure/promotion.drizzle-repository";
@@ -21,6 +22,7 @@ import { removePromotion } from "./application/remove-promotion.usecase";
 import { moveOrderTable } from "./application/move-order-table.usecase";
 import { transferOrderItems } from "./application/transfer-order-items.usecase";
 import { mergeOrders } from "./application/merge-orders.usecase";
+import { deleteOrder } from "./application/delete-order.usecase";
 import { orderDrizzleRepository } from "./infrastructure/order.drizzle-repository";
 import { shiftDrizzleRepository } from "~/modules/shift/infrastructure/shift.drizzle-repository";
 import { paymentConfigDrizzleRepository } from "~/modules/payment-config/infrastructure/payment-config.drizzle-repository";
@@ -126,11 +128,33 @@ export const orderRouter = createTRPCRouter({
         status: z.enum(["open", "paid", "cancelled", "transferred"]).optional(),
         search: z.string().optional(),
         shiftId: z.number().int().positive().optional(),
+        // Chỉ superadmin xem được đơn đã xoá mềm — giám sát việc admin xoá,
+        // admin (người xoá) không tự xem lại được (xem CLAUDE.md/order.router.ts).
+        deleted: z.boolean().optional(),
       }),
     )
     .query(({ ctx, input }) => {
+      if (input.deleted && ctx.session.user.role !== "superadmin") {
+        throw new TRPCError({ code: "FORBIDDEN" });
+      }
       const createdBy = ctx.session.user.role === "user" ? ctx.session.user.id : undefined;
       return listOrders(orderDrizzleRepository, { ...input, createdBy });
+    }),
+
+  // Xoá mềm — admin trở lên xoá được (bất kỳ trạng thái order nào), nhưng
+  // KHÔNG tự xem lại được (chỉ superadmin xem qua filter "deleted" ở `list`
+  // trên). Ghi vào activity_logs (khác order_events nội bộ) để superadmin
+  // giám sát được ai đã xoá đơn nào.
+  delete: adminProcedure
+    .input(z.object({ orderId: z.number().int().positive() }))
+    .mutation(async ({ ctx, input }) => {
+      await deleteOrder(orderDrizzleRepository, { orderId: input.orderId });
+      await logActivity({
+        actorId: ctx.session.user.id,
+        action: "delete",
+        entityType: "order",
+        entityId: String(input.orderId),
+      });
     }),
 
   // Lịch sử gọi món (event "items_added"/"items_removed" trong order_events)
