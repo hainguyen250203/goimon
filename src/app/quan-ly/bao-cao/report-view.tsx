@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClock, CheckCircle2, Percent, Receipt, TrendingUp, Wallet } from "lucide-react";
+import { Bot, CalendarClock, CheckCircle2, Percent, Receipt, TrendingUp, Wallet } from "lucide-react";
 import { Grid, Stack } from "@chakra-ui/react";
 
 import { api } from "~/trpc/react";
@@ -92,6 +92,13 @@ export function ReportView({
               )}
               icon={<TrendingUp size={18} />}
               colorPalette="orange"
+            />
+            <KpiCard
+              label="Chi phí AI"
+              value={`$${data.summary.aiCostUsd.toFixed(2)}`}
+              helpText={formatTrend(data.summary.aiCostUsd, data.previousSummary.aiCostUsd)}
+              icon={<Bot size={18} />}
+              colorPalette="teal"
             />
           </Grid>
 

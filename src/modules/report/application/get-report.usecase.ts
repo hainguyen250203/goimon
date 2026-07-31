@@ -1,3 +1,5 @@
+import type { AssistantRepository } from "~/modules/assistant/domain/assistant.repository";
+import { estimateCostUsd } from "~/modules/assistant/domain/usage-cost";
 import type { OrderRepository } from "~/modules/order/domain/order.repository";
 import type { ShiftRepository } from "~/modules/shift/domain/shift.repository";
 import type { ReportData, ReportDateRange, ReportSummary } from "../domain/report.entity";
@@ -9,6 +11,7 @@ const EMPTY_SUMMARY: ReportSummary = {
   paidOrderCount: 0,
   shiftCount: 0,
   averageRevenuePerShift: 0,
+  aiCostUsd: 0,
 };
 
 const EMPTY_REPORT: ReportData = {
@@ -27,10 +30,17 @@ const EMPTY_REPORT: ReportData = {
 async function getSummaryForRange(
   orderRepository: OrderRepository,
   shiftRepository: ShiftRepository,
+  assistantRepository: AssistantRepository,
   range: ReportDateRange,
 ): Promise<ReportSummary> {
-  const shifts = await shiftRepository.listInRange(range);
-  if (shifts.length === 0) return EMPTY_SUMMARY;
+  const [shifts, usage] = await Promise.all([
+    shiftRepository.listInRange(range),
+    assistantRepository.getUsageTotalsInRange(range),
+  ]);
+  // Chi phí AI độc lập với việc có ca hay không — không được bỏ qua như các
+  // số liệu doanh thu khác khi shifts rỗng.
+  const aiCostUsd = estimateCostUsd(usage.inputTokens, usage.outputTokens);
+  if (shifts.length === 0) return { ...EMPTY_SUMMARY, aiCostUsd };
 
   const revenueByShift = await orderRepository.getRevenueByShift(shifts.map((s) => s.id));
   const totalRevenue = revenueByShift.reduce((sum, row) => sum + row.totalRevenue, 0);
@@ -44,6 +54,7 @@ async function getSummaryForRange(
     paidOrderCount,
     shiftCount,
     averageRevenuePerShift: shiftCount > 0 ? Math.round(totalRevenue / shiftCount) : 0,
+    aiCostUsd,
   };
 }
 
@@ -60,13 +71,21 @@ async function getSummaryForRange(
 export async function getReport(
   orderRepository: OrderRepository,
   shiftRepository: ShiftRepository,
+  assistantRepository: AssistantRepository,
   range: ReportDateRange,
   /** Chỉ tính các danh mục này cho "Món bán chạy"/"Doanh thu theo danh mục" —
    * không ảnh hưởng KPI tổng/các widget khác. Bỏ trống = tính tất cả. */
   categoryIds?: number[],
 ): Promise<ReportData> {
-  const shifts = await shiftRepository.listInRange(range);
-  if (shifts.length === 0) return EMPTY_REPORT;
+  const [shifts, usage] = await Promise.all([
+    shiftRepository.listInRange(range),
+    assistantRepository.getUsageTotalsInRange(range),
+  ]);
+  // Chi phí AI độc lập với việc có ca hay không — vẫn tính dù shifts rỗng.
+  const aiCostUsd = estimateCostUsd(usage.inputTokens, usage.outputTokens);
+  if (shifts.length === 0) {
+    return { ...EMPTY_REPORT, summary: { ...EMPTY_SUMMARY, aiCostUsd } };
+  }
 
   const shiftIds = shifts.map((s) => s.id);
   const [revenueByShift, topItems, byPaymentMethod, promotionUsage, byCategory] = await Promise.all([
@@ -106,7 +125,12 @@ export async function getReport(
     start: new Date(range.start.getTime() - durationMs),
     end: range.start,
   };
-  const previousSummary = await getSummaryForRange(orderRepository, shiftRepository, previousRange);
+  const previousSummary = await getSummaryForRange(
+    orderRepository,
+    shiftRepository,
+    assistantRepository,
+    previousRange,
+  );
 
   return {
     summary: {
@@ -116,6 +140,7 @@ export async function getReport(
       paidOrderCount,
       shiftCount,
       averageRevenuePerShift: shiftCount > 0 ? Math.round(totalRevenue / shiftCount) : 0,
+      aiCostUsd,
     },
     previousSummary,
     shiftBreakdown,

@@ -38,6 +38,8 @@ export type UsageSummaryRow = {
   deletedAt: Date | null;
 };
 
+export type UsageTotals = { inputTokens: number; outputTokens: number };
+
 export interface AssistantRepository {
   createSession(params: CreateSessionParams): Promise<AssistantSession>;
   listSessions(params: ListSessionsParams): Promise<ListSessionsResult>;
@@ -54,4 +56,8 @@ export interface AssistantRepository {
    * OpenAI dù phiên đã bị ẩn khỏi sidebar, nên vẫn phải tính vào báo cáo chi phí.
    */
   getUsageSummary(userId: string): Promise<UsageSummaryRow[]>;
+  /** Tổng token của TOÀN BỘ user trong khoảng thời gian — cho KPI "Chi phí AI"
+   * ở trang Báo cáo (khác getUsageSummary: theo user, theo phiên). Gồm cả tin
+   * nhắn của phiên đã xoá mềm — chi phí đã phát sinh thật với OpenAI. */
+  getUsageTotalsInRange(range: { start: Date; end: Date }): Promise<UsageTotals>;
 }

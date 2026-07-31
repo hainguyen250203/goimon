@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import { adminProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { assistantDrizzleRepository } from "~/modules/assistant/infrastructure/assistant.drizzle-repository";
 import { orderDrizzleRepository } from "~/modules/order/infrastructure/order.drizzle-repository";
 import { shiftDrizzleRepository } from "~/modules/shift/infrastructure/shift.drizzle-repository";
 import { getDefaultReportRange } from "./application/get-default-report-range.usecase";
@@ -17,6 +18,12 @@ export const reportRouter = createTRPCRouter({
       }),
     )
     .query(({ input }) =>
-      getReport(orderDrizzleRepository, shiftDrizzleRepository, input, input.categoryIds),
+      getReport(
+        orderDrizzleRepository,
+        shiftDrizzleRepository,
+        assistantDrizzleRepository,
+        input,
+        input.categoryIds,
+      ),
     ),
 });

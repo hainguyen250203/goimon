@@ -18,27 +18,17 @@ const SUGGESTIONS = [
   "Món ăn nào bán chạy nhất tuần này?",
 ];
 
-// Chỉ hiện ở khoảng lặng THẬT (chưa có chữ/tool chip nào nói lên việc đang
-// làm) — xoay vòng vài câu cho đỡ "trơ", không phải tiến trình thật.
-const THINKING_LINES = [
-  "Đang tra cứu dữ liệu...",
-  "Đang tổng hợp thông tin...",
-  "Sắp xong rồi ạ...",
-];
+// Chỉ hiện ở khoảng lặng THẬT (chưa có chữ/tool chip nào nói lên việc đang làm).
+const THINKING_LINE = "Em đang suy nghĩ anh chờ em xíu nhá ...";
 
 function ThinkingIndicator() {
-  const [index, setIndex] = useState(0);
-  useEffect(() => {
-    const timer = setInterval(() => setIndex((i) => (i + 1) % THINKING_LINES.length), 1600);
-    return () => clearInterval(timer);
-  }, []);
   return (
     <Flex align="center" gap={2}>
       <Box boxSize="6" rounded="l1" overflow="hidden" className="assistant-avatar-glow">
         <Image src="/assistant-avatar.svg" alt="" boxSize="full" />
       </Box>
       <Text fontSize="sm" color="fg.muted">
-        {THINKING_LINES[index]}
+        {THINKING_LINE}
       </Text>
     </Flex>
   );

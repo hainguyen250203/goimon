@@ -13,6 +13,9 @@ export type ReportSummary = {
   paidOrderCount: number;
   shiftCount: number;
   averageRevenuePerShift: number;
+  /** Ước tính chi phí gọi OpenAI API cho trợ lý AI trong khoảng thời gian này
+   * (toàn hệ thống, không riêng người xem) — xem estimateCostUsd. */
+  aiCostUsd: number;
 };
 
 /** 1 dòng/ca — ghép metadata ca (giờ mở/đóng) với doanh thu của ca đó, dùng

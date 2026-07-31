@@ -1,4 +1,4 @@
-import { and, count, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 
 import { db } from "~/server/db";
 import type {
@@ -8,6 +8,7 @@ import type {
   ListSessionsParams,
   ListSessionsResult,
   UsageSummaryRow,
+  UsageTotals,
 } from "../domain/assistant.repository";
 import type { AssistantMessage } from "../domain/assistant-message.entity";
 import type { AssistantSession } from "../domain/assistant-session.entity";
@@ -138,5 +139,22 @@ export const assistantDrizzleRepository: AssistantRepository = {
       .orderBy(sql`${assistantSession.deletedAt} is not null`, desc(assistantSession.updatedAt));
 
     return rows;
+  },
+
+  async getUsageTotalsInRange({ start, end }): Promise<UsageTotals> {
+    const [row] = await db
+      .select({
+        inputTokens: sql<number>`coalesce(sum((${assistantMessage.usageJson}->>'inputTokens')::int), 0)`,
+        outputTokens: sql<number>`coalesce(sum((${assistantMessage.usageJson}->>'outputTokens')::int), 0)`,
+      })
+      .from(assistantMessage)
+      .where(
+        and(
+          eq(assistantMessage.role, "assistant"),
+          gte(assistantMessage.createdAt, start),
+          lt(assistantMessage.createdAt, end),
+        ),
+      );
+    return { inputTokens: row?.inputTokens ?? 0, outputTokens: row?.outputTokens ?? 0 };
   },
 };
