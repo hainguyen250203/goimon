@@ -52,6 +52,11 @@ Hệ thống POS quản lý nhà hàng: order món, tạo hóa đơn, in bill, x
 - Mọi control tương tác trong trang quản lý (`Input`, `Select`/`SelectRoot`, `Button`, `IconButton`) đều dùng `size="sm"` — đây là size mặc định thống nhất toàn app `quan-ly`, không dùng size mặc định của Chakra (thường là `md`, to hơn rõ rệt). Khi thêm 1 control mới nằm cùng hàng với control khác (vd filter/toolbar), **luôn tự set `size="sm"` tường minh** — Chakra không tự đồng bộ size giữa các component khác nhau, để mặc định dễ bị lệch cỡ so với các control lân cận (từng xảy ra: `Select` filter danh mục thiếu `size="sm"` trong khi `Input` ngày cùng hàng đã set, làm 2 control lệch cỡ rõ rệt).
 - `fontSize` nên khai báo dạng responsive object theo breakpoint (`fontSize={{ base: "xs", md: "sm" }}`) ở bất kỳ đâu chữ cần đọc được tốt trên cả mobile lẫn desktop, thay vì 1 giá trị cố định cho mọi màn hình — theo đúng breakpoint `base/sm/md/lg/xl` Chakra đã dùng thống nhất trong toàn app (xem mục Responsive/Mobile). Riêng chữ **trong biểu đồ echarts** (title/legend/axisLabel) không phải Chakra component nên không tự nhận prop responsive — phải tự tính bằng `useBreakpointValue({ base: ..., md: ... })` **trước** early-return của component (React không cho gọi hook sau early-return) rồi gán vào `textStyle.fontSize`/`axisLabel.fontSize` của option.
 
+## Đặt tên field/type phân loại
+
+- Khi thêm 1 trường phân loại "đây là loại/kiểu gì" cho 1 entity (vd: máy in dùng cho hoá đơn hay bếp, khuyến mãi giảm % hay giảm tiền cố định...), đặt tên là `type` (hoặc `{Entity}Type`, vd `PrinterType`, `DiscountType`) — **không** đặt là `role`.
+- `role` chỉ dùng cho đúng 2 khái niệm đã có sẵn: vai trò phân quyền người dùng (`Role`: `"user"|"manager"|"admin"`, xem `nav-config.ts`) và vai trò người tham gia hội thoại AI (`message.role`, đúng tên field gốc của AI SDK/OpenAI — không tự đổi tên field này khi bọc lại type, vd `AssistantMessageRole = UIMessage["role"]` ở `message-part.tsx`). Ngoài 2 trường hợp này, dùng `role` cho 1 field phân loại mới là sai tên, dễ gây nhầm với phân quyền.
+
 ## Quy tắc tổ chức code
 
 1. **Server Component mặc định.**

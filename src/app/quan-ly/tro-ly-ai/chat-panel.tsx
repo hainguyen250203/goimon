@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Box, Flex, IconButton, Image, Spinner, Stack, Text, Textarea } from "@chakra-ui/react";
 import { ArrowUp, Square } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
@@ -150,6 +150,21 @@ function ChatPanelInner({
 
   const busy = status === "submitted" || status === "streaming";
 
+  // Neo cuối danh sách tin nhắn — mở phiên có sẵn lịch sử phải thấy NGAY tin
+  // nhắn mới nhất, không bắt tự cuộn tay. useLayoutEffect (chạy trước khi
+  // browser paint) để tránh nháy thấy đầu danh sách rồi mới nhảy xuống cuối.
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ block: "end" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Tự cuộn mượt theo khi có tin nhắn mới/đang stream, để luôn thấy nội dung
+  // mới nhất mà không cần tự cuộn tay giữa chừng.
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+  }, [messages]);
+
   const submit = async (text: string) => {
     const trimmed = text.trim();
     if (!trimmed || busy) return;
@@ -235,7 +250,7 @@ function ChatPanelInner({
               >
                 <Stack gap={2}>
                   {message.parts.map((part, i) => (
-                    <MessagePart key={i} part={part} />
+                    <MessagePart key={i} part={part} role={message.role} />
                   ))}
                 </Stack>
               </Box>
@@ -265,6 +280,7 @@ function ChatPanelInner({
               </Box>
             </Flex>
           )}
+          <div ref={messagesEndRef} />
         </Stack>
       )}
 

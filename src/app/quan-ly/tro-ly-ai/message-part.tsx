@@ -8,8 +8,10 @@ import { AssistantChart } from "~/modules/assistant/ui/assistant-chart";
 import { AssistantDiagram } from "~/modules/assistant/ui/assistant-diagram";
 import type { ChartSpec } from "~/modules/assistant/infrastructure/tools/render-chart.tool";
 import type { DiagramSpec } from "~/modules/assistant/infrastructure/tools/render-diagram.tool";
+import { AssistantMarkdown } from "./assistant-markdown";
 
 export type AssistantMessagePart = UIMessage["parts"][number];
+export type AssistantMessageRole = UIMessage["role"];
 
 // Tool của app này đều "static" (khai báo cố định trong assistantTools(),
 // không dùng dynamicTool()) nên thực tế không bao giờ là DynamicToolUIPart —
@@ -52,8 +54,19 @@ function ToolProgressLine({ part }: { part: AnyToolPart }) {
   );
 }
 
-export function MessagePart({ part }: { part: AssistantMessagePart }) {
+export function MessagePart({
+  part,
+  role,
+}: {
+  part: AssistantMessagePart;
+  role: AssistantMessageRole;
+}) {
   if (part.type === "text") {
+    // Chỉ render markdown cho tin nhắn CỦA TRỢ LÝ — tin nhắn người dùng tự gõ
+    // là văn bản thô, không nên tự diễn giải "**"/"#" thành định dạng.
+    if (role === "assistant") {
+      return <AssistantMarkdown text={part.text} />;
+    }
     return (
       <Text fontSize="sm" whiteSpace="pre-wrap">
         {part.text}
