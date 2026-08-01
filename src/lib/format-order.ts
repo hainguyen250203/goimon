@@ -26,8 +26,11 @@ export function formatVnd(amount: number) {
   return new Intl.NumberFormat("vi-VN").format(amount) + "đ";
 }
 
+// timeZone cố định giờ VN — hiển thị luôn đúng giờ nhà hàng bất kể thiết bị
+// xem đang set múi giờ gì (không phụ thuộc ngầm định vào máy/trình duyệt).
 export function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
     dateStyle: "short",
     timeStyle: "short",
   }).format(date);

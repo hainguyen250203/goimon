@@ -9,7 +9,11 @@ import { api } from "~/trpc/react";
 import { formatVnd } from "~/lib/format-order";
 
 function formatTime(date: Date) {
-  return new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit" }).format(date);
+  return new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }
 
 export function TableSelector({ areaId }: { areaId?: number }) {

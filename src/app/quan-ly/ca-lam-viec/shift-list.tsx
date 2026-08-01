@@ -31,6 +31,7 @@ const STATUS_DOT_COLOR: Record<ShiftStatus, string> = {
 
 function formatDateTime(date: Date) {
   return new Intl.DateTimeFormat("vi-VN", {
+    timeZone: "Asia/Ho_Chi_Minh",
     dateStyle: "short",
     timeStyle: "short",
   }).format(date);

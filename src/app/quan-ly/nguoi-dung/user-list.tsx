@@ -23,7 +23,7 @@ import { ROLE_DOT_COLOR, ROLE_LABEL } from "./role-label";
 const ALL = "all";
 
 function formatDate(date: Date) {
-  return new Intl.DateTimeFormat("vi-VN", { dateStyle: "short" }).format(date);
+  return new Intl.DateTimeFormat("vi-VN", { timeZone: "Asia/Ho_Chi_Minh", dateStyle: "short" }).format(date);
 }
 
 export function UserList({
