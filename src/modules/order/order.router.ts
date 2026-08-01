@@ -1,7 +1,13 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
-import { adminProcedure, superadminProcedure, userProcedure, createTRPCRouter } from "~/server/api/trpc";
+import {
+  adminProcedure,
+  managerProcedure,
+  superadminProcedure,
+  userProcedure,
+  createTRPCRouter,
+} from "~/server/api/trpc";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "~/lib/pagination";
 import { logActivity } from "~/modules/activity-log/log-activity";
 import { menuItemDrizzleRepository } from "~/modules/menu/infrastructure/menu-item.drizzle-repository";
@@ -23,6 +29,7 @@ import { removePromotion } from "./application/remove-promotion.usecase";
 import { moveOrderTable } from "./application/move-order-table.usecase";
 import { transferOrderItems } from "./application/transfer-order-items.usecase";
 import { mergeOrders } from "./application/merge-orders.usecase";
+import { getShiftItemBreakdown } from "./application/get-shift-item-breakdown.usecase";
 import { deleteOrder } from "./application/delete-order.usecase";
 import { orderDrizzleRepository } from "./infrastructure/order.drizzle-repository";
 import { shiftDrizzleRepository } from "~/modules/shift/infrastructure/shift.drizzle-repository";
@@ -565,4 +572,10 @@ export const orderRouter = createTRPCRouter({
         mapOrderDomainError(error);
       }
     }),
+
+  // Từng món đã bán trong 1 ca — cho dialog "Tổng kết ca làm" ở trang
+  // /quan-ly/ca-lam-viec. managerProcedure vì trang này admin-only.
+  getShiftItemBreakdown: managerProcedure
+    .input(z.object({ shiftId: z.number().int().positive() }))
+    .query(({ input }) => getShiftItemBreakdown(orderDrizzleRepository, input.shiftId)),
 });

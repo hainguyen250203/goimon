@@ -79,6 +79,19 @@ export type TopSellingItem = {
   revenue: number;
 };
 
+/** 1 dòng món đã bán trong 1 ca — cho dialog "Tổng kết ca làm" ở trang
+ * /quan-ly/ca-lam-viec. Khác TopSellingItem: đây LUÔN đúng 1 ca (không nhận
+ * mảng shiftIds/limit/categoryIds) — hiển thị đủ mọi món đã bán để đối soát,
+ * không phải top-N. */
+export type ShiftItemBreakdownRow = {
+  menuItemId: number;
+  itemName: string;
+  quantity: number;
+  /** Giá gốc (unitPrice * quantity), CHƯA trừ khuyến mãi — có thể cao hơn
+   * ShiftSummary.totalRevenue nếu ca có đơn dùng khuyến mãi. */
+  subtotal: number;
+};
+
 export type PaymentMethodRevenue = {
   paymentMethod: string;
   revenue: number;
@@ -203,6 +216,9 @@ export interface OrderRepository {
   listActive(): Promise<ActiveOrderSummary[]>;
   /** Số đơn + doanh thu đã thanh toán trong 1 ca — cho màn hình đóng ca/lịch sử ca. */
   getShiftSummary(shiftId: number): Promise<ShiftSummary>;
+  /** Từng món phân biệt đã bán trong 1 ca (đã thanh toán) — cho dialog "Tổng
+   * kết ca làm" ở trang danh sách ca. */
+  getShiftItemBreakdown(shiftId: number): Promise<ShiftItemBreakdownRow[]>;
   /** Toàn bộ số liệu đơn hàng của 1 ca theo từng trạng thái (đã thanh toán/đang
    * mở/đã huỷ) — cho trang Tổng quan, luôn theo ca đang mở, không theo ngày. */
   getShiftOrderStats(shiftId: number): Promise<ShiftOrderStats>;

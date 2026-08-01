@@ -25,6 +25,7 @@ import type {
   PaymentMethodRevenue,
   PromotionUsageRow,
   RecordOrderEventParams,
+  ShiftItemBreakdownRow,
   ShiftOrderStats,
   ShiftRevenueRow,
   ShiftSummary,
@@ -395,6 +396,24 @@ export const orderDrizzleRepository: OrderRepository = {
       .from(order)
       .where(and(eq(order.shiftId, shiftId), eq(order.status, "paid"), isNull(order.deletedAt)));
     return { orderCount: row?.orderCount ?? 0, totalRevenue: row?.totalRevenue ?? 0 };
+  },
+
+  async getShiftItemBreakdown(shiftId: number): Promise<ShiftItemBreakdownRow[]> {
+    const rows = await db
+      .select({
+        menuItemId: orderItem.menuItemId,
+        itemName: orderItem.itemName,
+        quantity: sql<number>`coalesce(sum(${orderItem.quantity}), 0)`.mapWith(Number),
+        subtotal: sql<number>`coalesce(sum(${orderItem.unitPrice} * ${orderItem.quantity}), 0)`.mapWith(
+          Number,
+        ),
+      })
+      .from(orderItem)
+      .innerJoin(order, eq(order.id, orderItem.orderId))
+      .where(and(eq(order.shiftId, shiftId), eq(order.status, "paid"), isNull(order.deletedAt)))
+      .groupBy(orderItem.menuItemId, orderItem.itemName)
+      .orderBy(orderItem.itemName);
+    return rows;
   },
 
   async getShiftOrderStats(shiftId: number): Promise<ShiftOrderStats> {

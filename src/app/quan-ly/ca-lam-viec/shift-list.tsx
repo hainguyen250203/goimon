@@ -16,6 +16,7 @@ import { api } from "~/trpc/react";
 import { formatVnd } from "~/lib/format-order";
 import type { ShiftListItemWithRevenue } from "~/modules/shift/application/list-shifts.usecase";
 import type { ShiftStatus } from "~/modules/shift/domain/shift.entity";
+import { ShiftRowActions } from "./shift-row-actions";
 
 const ALL_STATUS = "all";
 
@@ -70,6 +71,12 @@ const columns: ListViewColumn<ShiftListItemWithRevenue>[] = [
     header: "Số đơn",
     cell: (row) => String(row.paidOrderCount),
     textAlign: "right",
+  },
+  {
+    key: "actions",
+    header: "",
+    width: "3rem",
+    cell: (row) => <ShiftRowActions row={row} />,
   },
 ];
 
