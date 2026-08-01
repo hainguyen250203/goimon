@@ -17,17 +17,18 @@ import { FilterSelect } from "~/components/data-table/filter-select";
 import { ManageListDialog } from "~/components/manage-list/manage-list-dialog";
 import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
+import type { RestaurantTable } from "~/modules/table/domain/restaurant-table.entity";
 import type {
-  RestaurantTable,
-  TableStatus,
-} from "~/modules/table/domain/restaurant-table.entity";
+  RestaurantTableWithStatus,
+  TableOccupancyStatus,
+} from "~/modules/table/application/list-tables.usecase";
 import { TableFormDialog } from "./table-form-dialog";
 import { TableRowActions } from "./table-row-actions";
 
 const ALL_AREAS = "all";
 const ALL_STATUS = "all";
 
-const STATUS_LABEL: Record<TableStatus, string> = {
+const STATUS_LABEL: Record<TableOccupancyStatus, string> = {
   available: "Trống",
   occupied: "Đang phục vụ",
 };
@@ -41,7 +42,7 @@ export function TableList({
   page: number;
   pageSize: number;
   areaId?: number;
-  status?: TableStatus;
+  status?: TableOccupancyStatus;
 }) {
   const router = useRouter();
   const [areas] = api.table.listAreas.useSuspenseQuery();
@@ -83,7 +84,7 @@ export function TableList({
       toaster.create({ title: "Không xoá được khu vực", description: error.message, type: "error" }),
   });
 
-  const columns: ListViewColumn<RestaurantTable>[] = [
+  const columns: ListViewColumn<RestaurantTableWithStatus>[] = [
     { key: "id", header: "ID", cell: (row) => row.id, width: "4rem" },
     { key: "name", header: "Tên bàn", cell: (row) => row.name },
     { key: "area", header: "Khu vực", cell: (row) => row.areaName },
@@ -116,7 +117,7 @@ export function TableList({
     page?: number;
     pageSize?: number;
     areaId?: number;
-    status?: TableStatus;
+    status?: TableOccupancyStatus;
   }) => {
     const search = new URLSearchParams();
     // Dùng "in" thay vì "??" — phải phân biệt được "không truyền areaId/status"
@@ -177,7 +178,7 @@ export function TableList({
             router.push(
               buildHref({
                 page: 1,
-                status: value === ALL_STATUS ? undefined : (value as TableStatus),
+                status: value === ALL_STATUS ? undefined : (value as TableOccupancyStatus),
               }),
             )
           }

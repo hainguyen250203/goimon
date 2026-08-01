@@ -1,5 +1,4 @@
 import type { MenuItemRepository } from "~/modules/menu/domain/menu-item.repository";
-import type { RestaurantTableRepository } from "~/modules/table/domain/restaurant-table.repository";
 import { Order } from "../domain/order.entity";
 import type { OrderRepository } from "../domain/order.repository";
 
@@ -22,11 +21,11 @@ export type AddOrderItemsResult = {
 /**
  * Mở order mới cho bàn nếu chưa có (hoặc dùng order "open" đang có),
  * thêm/gộp các món vào — giá/tên lấy từ menu thật (KHÔNG tin client) để
- * tránh gian lận giá. Nếu order mới mở, tự chuyển bàn sang "occupied".
+ * tránh gian lận giá. "Bàn đang phục vụ hay không" luôn suy từ order đang mở
+ * (activeOrder), không lưu field riêng nên không cần tự set gì ở đây.
  */
 export async function addOrderItems(
   orderRepository: OrderRepository,
-  tableRepository: RestaurantTableRepository,
   menuItemRepository: MenuItemRepository,
   params: AddOrderItemsParams,
 ): Promise<AddOrderItemsResult> {
@@ -40,7 +39,6 @@ export async function addOrderItems(
   const menuItemById = new Map(menuItems.map((m) => [m.id, m]));
 
   let orderEntity = await orderRepository.findActiveByTableId(params.tableId);
-  const isNewOrder = orderEntity === null;
   if (!orderEntity) {
     orderEntity = Order.open(params.tableId, params.actorId, params.shiftId);
   }
@@ -58,10 +56,6 @@ export async function addOrderItems(
   }
 
   const saved = await orderRepository.save(orderEntity);
-
-  if (isNewOrder) {
-    await tableRepository.setStatus(params.tableId, "occupied");
-  }
 
   // Snapshot tên món thật vào payload + items_summary (text phẳng) — không
   // suy ngược từ menuItemId lúc hiển thị lịch sử, vì menu item có thể đổi

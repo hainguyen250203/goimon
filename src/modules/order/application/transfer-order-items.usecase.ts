@@ -57,7 +57,6 @@ export async function transferOrderItems(
   });
 
   let targetOrder = await orderRepository.findActiveByTableId(params.targetTableId);
-  const isNewTargetOrder = targetOrder === null;
   if (!targetOrder) {
     targetOrder = Order.open(params.targetTableId, params.actorId, params.shiftId);
   }
@@ -84,13 +83,6 @@ export async function transferOrderItems(
   // Lưu đích + nguồn trong CÙNG 1 transaction — nếu crash giữa chừng, món sẽ
   // không bao giờ vừa xuất hiện ở đích vừa còn ở nguồn (xem saveMany()).
   const [savedTarget, savedSource] = await orderRepository.saveMany([targetOrder, sourceOrder]);
-
-  if (isNewTargetOrder) {
-    await tableRepository.setStatus(params.targetTableId, "occupied");
-  }
-  if (sourceBecameEmpty) {
-    await tableRepository.setStatus(savedSource.tableId, "available");
-  }
 
   const tables = await tableRepository.listAll();
   const sourceTableName = tables.find((t) => t.id === savedSource.tableId)?.name ?? "";

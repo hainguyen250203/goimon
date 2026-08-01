@@ -68,8 +68,6 @@ export async function mergeOrders(
   // không bao giờ vừa xuất hiện ở đích vừa còn ở nguồn (xem saveMany()).
   const [savedTarget, savedSource] = await orderRepository.saveMany([targetOrder, sourceOrder]);
 
-  await tableRepository.setStatus(savedSource.tableId, "available");
-
   const tables = await tableRepository.listAll();
   const sourceTableName = tables.find((t) => t.id === savedSource.tableId)?.name ?? "";
   const targetTableName = tables.find((t) => t.id === params.targetTableId)?.name ?? "";

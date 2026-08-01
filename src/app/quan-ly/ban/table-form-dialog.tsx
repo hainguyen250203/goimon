@@ -15,28 +15,18 @@ import { Field } from "~/components/ui/field";
 import { FilterSelect } from "~/components/data-table/filter-select";
 import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
-import type {
-  RestaurantTable,
-  TableStatus,
-} from "~/modules/table/domain/restaurant-table.entity";
+import type { RestaurantTable } from "~/modules/table/domain/restaurant-table.entity";
 import type { AreaOption } from "~/modules/table/domain/restaurant-table.repository";
-
-const STATUS_LABEL: Record<TableStatus, string> = {
-  available: "Trống",
-  occupied: "Đang phục vụ",
-};
 
 type FormState = {
   name: string;
   areaId: string;
-  status: TableStatus;
 };
 
 function toFormState(item?: RestaurantTable): FormState {
   return {
     name: item?.name ?? "",
     areaId: item ? String(item.areaId) : "",
-    status: item?.status ?? "available",
   };
 }
 
@@ -44,7 +34,9 @@ function toFormState(item?: RestaurantTable): FormState {
  * Dialog dùng chung cho cả tạo mới lẫn sửa — `item` undefined nghĩa là
  * đang ở chế độ tạo mới. Điều khiển hoàn toàn qua `open`/`onOpenChange` từ
  * component cha để 1 instance duy nhất phục vụ được cả nút "Thêm bàn"
- * trên toolbar lẫn "Sửa" trong menu thao tác từng dòng.
+ * trên toolbar lẫn "Sửa" trong menu thao tác từng dòng. Không có field
+ * "Trạng thái" — đang phục vụ/trống luôn suy từ order đang mở, không tự set
+ * tay được (xem list-tables.usecase.ts).
  */
 export function TableFormDialog({
   open,
@@ -85,7 +77,6 @@ export function TableFormDialog({
     const payload = {
       name: form.name.trim(),
       areaId: Number(form.areaId),
-      status: form.status,
     };
 
     const mutation = isEdit
@@ -133,21 +124,6 @@ export function TableFormDialog({
                 value={form.areaId}
                 onValueChange={(value) => setForm((f) => ({ ...f, areaId: value }))}
                 options={areas.map((a) => ({ value: String(a.id), label: a.name }))}
-              />
-            </Field>
-
-            <Field label="Trạng thái">
-              <FilterSelect
-                width="full"
-                placeholder="Trạng thái"
-                value={form.status}
-                onValueChange={(value) =>
-                  setForm((f) => ({ ...f, status: value as TableStatus }))
-                }
-                options={[
-                  { value: "available", label: STATUS_LABEL.available },
-                  { value: "occupied", label: STATUS_LABEL.occupied },
-                ]}
               />
             </Field>
           </Stack>

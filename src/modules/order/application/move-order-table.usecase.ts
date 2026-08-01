@@ -44,11 +44,6 @@ export async function moveOrderTable(
   orderEntity.moveToTable(params.targetTableId);
   const saved = await orderRepository.save(orderEntity);
 
-  await Promise.all([
-    tableRepository.setStatus(params.targetTableId, "occupied"),
-    tableRepository.setStatus(fromTableId, "available"),
-  ]);
-
   await orderRepository.recordEvent({
     orderId: saved.id!,
     actorId: params.actorId,

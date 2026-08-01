@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 
 import { managerProcedure, userProcedure, createTRPCRouter } from "~/server/api/trpc";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "~/lib/pagination";
+import { orderDrizzleRepository } from "~/modules/order/infrastructure/order.drizzle-repository";
 import { listAreaOptions } from "./application/list-area-options.usecase";
 import { listTables } from "./application/list-tables.usecase";
 import { createTable } from "./application/create-table.usecase";
@@ -25,7 +26,6 @@ const areaInputSchema = z.object({
 const tableInputSchema = z.object({
   name: z.string().min(1, "Tên bàn không được để trống"),
   areaId: z.number().int().positive(),
-  status: z.enum(["available", "occupied"]),
 });
 
 export const tableRouter = createTRPCRouter({
@@ -38,7 +38,7 @@ export const tableRouter = createTRPCRouter({
         status: z.enum(["available", "occupied"]).optional(),
       }),
     )
-    .query(({ input }) => listTables(restaurantTableDrizzleRepository, input)),
+    .query(({ input }) => listTables(restaurantTableDrizzleRepository, orderDrizzleRepository, input)),
 
   // userProcedure (không phải managerProcedure): màn hình gọi món (/goi-mon,
   // vai trò "user") cũng cần danh sách khu vực để chọn bàn — xem chỉ danh
@@ -69,8 +69,8 @@ export const tableRouter = createTRPCRouter({
         entityType: "table",
         entityId: String(after.id),
         metadata: {
-          before: { name: before.name, areaId: before.areaId, status: before.status },
-          after: { name: after.name, areaId: after.areaId, status: after.status },
+          before: { name: before.name, areaId: before.areaId },
+          after: { name: after.name, areaId: after.areaId },
         },
       });
       return after;

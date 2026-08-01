@@ -4,7 +4,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 
 import { api, HydrateClient } from "~/trpc/server";
 import { parsePageSize } from "~/lib/pagination";
-import type { TableStatus } from "~/modules/table/domain/restaurant-table.entity";
+import type { TableOccupancyStatus } from "~/modules/table/application/list-tables.usecase";
 import { TableList } from "./table-list";
 
 export default async function BanPage({
@@ -23,7 +23,7 @@ export default async function BanPage({
   const areaId = areaIdParam ? Number(areaIdParam) : undefined;
   const status =
     statusParam === "available" || statusParam === "occupied"
-      ? (statusParam as TableStatus)
+      ? (statusParam as TableOccupancyStatus)
       : undefined;
 
   // Prefetch song song trên server — tránh waterfall khi client hydrate.

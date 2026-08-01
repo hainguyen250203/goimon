@@ -274,7 +274,6 @@ export const orderRouter = createTRPCRouter({
       try {
         const { order, addedItems } = await addOrderItems(
           orderDrizzleRepository,
-          restaurantTableDrizzleRepository,
           menuItemDrizzleRepository,
           {
             tableId: input.tableId,
@@ -418,7 +417,7 @@ export const orderRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await requireOpenShift();
       return runOrderAction(() =>
-        confirmPayment(orderDrizzleRepository, restaurantTableDrizzleRepository, {
+        confirmPayment(orderDrizzleRepository, {
           orderId: input.orderId,
           actorId: ctx.session.user.id,
           paymentMethod: input.paymentMethod,
@@ -431,7 +430,7 @@ export const orderRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       await requireOpenShift();
       return runOrderAction(() =>
-        cancelOrder(orderDrizzleRepository, restaurantTableDrizzleRepository, {
+        cancelOrder(orderDrizzleRepository, {
           orderId: input.orderId,
           actorId: ctx.session.user.id,
         }),

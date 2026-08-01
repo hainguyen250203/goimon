@@ -3,16 +3,10 @@ import {
   boolean,
   index,
   integer,
-  pgEnum,
   pgTable,
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
-
-export const tableStatusEnum = pgEnum("table_status", [
-  "available",
-  "occupied",
-]);
 
 export const area = pgTable("areas", {
   id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
@@ -35,7 +29,6 @@ export const restaurantTable = pgTable(
       .notNull()
       .references(() => area.id),
     name: varchar("name", { length: 100 }).notNull().unique(),
-    status: tableStatusEnum("status").notNull().default("available"),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
@@ -43,10 +36,7 @@ export const restaurantTable = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  (t) => [
-    index("tables_status_idx").on(t.status),
-    index("tables_area_id_idx").on(t.areaId),
-  ],
+  (t) => [index("tables_area_id_idx").on(t.areaId)],
 );
 
 export const areaRelations = relations(area, ({ many }) => ({

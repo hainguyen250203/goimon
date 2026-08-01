@@ -1,8 +1,8 @@
-import { and, asc, count, eq, sql } from "drizzle-orm";
+import { and, asc, count, eq, inArray, notInArray, sql } from "drizzle-orm";
 
 import { db } from "~/server/db";
 import { isForeignKeyViolation } from "~/lib/db-errors";
-import type { RestaurantTable, TableStatus } from "../domain/restaurant-table.entity";
+import type { RestaurantTable } from "../domain/restaurant-table.entity";
 import type {
   Area,
   AreaOption,
@@ -11,7 +11,6 @@ import type {
   ListTablesParams,
   ListTablesResult,
   RestaurantTableRepository,
-  TableStatusCounts,
   UpdateAreaParams,
   UpdateTableParams,
 } from "../domain/restaurant-table.repository";
@@ -30,14 +29,12 @@ function toEntity(row: {
   name: string;
   areaId: number;
   areaName: string | null;
-  status: TableStatus;
 }): RestaurantTable {
   return {
     id: row.id,
     name: row.name,
     areaId: row.areaId,
     areaName: row.areaName ?? "",
-    status: row.status,
   };
 }
 
@@ -48,7 +45,6 @@ async function findById(id: number): Promise<RestaurantTable> {
       name: restaurantTable.name,
       areaId: restaurantTable.areaId,
       areaName: area.name,
-      status: restaurantTable.status,
     })
     .from(restaurantTable)
     .leftJoin(area, eq(restaurantTable.areaId, area.id))
@@ -73,12 +69,14 @@ export const restaurantTableDrizzleRepository: RestaurantTableRepository = {
     page,
     pageSize,
     areaId,
-    status,
+    tableIdIn,
+    tableIdNotIn,
   }: ListTablesParams): Promise<ListTablesResult> {
     const offset = (page - 1) * pageSize;
     const conditions = [
       areaId ? eq(restaurantTable.areaId, areaId) : undefined,
-      status ? eq(restaurantTable.status, status) : undefined,
+      tableIdIn ? inArray(restaurantTable.id, tableIdIn) : undefined,
+      tableIdNotIn ? notInArray(restaurantTable.id, tableIdNotIn) : undefined,
     ].filter((c): c is NonNullable<typeof c> => c !== undefined);
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -89,7 +87,6 @@ export const restaurantTableDrizzleRepository: RestaurantTableRepository = {
           name: restaurantTable.name,
           areaId: restaurantTable.areaId,
           areaName: area.name,
-          status: restaurantTable.status,
         })
         .from(restaurantTable)
         .leftJoin(area, eq(restaurantTable.areaId, area.id))
@@ -142,10 +139,6 @@ export const restaurantTableDrizzleRepository: RestaurantTableRepository = {
     }
   },
 
-  async setStatus(id: number, status: TableStatus): Promise<void> {
-    await db.update(restaurantTable).set({ status }).where(eq(restaurantTable.id, id));
-  },
-
   async listAll(): Promise<RestaurantTable[]> {
     const rows = await db
       .select({
@@ -153,22 +146,11 @@ export const restaurantTableDrizzleRepository: RestaurantTableRepository = {
         name: restaurantTable.name,
         areaId: restaurantTable.areaId,
         areaName: area.name,
-        status: restaurantTable.status,
       })
       .from(restaurantTable)
       .leftJoin(area, eq(restaurantTable.areaId, area.id))
       .orderBy(asc(area.name), ...naturalTableNameOrderBy);
     return rows.map(toEntity);
-  },
-
-  async countByStatus(): Promise<TableStatusCounts> {
-    const rows = await db
-      .select({ status: restaurantTable.status, value: count() })
-      .from(restaurantTable)
-      .groupBy(restaurantTable.status);
-    const available = rows.find((r) => r.status === "available")?.value ?? 0;
-    const occupied = rows.find((r) => r.status === "occupied")?.value ?? 0;
-    return { available, occupied, total: available + occupied };
   },
 
   async listAreasFull(): Promise<Area[]> {

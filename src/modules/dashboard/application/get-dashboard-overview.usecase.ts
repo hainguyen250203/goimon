@@ -17,10 +17,16 @@ export async function getDashboardOverview(
   shiftRepository: ShiftRepository,
   tableRepository: RestaurantTableRepository,
 ): Promise<DashboardOverview> {
-  const [shift, tableCounts] = await Promise.all([
+  const [shift, tables, activeOrders] = await Promise.all([
     shiftRepository.findLatest(),
-    tableRepository.countByStatus(),
+    tableRepository.listAll(),
+    orderRepository.listActive(),
   ]);
+  // "Đang phục vụ/trống" luôn suy từ order đang mở, không lưu cột riêng trên
+  // bảng tables (xem CLAUDE.md) — đếm trực tiếp ở đây thay vì countByStatus().
+  const occupiedTableIds = new Set(activeOrders.map((o) => o.tableId));
+  const occupied = tables.filter((t) => occupiedTableIds.has(t.id)).length;
+  const tableCounts = { available: tables.length - occupied, occupied, total: tables.length };
 
   let latestShift: DashboardOverview["latestShift"] = null;
   if (shift) {
