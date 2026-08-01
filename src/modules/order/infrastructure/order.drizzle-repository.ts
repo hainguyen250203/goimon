@@ -598,10 +598,14 @@ export const orderDrizzleRepository: OrderRepository = {
     pageSize,
     search,
     actorId,
+    shiftId,
   }: ListOrderItemEventsParams): Promise<ListOrderItemEventsResult> {
     const offset = (page - 1) * pageSize;
     const trimmedSearch = search?.trim();
-    const conditions = [inArray(orderEvent.eventType, ["items_added", "items_removed"])];
+    const conditions = [
+      inArray(orderEvent.eventType, ["items_added", "items_removed"]),
+      eq(order.shiftId, shiftId),
+    ];
     if (actorId) conditions.push(eq(orderEvent.actorId, actorId));
     if (trimmedSearch) {
       conditions.push(
@@ -628,7 +632,11 @@ export const orderDrizzleRepository: OrderRepository = {
         .orderBy(desc(orderEvent.createdAt))
         .limit(pageSize)
         .offset(offset),
-      db.select({ value: count() }).from(orderEvent).where(where),
+      db
+        .select({ value: count() })
+        .from(orderEvent)
+        .innerJoin(order, eq(orderEvent.orderId, order.id))
+        .where(where),
     ]);
 
     return {
@@ -677,9 +685,13 @@ export const orderDrizzleRepository: OrderRepository = {
     page,
     pageSize,
     actorId,
+    shiftId,
   }: ListTableTransferEventsParams): Promise<ListTableTransferEventsResult> {
     const offset = (page - 1) * pageSize;
-    const conditions = [inArray(orderEvent.eventType, ["table_changed", "items_transferred_out"])];
+    const conditions = [
+      inArray(orderEvent.eventType, ["table_changed", "items_transferred_out"]),
+      eq(order.shiftId, shiftId),
+    ];
     if (actorId) conditions.push(eq(orderEvent.actorId, actorId));
     const where = and(...conditions);
 
@@ -701,7 +713,11 @@ export const orderDrizzleRepository: OrderRepository = {
         .orderBy(desc(orderEvent.createdAt))
         .limit(pageSize)
         .offset(offset),
-      db.select({ value: count() }).from(orderEvent).where(where),
+      db
+        .select({ value: count() })
+        .from(orderEvent)
+        .innerJoin(order, eq(orderEvent.orderId, order.id))
+        .where(where),
     ]);
 
     return {

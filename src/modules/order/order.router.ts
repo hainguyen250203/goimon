@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
 import { adminProcedure, userProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "~/lib/pagination";
 import { logActivity } from "~/modules/activity-log/log-activity";
 import { menuItemDrizzleRepository } from "~/modules/menu/infrastructure/menu-item.drizzle-repository";
 import { restaurantTableDrizzleRepository } from "~/modules/table/infrastructure/restaurant-table.drizzle-repository";
@@ -143,21 +144,32 @@ export const orderRouter = createTRPCRouter({
     .input(
       z.object({
         page: z.number().int().min(1).default(1),
-        pageSize: z.number().int().min(1).max(100).default(20),
+        pageSize: z.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
         status: z.enum(["open", "paid", "cancelled", "transferred"]).optional(),
         search: z.string().optional(),
         shiftId: z.number().int().positive().optional(),
         // Chỉ superadmin xem được đơn đã xoá mềm — giám sát việc admin xoá,
         // admin (người xoá) không tự xem lại được (xem CLAUDE.md/order.router.ts).
         deleted: z.boolean().optional(),
+        // Trang Lịch sử ở /goi-mon/cua-hang set cờ này để CHỈ xem/search trong
+        // ca đang mở (không nhận shiftId tuỳ ý từ client) — khác trang admin
+        // /quan-ly/don-hang, vẫn xem toàn bộ lịch sử + tự chọn "Số Ca" thủ công
+        // như cũ khi không set cờ này.
+        currentShiftOnly: z.boolean().optional(),
       }),
     )
-    .query(({ ctx, input }) => {
+    .query(async ({ ctx, input }) => {
       if (input.deleted && ctx.session.user.role !== "superadmin") {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
+      let shiftId = input.shiftId;
+      if (input.currentShiftOnly) {
+        const openShift = await shiftDrizzleRepository.findOpen();
+        if (!openShift?.id) return { items: [], total: 0 };
+        shiftId = openShift.id;
+      }
       const createdBy = ctx.session.user.role === "user" ? ctx.session.user.id : undefined;
-      return listOrders(orderDrizzleRepository, { ...input, createdBy });
+      return listOrders(orderDrizzleRepository, { ...input, shiftId, createdBy });
     }),
 
   // Xoá mềm — admin trở lên xoá được (bất kỳ trạng thái order nào), nhưng
@@ -189,9 +201,14 @@ export const orderRouter = createTRPCRouter({
         search: z.string().optional(),
       }),
     )
-    .query(({ ctx, input }) => {
+    .query(async ({ ctx, input }) => {
+      // Chỉ trang Lịch sử ở /goi-mon/cua-hang gọi endpoint này — luôn giới
+      // hạn trong ca đang mở, không có chế độ "xem toàn bộ" (không nhận
+      // shiftId từ client).
+      const openShift = await shiftDrizzleRepository.findOpen();
+      if (!openShift?.id) return { items: [], total: 0 };
       const actorId = ctx.session.user.role === "user" ? ctx.session.user.id : undefined;
-      return listOrderItemEvents(orderDrizzleRepository, { ...input, actorId });
+      return listOrderItemEvents(orderDrizzleRepository, { ...input, actorId, shiftId: openShift.id });
     }),
 
   // Lịch sử chuyển bàn ("table_changed") + chuyển món ("items_transferred_out")
@@ -206,9 +223,16 @@ export const orderRouter = createTRPCRouter({
         pageSize: z.number().int().min(1).max(100).default(20),
       }),
     )
-    .query(({ ctx, input }) => {
+    .query(async ({ ctx, input }) => {
+      // Cùng lý do với listOrderItemEvents — luôn giới hạn trong ca đang mở.
+      const openShift = await shiftDrizzleRepository.findOpen();
+      if (!openShift?.id) return { items: [], total: 0 };
       const actorId = ctx.session.user.role === "user" ? ctx.session.user.id : undefined;
-      return listTableTransferEvents(orderDrizzleRepository, { ...input, actorId });
+      return listTableTransferEvents(orderDrizzleRepository, {
+        ...input,
+        actorId,
+        shiftId: openShift.id,
+      });
     }),
 
   // Toàn bộ timeline của 1 order cụ thể (gọi món, trả món, in bill, thanh

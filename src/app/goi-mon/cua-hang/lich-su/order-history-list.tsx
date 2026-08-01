@@ -73,7 +73,7 @@ export function OrderHistoryList() {
   const { search, page, setPage, searchInput, setSearchInput } = usePaginationState();
 
   const { data, isFetching } = api.order.list.useQuery(
-    { page, pageSize: PAGE_SIZE, search: search || undefined },
+    { page, pageSize: PAGE_SIZE, search: search || undefined, currentShiftOnly: true },
     { placeholderData: keepPreviousData },
   );
 

@@ -1,0 +1,1 @@
+CREATE INDEX "orders_shift_id_idx" ON "orders" USING btree ("shift_id");

@@ -43,6 +43,13 @@
       "when": 1785511804359,
       "tag": "0005_absent_the_hunter",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785561915275,
+      "tag": "0006_gigantic_hardball",
+      "breakpoints": true
     }
   ]
 }

@@ -83,6 +83,9 @@ export const order = pgTable(
     index("orders_created_by_idx").on(t.createdBy),
     index("orders_table_id_idx").on(t.tableId),
     index("orders_status_idx").on(t.status),
+    // Giờ là điều kiện lọc bắt buộc ở trang Lịch sử (/goi-mon/cua-hang) — mọi
+    // lượt xem/search đều chỉ xét trong ca đang mở, chạy trên mỗi lần tải trang.
+    index("orders_shift_id_idx").on(t.shiftId),
     index("orders_status_paid_confirmed_at_idx").on(
       t.status,
       t.paidConfirmedAt,

@@ -118,6 +118,10 @@ export type ListOrderItemEventsParams = {
   search?: string;
   /** Chỉ event do người này thao tác — router tự set khi role "user" (nhân viên chỉ xem hành động của mình ở /goi-mon/cua-hang). */
   actorId?: string;
+  /** Chỉ event thuộc ca này — bắt buộc, router luôn tự gán ca đang mở trước
+   * khi gọi tới đây (không có chế độ "xem toàn bộ" cho usecase này, khác
+   * ListOrdersParams). */
+  shiftId: number;
 };
 
 export type ListOrderItemEventsResult = {
@@ -145,6 +149,9 @@ export type ListTableTransferEventsParams = {
   pageSize: number;
   /** Chỉ event do người này thao tác — cùng quy tắc role "user" như listOrderItemEvents. */
   actorId?: string;
+  /** Chỉ event thuộc ca này — bắt buộc, router luôn tự gán ca đang mở (xem
+   * ListOrderItemEventsParams). */
+  shiftId: number;
 };
 
 /**
