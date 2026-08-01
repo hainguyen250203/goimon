@@ -168,10 +168,10 @@ export const assistantDrizzleRepository: AssistantRepository = {
     userId,
   }: ListAllSessionsParams): Promise<ListAllSessionsResult> {
     const offset = (page - 1) * pageSize;
-    const where = and(
-      isNull(assistantSession.deletedAt),
-      userId ? eq(assistantSession.userId, userId) : undefined,
-    );
+    // Không lọc deletedAt — trang giám sát superadmin cần xem được cả phiên đã
+    // xoá mềm (để audit), giống getUsageSummary/thong-ke đang làm; UI tự hiện
+    // badge "Đã xoá" để phân biệt thay vì ẩn hẳn khỏi bảng.
+    const where = userId ? eq(assistantSession.userId, userId) : undefined;
 
     const [rows, totalRows] = await Promise.all([
       db
@@ -192,7 +192,8 @@ export const assistantDrizzleRepository: AssistantRepository = {
         .leftJoin(assistantMessage, eq(assistantMessage.sessionId, assistantSession.id))
         .where(where)
         .groupBy(assistantSession.id, user.name)
-        .orderBy(desc(assistantSession.updatedAt))
+        // Phiên đã xoá luôn đẩy xuống cuối bất kể updatedAt (giống getUsageSummary).
+        .orderBy(sql`${assistantSession.deletedAt} is not null`, desc(assistantSession.updatedAt))
         .limit(pageSize)
         .offset(offset),
       db

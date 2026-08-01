@@ -3,7 +3,7 @@
 import NextLink from "next/link";
 import { useRouter } from "nextjs-toploader/app";
 import { keepPreviousData } from "@tanstack/react-query";
-import { IconButton, Stack } from "@chakra-ui/react";
+import { Badge, Flex, IconButton, Stack, Text } from "@chakra-ui/react";
 import { Eye } from "lucide-react";
 
 import { ListViewTable, type ListViewColumn } from "~/components/data-table/list-view-table";
@@ -17,7 +17,22 @@ import { UserFilterCombobox } from "./user-filter-combobox";
 const columns: ListViewColumn<SessionHistoryItem>[] = [
   { key: "id", header: "ID", cell: (row) => row.id, width: "4rem" },
   { key: "ownerName", header: "Chủ sở hữu", cell: (row) => row.ownerName },
-  { key: "title", header: "Tiêu đề", cell: (row) => row.title ?? "Chưa đặt tên" },
+  {
+    key: "title",
+    header: "Tiêu đề",
+    cell: (row) => (
+      <Flex align="center" gap={2}>
+        <Text lineClamp={1} color={row.deletedAt ? "fg.muted" : undefined}>
+          {row.title || "Chưa đặt tên"}
+        </Text>
+        {row.deletedAt && (
+          <Badge colorPalette="red" variant="solid" rounded="full" size="sm" flexShrink={0}>
+            Đã xoá
+          </Badge>
+        )}
+      </Flex>
+    ),
+  },
   {
     key: "messageCount",
     header: "Số tin nhắn",
