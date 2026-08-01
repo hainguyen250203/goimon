@@ -7,6 +7,7 @@ import type {
 
 export type ShiftListItemWithRevenue = ShiftListItem & {
   totalRevenue: number;
+  discountAmount: number;
   paidOrderCount: number;
 };
 
@@ -38,6 +39,7 @@ export async function listShifts(
       return {
         ...item,
         totalRevenue: revenue?.totalRevenue ?? 0,
+        discountAmount: revenue?.discountAmount ?? 0,
         paidOrderCount: revenue?.paidOrderCount ?? 0,
       };
     }),
