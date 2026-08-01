@@ -1,16 +1,16 @@
 import "dotenv/config";
 
+import { and, eq } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { and, eq } from "drizzle-orm";
 
 import { category, menuItem } from "~/modules/menu/infrastructure/menu.schema";
 import { paymentConfig } from "~/modules/payment-config/infrastructure/payment-config.schema";
 import { printer } from "~/modules/printer/infrastructure/printer.schema";
 import { area, restaurantTable } from "~/modules/table/infrastructure/table.schema";
-import { account } from "~/server/better-auth/schema";
 import { auth } from "~/server/better-auth/config";
+import { account } from "~/server/better-auth/schema";
 import { db } from "~/server/db";
 
 // Dữ liệu tham khảo từ pos-be/src/utils/data/menu.json (chỉ lấy DATA, không
@@ -34,7 +34,6 @@ type UserRole = "user" | "manager" | "admin" | "superadmin";
 // phải local dev.
 const SEED_USERS = [
   { name: "Nguyen Hai", phoneNumber: "0968916540", password: "$2b$10$sFZStD2cIe.LqELq6Yxhj.cDAAfi2mDndKJ7kvhG32ygje8mvmZza", role: "superadmin" as const },
-  { name: "Khanh Lam", phoneNumber: "0397372410", password: "$2b$10$XWTh0Z8NGNPbItEsA3g6heCsjDmWfcMzG5hq8v3nt1UCLtLyComXK", role: "admin" as const },
 ];
 
 type SeedUserFileEntry = {
