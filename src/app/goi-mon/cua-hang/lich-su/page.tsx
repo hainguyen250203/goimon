@@ -7,7 +7,10 @@ import { LichSuTabs } from "./lich-su-tabs";
 const PAGE_SIZE = 20;
 
 export default function LichSuPage() {
-  void api.order.list.prefetch({ page: 1, pageSize: PAGE_SIZE });
+  // currentShiftOnly: true khớp với query client ở order-history-list.tsx —
+  // thiếu cờ này khiến query key lệch nhau, prefetch bị bỏ phí (client vẫn
+  // phải tự fetch lại từ đầu đúng scope ca hiện tại).
+  void api.order.list.prefetch({ page: 1, pageSize: PAGE_SIZE, currentShiftOnly: true });
   void api.order.listOrderItemEvents.prefetch({ page: 1, pageSize: PAGE_SIZE });
   void api.order.listTableTransferEvents.prefetch({ page: 1, pageSize: PAGE_SIZE });
 
