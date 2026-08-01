@@ -1,8 +1,8 @@
-// USD / 1.000.000 token — giá model đang dùng (gpt-5.5, xem MODEL trong
-// send-message.usecase.ts), tra cứu 31/07/2026. Đổi model thì PHẢI cập nhật
+// USD / 1.000.000 token — giá model đang dùng (gpt-5.4-mini, xem MODEL trong
+// send-message.usecase.ts), tra cứu 01/08/2026. Đổi model thì PHẢI cập nhật
 // lại giá ở đây — kiểm tra giá thật tại https://openai.com/api/pricing vì
 // OpenAI có thể đổi giá bất kỳ lúc nào.
-export const PRICING_USD_PER_1M_TOKENS = { input: 5.0, output: 30.0 };
+export const PRICING_USD_PER_1M_TOKENS = { input: 0.75, output: 4.5 };
 
 // Cộng thêm 20% vào chi phí ước tính theo giá niêm yết — theo yêu cầu người
 // dùng, để con số hiện ra luôn có biên an toàn, tránh ước tính thấp hơn thực

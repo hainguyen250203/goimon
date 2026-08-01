@@ -44,7 +44,7 @@ export function UsageSummaryTable() {
       <Stack gap={1}>
         <Heading size="md">Chi phí trợ lý AI</Heading>
         <Text fontSize="sm" color="fg.muted">
-          Ước tính theo giá gpt-5.5 — tổng: ${totalCost.toFixed(4)}
+          Ước tính theo giá gpt-5.4-mini — tổng: ${totalCost.toFixed(4)}
         </Text>
       </Stack>
       <ListViewTable

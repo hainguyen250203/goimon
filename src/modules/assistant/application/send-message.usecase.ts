@@ -18,7 +18,7 @@ import { checkRateLimit } from "../infrastructure/rate-limit";
 import { buildCategoryContext, buildCurrentTimeContext, SYSTEM_PROMPT } from "../infrastructure/system-prompt";
 import { assistantTools } from "../infrastructure/tools";
 
-const MODEL = "gpt-5.5";
+const MODEL = "gpt-5.4-mini";
 
 export class AssistantRateLimitError extends Error {
   constructor() {
