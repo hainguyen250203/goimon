@@ -40,6 +40,30 @@ export type UsageSummaryRow = {
 
 export type UsageTotals = { inputTokens: number; outputTokens: number };
 
+export type ListAllSessionsParams = {
+  page: number;
+  pageSize: number;
+  /** Lọc theo 1 chủ sở hữu cụ thể (Combobox chọn ở trang giám sát). */
+  userId?: string;
+};
+
+export type SessionWithOwner = AssistantSession & {
+  ownerName: string;
+  messageCount: number;
+  inputTokens: number;
+  outputTokens: number;
+};
+
+export type ListAllSessionsResult = {
+  items: SessionWithOwner[];
+  total: number;
+};
+
+export type SessionDetailForAdmin = {
+  session: AssistantSession & { ownerName: string };
+  messages: AssistantMessage[];
+};
+
 export interface AssistantRepository {
   createSession(params: CreateSessionParams): Promise<AssistantSession>;
   listSessions(params: ListSessionsParams): Promise<ListSessionsResult>;
@@ -60,4 +84,10 @@ export interface AssistantRepository {
    * ở trang Báo cáo (khác getUsageSummary: theo user, theo phiên). Gồm cả tin
    * nhắn của phiên đã xoá mềm — chi phí đã phát sinh thật với OpenAI. */
   getUsageTotalsInRange(range: { start: Date; end: Date }): Promise<UsageTotals>;
+  /** Toàn bộ phiên chat của MỌI user (join tên chủ sở hữu) — chỉ dùng cho trang
+   * giám sát superadmin, khác listSessions (tự lọc theo userId của người gọi). */
+  listAllSessions(params: ListAllSessionsParams): Promise<ListAllSessionsResult>;
+  /** Không lọc theo userId sở hữu — superadmin xem được cả phiên đã xoá mềm (để
+   * audit), khác findSessionById (tự kiểm tra quyền sở hữu). */
+  getSessionDetailForAdmin(id: number): Promise<SessionDetailForAdmin | null>;
 }

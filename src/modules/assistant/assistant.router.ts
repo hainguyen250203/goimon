@@ -1,7 +1,8 @@
 import { z } from "zod";
 
-import { adminProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { adminProcedure, createTRPCRouter, superadminProcedure } from "~/server/api/trpc";
 import { logActivity } from "~/modules/activity-log/log-activity";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "~/lib/pagination";
 
 import { createSession } from "./application/create-session.usecase";
 import { listSessions } from "./application/list-sessions.usecase";
@@ -9,6 +10,8 @@ import { renameSession } from "./application/rename-session.usecase";
 import { deleteSession } from "./application/delete-session.usecase";
 import { getSessionWithMessages } from "./application/get-session-with-messages.usecase";
 import { getUsageSummary } from "./application/get-usage-summary.usecase";
+import { listAllSessions } from "./application/list-all-sessions.usecase";
+import { getSessionDetailForAdmin } from "./application/get-session-detail-for-admin.usecase";
 import { assistantDrizzleRepository } from "./infrastructure/assistant.drizzle-repository";
 
 export const assistantRouter = createTRPCRouter({
@@ -81,4 +84,21 @@ export const assistantRouter = createTRPCRouter({
         entityId: String(input.id),
       });
     }),
+
+  // Trang giám sát toàn hệ thống (/quan-ly/tro-ly-ai/lich-su) — chỉ superadmin,
+  // xem được phiên chat của MỌI user, khác listSessions/getSession ở trên (tự
+  // lọc theo ctx.session.user.id, dùng cho chính trang chat của người gọi).
+  listAllSessions: superadminProcedure
+    .input(
+      z.object({
+        page: z.number().int().min(1).default(1),
+        pageSize: z.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
+        userId: z.string().optional(),
+      }),
+    )
+    .query(({ input }) => listAllSessions(assistantDrizzleRepository, input)),
+
+  getSessionDetail: superadminProcedure
+    .input(z.object({ id: z.number().int().positive() }))
+    .query(({ input }) => getSessionDetailForAdmin(assistantDrizzleRepository, input.id)),
 });

@@ -3,6 +3,7 @@ import {
   BarChart3,
   Bot,
   Gauge,
+  History,
   ClipboardList,
   Clock,
   Landmark,
@@ -113,6 +114,16 @@ export const ADMIN_NAV: NavItem[] = [
     href: "/quan-ly/tro-ly-ai/thong-ke",
     group: "Quản trị",
     minRole: "admin",
+  },
+  {
+    key: "assistant-history",
+    label: "Lịch sử trò chuyện AI",
+    icon: History,
+    href: "/quan-ly/tro-ly-ai/lich-su",
+    group: "Quản trị",
+    // Chỉ superadmin — xem được lịch sử chat AI của MỌI user, khác trang
+    // "Trợ lý AI" (chỉ chat của chính người đang đăng nhập).
+    minRole: "superadmin",
   },
   {
     key: "user",

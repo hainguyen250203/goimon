@@ -1,12 +1,16 @@
 import { and, count, desc, eq, gte, isNull, lt, sql } from "drizzle-orm";
 
 import { db } from "~/server/db";
+import { user } from "~/server/better-auth/schema";
 import type {
   AppendMessageParams,
   AssistantRepository,
   CreateSessionParams,
+  ListAllSessionsParams,
+  ListAllSessionsResult,
   ListSessionsParams,
   ListSessionsResult,
+  SessionDetailForAdmin,
   UsageSummaryRow,
   UsageTotals,
 } from "../domain/assistant.repository";
@@ -156,5 +160,86 @@ export const assistantDrizzleRepository: AssistantRepository = {
         ),
       );
     return { inputTokens: row?.inputTokens ?? 0, outputTokens: row?.outputTokens ?? 0 };
+  },
+
+  async listAllSessions({
+    page,
+    pageSize,
+    userId,
+  }: ListAllSessionsParams): Promise<ListAllSessionsResult> {
+    const offset = (page - 1) * pageSize;
+    const where = and(
+      isNull(assistantSession.deletedAt),
+      userId ? eq(assistantSession.userId, userId) : undefined,
+    );
+
+    const [rows, totalRows] = await Promise.all([
+      db
+        .select({
+          id: assistantSession.id,
+          userId: assistantSession.userId,
+          title: assistantSession.title,
+          createdAt: assistantSession.createdAt,
+          updatedAt: assistantSession.updatedAt,
+          deletedAt: assistantSession.deletedAt,
+          ownerName: user.name,
+          messageCount: count(assistantMessage.id),
+          inputTokens: sql<number>`coalesce(sum((${assistantMessage.usageJson}->>'inputTokens')::int), 0)`,
+          outputTokens: sql<number>`coalesce(sum((${assistantMessage.usageJson}->>'outputTokens')::int), 0)`,
+        })
+        .from(assistantSession)
+        .innerJoin(user, eq(assistantSession.userId, user.id))
+        .leftJoin(assistantMessage, eq(assistantMessage.sessionId, assistantSession.id))
+        .where(where)
+        .groupBy(assistantSession.id, user.name)
+        .orderBy(desc(assistantSession.updatedAt))
+        .limit(pageSize)
+        .offset(offset),
+      db
+        .select({ value: count() })
+        .from(assistantSession)
+        .where(where),
+    ]);
+
+    return {
+      items: rows.map((row) => ({
+        ...toSessionEntity(row),
+        ownerName: row.ownerName ?? "",
+        messageCount: row.messageCount,
+        inputTokens: row.inputTokens,
+        outputTokens: row.outputTokens,
+      })),
+      total: totalRows[0]?.value ?? 0,
+    };
+  },
+
+  async getSessionDetailForAdmin(id: number): Promise<SessionDetailForAdmin | null> {
+    const rows = await db
+      .select({
+        id: assistantSession.id,
+        userId: assistantSession.userId,
+        title: assistantSession.title,
+        createdAt: assistantSession.createdAt,
+        updatedAt: assistantSession.updatedAt,
+        deletedAt: assistantSession.deletedAt,
+        ownerName: user.name,
+      })
+      .from(assistantSession)
+      .innerJoin(user, eq(assistantSession.userId, user.id))
+      .where(eq(assistantSession.id, id));
+
+    const row = rows[0];
+    if (!row) return null;
+
+    const messageRows = await db
+      .select()
+      .from(assistantMessage)
+      .where(eq(assistantMessage.sessionId, id))
+      .orderBy(assistantMessage.createdAt);
+
+    return {
+      session: { ...toSessionEntity(row), ownerName: row.ownerName ?? "" },
+      messages: messageRows.map(toMessageEntity),
+    };
   },
 };
