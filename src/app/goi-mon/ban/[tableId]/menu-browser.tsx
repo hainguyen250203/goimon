@@ -29,6 +29,15 @@ export function MenuBrowserPanel({ tableId }: { tableId: number }) {
     return Array.from(map, ([id, name]) => ({ id, name }));
   }, [menuItems]);
 
+  // Tính sẵn tên đã bỏ dấu 1 LẦN khi menuItems load xong — filteredItems gõ
+  // xuống dòng dưới sẽ chạy lại mỗi keystroke, không nên strip lại toàn bộ
+  // danh sách mỗi lần gõ (vô ích vì tên món không đổi giữa các lần gõ).
+  const normalizedNameById = useMemo(() => {
+    const map = new Map<number, string>();
+    for (const item of menuItems) map.set(item.id, stripDiacritics(item.name.toLowerCase()));
+    return map;
+  }, [menuItems]);
+
   const filteredItems = useMemo(() => {
     // Gõ không dấu (vd "ga") vẫn tìm ra món có dấu (vd "Gà") — bỏ dấu cả 2
     // vế trước khi so khớp.
@@ -37,9 +46,9 @@ export function MenuBrowserPanel({ tableId }: { tableId: number }) {
       if (selectedCategoryId !== ALL_CATEGORY && item.categoryId !== selectedCategoryId) {
         return false;
       }
-      return stripDiacritics(item.name.toLowerCase()).includes(normalizedSearch);
+      return normalizedNameById.get(item.id)!.includes(normalizedSearch);
     });
-  }, [menuItems, selectedCategoryId, search]);
+  }, [menuItems, selectedCategoryId, search, normalizedNameById]);
 
   return (
     <Flex direction="column" flex={1} minH={0}>
