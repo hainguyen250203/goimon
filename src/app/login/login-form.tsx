@@ -5,6 +5,7 @@ import { useRouter } from "nextjs-toploader/app";
 import { Button, Card, Input, Stack, Text } from "@chakra-ui/react";
 
 import { Field } from "~/components/ui/field";
+import { NumericInput } from "~/components/ui/numeric-input";
 import { authClient } from "~/server/better-auth/client";
 
 export function LoginForm() {
@@ -47,9 +48,8 @@ export function LoginForm() {
         <Stack asChild gap={4}>
           <form onSubmit={handleSubmit}>
             <Field label="Số điện thoại">
-              <Input
+              <NumericInput
                 id="phoneNumber"
-                type="tel"
                 autoComplete="tel"
                 required
                 value={phoneNumber}

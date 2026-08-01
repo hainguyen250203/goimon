@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Field } from "~/components/ui/field";
+import { NumericInput } from "~/components/ui/numeric-input";
 import { Switch } from "~/components/ui/switch";
 import { FilterSelect } from "~/components/data-table/filter-select";
 import { toaster } from "~/components/ui/toaster";
@@ -143,8 +144,7 @@ export function MenuItemFormDialog({
             </Field>
 
             <Field label="Giá (đ)" invalid={!!errors.price} errorText={errors.price}>
-              <Input
-                type="number"
+              <NumericInput
                 min={0}
                 value={form.price}
                 onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}

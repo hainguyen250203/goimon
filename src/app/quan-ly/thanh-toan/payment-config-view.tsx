@@ -6,6 +6,7 @@ import { Box, Button, Flex, Image, Input, Stack, Text } from "@chakra-ui/react";
 import { FilterSelect } from "~/components/data-table/filter-select";
 import { EmptyState } from "~/components/ui/empty-state";
 import { Field } from "~/components/ui/field";
+import { NumericInput } from "~/components/ui/numeric-input";
 import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
 import { buildVietQrImageUrl } from "~/lib/vietqr";
@@ -179,7 +180,7 @@ export function PaymentConfigView({ canEdit }: { canEdit: boolean }) {
                 )}
               </Field>
               <Field label="Số tài khoản" invalid={!!errors.bankAccountNumber} errorText={errors.bankAccountNumber}>
-                <Input
+                <NumericInput
                   value={form.bankAccountNumber}
                   onChange={(e) => setForm((f) => ({ ...f, bankAccountNumber: e.target.value }))}
                 />

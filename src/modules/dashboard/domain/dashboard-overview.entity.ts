@@ -11,6 +11,7 @@ export type DashboardOverview = {
     paidOrderCount: number;
     openOrderCount: number;
     cancelledOrderCount: number;
+    openRevenue: number;
   } | null;
   tables: {
     available: number;

@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Field } from "~/components/ui/field";
+import { NumericInput } from "~/components/ui/numeric-input";
 import { FilterSelect } from "~/components/data-table/filter-select";
 import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
@@ -123,7 +124,7 @@ export function CreateUserDialog({
               invalid={!!errors.phoneNumber}
               errorText={errors.phoneNumber}
             >
-              <Input
+              <NumericInput
                 value={form.phoneNumber}
                 onChange={(e) =>
                   setForm((f) => ({ ...f, phoneNumber: e.target.value }))

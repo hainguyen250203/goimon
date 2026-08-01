@@ -42,6 +42,12 @@ Hệ thống POS quản lý nhà hàng: order món, tạo hóa đơn, in bill, x
     `paidConfirmedAt` — KHÔNG yêu cầu đã in bill. Gọi khi không phải `open` phải throw domain error,
     không đổi state. Không có trạng thái nào tự động chuyển thành `paid`.
   - `cancel()`: hợp lệ từ `open` → `cancelled`.
+- Mọi query tính doanh thu/số liệu đơn hàng phải lọc `isNull(order.deletedAt)` — đơn xoá mềm
+  không được tính vào bất kỳ KPI/báo cáo nào. Doanh thu đơn `open` (chưa thanh toán) PHẢI tính
+  "sống" từ `sum(orderItem.unitPrice * orderItem.quantity)` (join `orderItem`), KHÔNG được dùng
+  `order.totalAmount` — cột này `null` tới khi `printBill()`/`confirmPayment()` chạy, nên đơn
+  `open` chưa từng in sẽ bị tính thiếu/bằng 0. Xem `order.drizzle-repository.ts`'s
+  `getShiftOrderStats()`/`listActive()`.
 
 ## Route guard & trang danh sách
 
@@ -60,6 +66,13 @@ Hệ thống POS quản lý nhà hàng: order món, tạo hóa đơn, in bill, x
 - Bất kỳ layout nhiều cột tự viết riêng cho 1 trang (không phải sidebar điều hướng chính của `AdminShell`) — ví dụ sidebar danh sách phiên + khung chat của Trợ lý AI — đều phải tự thu gọn trên mobile: ẩn cột phụ bằng `display={{ base: "none", md: "..." }}`, thay bằng nút mở `Drawer` (`~/components/ui/drawer`) khi cần xem, đúng pattern `AdminShell` đã dùng cho sidebar điều hướng chính. Không bao giờ để 2 cột tự co lại chia đôi màn hình hẹp — chữ bị bóp xuống dòng liên tục, không đọc được.
 - `ListViewPagination`: trên mobile chỉ hiện nút Trước/Sau + dòng "Trang X/Y — N kết quả" (`display={{ base: "none", sm: "..." }}` cho `PaginationFirstTrigger`/`PaginationLastTrigger`/danh sách số trang) — hiện đầy đủ từ `sm` trở lên. Danh sách số trang dễ tràn dòng trên màn hình hẹp nếu hiện hết.
 - Lưới `KpiCard` nhiều ô: mobile vẫn nên chia **2 cột** (`templateColumns={{ base: "repeat(2, 1fr)", ... }}`), KHÔNG dùng `base: "1fr"` (1 cột) — mỗi card 1 dòng riêng làm trang dài lê thê, UX kém. Xem `src/app/quan-ly/bao-cao/report-view.tsx`/`dashboard-overview.tsx`.
+- Mọi input chỉ nhận số nguyên (số lượng, giá, SĐT, port, số tài khoản...) phải dùng
+  `NumericInput` (`src/components/ui/numeric-input.tsx`) thay vì `Input` với
+  `type="number"`/`type="tel"` — ép bàn phím số trên mobile qua `inputMode="numeric"` +
+  `pattern="[0-9]*"` (dùng `type="text"` bên dưới để tránh nút tăng/giảm và ký tự +/-/e mà
+  `type="number"` vẫn hiện trên nhiều trình duyệt mobile). `min`/`max` truyền vào chỉ mang
+  tính tài liệu, không được trình duyệt tự enforce trên `type="text"` — nơi gọi phải tự
+  validate qua JS/Zod như hiện tại.
 - Biểu đồ `echarts-for-react`: **luôn** bọc qua `EchartBox` (`src/app/quan-ly/bao-cao/ui/echart-box.tsx`), không tự viết `<ReactECharts>` trần. `EchartBox` nhận prop `buildOption(containerWidth)` (hàm), KHÔNG nhận `option` tĩnh — bên trong tự đo chiều rộng THẬT của container bằng `ResizeObserver` rồi gọi `buildOption(width)` + `setOption(..., notMerge: true)` mỗi khi resize. Lý do không dùng `useBreakpointValue`/breakpoint Chakra cho fontSize/margin của chart: breakpoint dựa theo viewport toàn trang, không phải kích thước container chart thực tế (co cửa sổ, đổi số cột Grid không kèm sự kiện breakpoint rõ ràng); còn `chart.resize()` một mình chỉ vẽ lại theo kích thước mới nhưng vẫn dùng option cũ (fontSize/width nhãn "đóng băng" lúc mount) — phải đo width thật + build lại toàn bộ option + `notMerge` mới chắc chắn đúng ngay, không cần F5.
 
 ## Kích thước component (size/fontSize)

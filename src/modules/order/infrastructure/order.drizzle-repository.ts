@@ -415,11 +415,26 @@ export const orderDrizzleRepository: OrderRepository = {
       .groupBy(order.status);
 
     const byStatus = new Map(rows.map((r) => [r.status, r]));
+
+    // Không dùng byStatus.get("open")?.revenue (tính từ order.totalAmount) vì
+    // cột này null tới khi printBill()/confirmPayment() chạy — đơn open chưa
+    // từng in sẽ bị tính thiếu. Tính "sống" từ orderItem, giống listActive().
+    const [openRevenueRow] = await db
+      .select({
+        openRevenue: sql<number>`coalesce(sum(${orderItem.unitPrice} * ${orderItem.quantity}), 0)`.mapWith(
+          Number,
+        ),
+      })
+      .from(order)
+      .leftJoin(orderItem, eq(orderItem.orderId, order.id))
+      .where(and(eq(order.shiftId, shiftId), eq(order.status, "open"), isNull(order.deletedAt)));
+
     return {
       totalRevenue: byStatus.get("paid")?.revenue ?? 0,
       paidOrderCount: byStatus.get("paid")?.orderCount ?? 0,
       openOrderCount: byStatus.get("open")?.orderCount ?? 0,
       cancelledOrderCount: byStatus.get("cancelled")?.orderCount ?? 0,
+      openRevenue: openRevenueRow?.openRevenue ?? 0,
     };
   },
 

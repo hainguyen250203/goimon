@@ -4,6 +4,7 @@ import { Box, Flex, IconButton, Input, Text } from "@chakra-ui/react";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { memo, useEffect, useState } from "react";
 
+import { NumericInput } from "~/components/ui/numeric-input";
 import { formatVnd } from "~/lib/format-order";
 
 // Chặn gõ nhầm số cực lớn (vd gõ thừa 1 số 0) làm sai lệch tổng tiền — 99 đủ
@@ -126,13 +127,12 @@ export const OrderLineItemCard = memo(function OrderLineItemCard({
           >
             <Minus size={13} />
           </IconButton>
-          <Input
+          <NumericInput
             size="xs"
-            type="number"
             min={1}
             max={MAX_QUANTITY}
             textAlign="center"
-            w="36px"
+            w="48px"
             px={1}
             disabled={disabled}
             value={quantityInput}

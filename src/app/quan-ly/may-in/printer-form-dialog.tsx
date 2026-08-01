@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { Field } from "~/components/ui/field";
+import { NumericInput } from "~/components/ui/numeric-input";
 import { Switch } from "~/components/ui/switch";
 import { toaster } from "~/components/ui/toaster";
 import { FilterSelect } from "~/components/data-table/filter-select";
@@ -158,8 +159,7 @@ export function PrinterFormDialog({
             </Field>
 
             <Field label="Cổng" invalid={!!errors.port} errorText={errors.port}>
-              <Input
-                type="number"
+              <NumericInput
                 min={1}
                 max={65535}
                 value={form.port}

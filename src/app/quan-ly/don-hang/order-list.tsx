@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "nextjs-toploader/app";
 import { keepPreviousData } from "@tanstack/react-query";
-import { Input, Stack, Text } from "@chakra-ui/react";
+import { Stack, Text } from "@chakra-ui/react";
 import { StatusDot } from "~/components/ui/status-dot";
+import { NumericInput } from "~/components/ui/numeric-input";
 
 import {
   ListViewTable,
@@ -202,10 +203,9 @@ export function OrderList({
               : STATUS_OPTIONS
           }
         />
-        <Input
+        <NumericInput
           width="10rem"
           placeholder="Số Ca"
-          type="number"
           min={1}
           value={shiftIdInput}
           onChange={(e) => setShiftIdInput(e.target.value)}

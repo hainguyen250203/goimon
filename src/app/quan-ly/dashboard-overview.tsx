@@ -1,7 +1,7 @@
 "use client";
 
 import NextLink from "next/link";
-import { Armchair, CheckCircle2, Clock, Wallet, XCircle } from "lucide-react";
+import { Armchair, CheckCircle2, Clock, HandCoins, Wallet, XCircle } from "lucide-react";
 import { Flex, Grid, Heading, Link as ChakraLink, Box } from "@chakra-ui/react";
 
 import { EmptyState } from "~/components/ui/empty-state";
@@ -55,7 +55,7 @@ export function DashboardOverview() {
         </StatusDot>
       </Flex>
       <Grid
-        templateColumns={{ base: "repeat(2, 1fr)", lg: "repeat(3, 1fr)", xl: "repeat(5, 1fr)" }}
+        templateColumns={{ base: "repeat(2, 1fr)", lg: "repeat(3, 1fr)", xl: "repeat(6, 1fr)" }}
         gap={{ base: 3, md: 4 }}
       >
         <KpiCard
@@ -63,6 +63,12 @@ export function DashboardOverview() {
           value={formatVnd(latestShift.totalRevenue)}
           icon={<Wallet size={18} />}
           colorPalette="green"
+        />
+        <KpiCard
+          label="Doanh thu chưa thanh toán"
+          value={formatVnd(latestShift.openRevenue)}
+          icon={<HandCoins size={18} />}
+          colorPalette="yellow"
         />
         <KpiCard
           label="Đơn đã thanh toán"
