@@ -12,6 +12,7 @@
     "db:push": "drizzle-kit push",
     "db:seed": "tsx src/server/db/seed.ts",
     "db:studio": "drizzle-kit studio",
+    "db:wipe-assistant-sessions": "tsx src/server/db/wipe-assistant-sessions.ts",
     "dev": "next dev -p 4466",
     "preview": "next build && next start",
     "start": "next start -p 4466",
