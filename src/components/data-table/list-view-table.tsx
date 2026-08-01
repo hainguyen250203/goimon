@@ -23,15 +23,17 @@ export function ListViewTable<T>({
   rowKey,
   isLoading,
   emptyMessage = "Chưa có dữ liệu.",
+  rounded = true,
 }: {
   columns: ListViewColumn<T>[];
   data: T[] | undefined;
   rowKey: (row: T) => string | number;
   isLoading?: boolean;
   emptyMessage?: string;
+  rounded?: boolean;
 }) {
   return (
-    <Table.ScrollArea rounded="l3" borderWidth="1px">
+    <Table.ScrollArea rounded={rounded ? "l3" : undefined} borderWidth="1px">
       <Table.Root size="sm" variant="line" interactive>
         <Table.Header>
           <Table.Row bg="bg.subtle">

@@ -1,6 +1,6 @@
 "use client";
 
-import { Flex, Separator, Stack, Text } from "@chakra-ui/react";
+import { Box, Flex, Separator, Stack, Text } from "@chakra-ui/react";
 
 import {
   DialogBody,
@@ -11,7 +11,8 @@ import {
   DialogTitle,
 } from "~/components/ui/dialog";
 import { StatusDot } from "~/components/ui/status-dot";
-import type { OrderListItem } from "~/modules/order/domain/order-list-item.entity";
+import { ListViewTable, type ListViewColumn } from "~/components/data-table/list-view-table";
+import type { OrderListItem, OrderListItemLine } from "~/modules/order/domain/order-list-item.entity";
 import { formatDateTime, formatVnd, PAYMENT_METHOD_LABEL, STATUS_DOT_COLOR, STATUS_LABEL } from "~/lib/format-order";
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
@@ -24,6 +25,31 @@ function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
     </Flex>
   );
 }
+
+const itemColumns: ListViewColumn<OrderListItemLine>[] = [
+  { key: "itemName", header: "Tên món", cell: (row) => row.itemName },
+  {
+    key: "quantity",
+    header: "SL",
+    cell: (row) => row.quantity,
+    textAlign: "right",
+    width: "4rem",
+  },
+  {
+    key: "unitPrice",
+    header: "Đơn giá",
+    cell: (row) => formatVnd(row.unitPrice),
+    textAlign: "right",
+    width: "7rem",
+  },
+  {
+    key: "subtotal",
+    header: "Thành tiền",
+    cell: (row) => formatVnd(row.unitPrice * row.quantity),
+    textAlign: "right",
+    width: "8rem",
+  },
+];
 
 export function OrderDetailDialog({
   open,
@@ -38,81 +64,68 @@ export function OrderDetailDialog({
 
   return (
     <DialogRoot open={open} onOpenChange={(e) => onOpenChange(e.open)}>
-      <DialogContent>
+      <DialogContent maxW={{ base: "calc(100vw - 24px)", md: "600px", lg: "700px" }} mx="auto">
         <DialogHeader>
           <DialogTitle>Chi tiết đơn #{order.id}</DialogTitle>
         </DialogHeader>
         <DialogCloseTrigger />
         <DialogBody>
           <Stack gap={3}>
-            <InfoRow label="Bàn" value={`${order.tableName} · ${order.areaName}`} />
-            <InfoRow
-              label="Trạng thái"
-              value={
-                <StatusDot color={STATUS_DOT_COLOR[order.status]}>{STATUS_LABEL[order.status]}</StatusDot>
-              }
-            />
-            <InfoRow label="Ca" value={order.shiftId ? `Ca #${order.shiftId}` : "—"} />
-            <InfoRow label="Người tạo" value={order.createdByName} />
-            <InfoRow label="Tạo lúc" value={formatDateTime(order.createdAt)} />
-
-            <Separator />
-
-            <Stack gap={0} maxH="240px" overflowY="auto" borderWidth="1px" borderColor="border" rounded="l2">
-              {order.items.length === 0 ? (
-                <Text px={3} py={4} fontSize="sm" color="fg.muted" textAlign="center">
-                  Không có món nào.
-                </Text>
-              ) : (
-                order.items.map((item, index) => (
-                  <Flex
-                    key={item.id}
-                    justify="space-between"
-                    align="center"
-                    px={3}
-                    py={2}
-                    borderTopWidth={index > 0 ? "1px" : 0}
-                    borderColor="border"
-                  >
-                    <Stack gap={0}>
-                      <Text fontSize="sm">{item.itemName}</Text>
-                      <Text fontSize="xs" color="fg.muted">
-                        {formatVnd(item.unitPrice)} × {item.quantity}
-                      </Text>
-                    </Stack>
-                    <Text fontSize="sm" fontWeight="semibold">
-                      {formatVnd(item.unitPrice * item.quantity)}
-                    </Text>
-                  </Flex>
-                ))
-              )}
+            <Stack gap={2}>
+              <InfoRow label="Bàn" value={`${order.tableName} · ${order.areaName}`} />
+              <InfoRow
+                label="Trạng thái"
+                value={
+                  <StatusDot color={STATUS_DOT_COLOR[order.status]}>{STATUS_LABEL[order.status]}</StatusDot>
+                }
+              />
+              <InfoRow label="Ca" value={order.shiftId ? `Ca #${order.shiftId}` : "—"} />
+              <InfoRow label="Người tạo" value={order.createdByName} />
+              <InfoRow label="Tạo lúc" value={formatDateTime(order.createdAt)} />
             </Stack>
 
             <Separator />
 
-            <InfoRow label="Tạm tính" value={formatVnd(subtotal)} />
-            {order.promotionName && <InfoRow label="Khuyến mãi" value={order.promotionName} />}
-            <InfoRow
-              label="Tổng tiền"
-              value={
-                order.totalAmount != null ? (
-                  formatVnd(order.totalAmount)
-                ) : (
-                  <>
-                    {formatVnd(subtotal)}{" "}
-                    <Text as="span" fontSize="xs" color="fg.muted">
-                      (chưa thanh toán)
-                    </Text>
-                  </>
-                )
-              }
+            <ListViewTable
+              columns={itemColumns}
+              data={order.items}
+              rowKey={(row) => row.id}
+              emptyMessage="Không có món nào."
+              rounded={false}
             />
-            {order.paymentMethod && (
-              <InfoRow label="Phương thức TT" value={PAYMENT_METHOD_LABEL[order.paymentMethod]} />
-            )}
-            {order.paidConfirmedAt && (
-              <InfoRow label="Thanh toán lúc" value={formatDateTime(order.paidConfirmedAt)} />
-            )}
+
+            <Box borderWidth="1px" rounded="l3" p={4} bg="bg.panel">
+              <Stack gap={2}>
+                <InfoRow label="Tạm tính" value={formatVnd(subtotal)} />
+                {order.promotionName && <InfoRow label="Khuyến mãi" value={order.promotionName} />}
+                {order.paymentMethod && (
+                  <InfoRow label="Phương thức TT" value={PAYMENT_METHOD_LABEL[order.paymentMethod]} />
+                )}
+                {order.paidConfirmedAt && (
+                  <InfoRow label="Thanh toán lúc" value={formatDateTime(order.paidConfirmedAt)} />
+                )}
+
+                <Separator />
+
+                <Flex justify="space-between" align="center">
+                  <Text fontSize="sm" fontWeight="semibold">
+                    Tổng tiền
+                  </Text>
+                  <Text fontSize="lg" fontWeight="bold">
+                    {order.totalAmount != null ? (
+                      formatVnd(order.totalAmount)
+                    ) : (
+                      <>
+                        {formatVnd(subtotal)}{" "}
+                        <Text as="span" fontSize="xs" fontWeight="normal" color="fg.muted">
+                          (chưa thanh toán)
+                        </Text>
+                      </>
+                    )}
+                  </Text>
+                </Flex>
+              </Stack>
+            </Box>
           </Stack>
         </DialogBody>
       </DialogContent>
