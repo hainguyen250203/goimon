@@ -9,10 +9,6 @@ export type BillPrintLineItem = {
 export type BillPrintPayload = {
   shopName: string;
   shopAddress: string;
-  /** Ghi chú liên hệ/góp ý cuối bill (đã gồm SĐT), mỗi phần tử là 1 dòng in
-   *  sẵn — không tự wrapText nữa (từng rớt 1 chữ lẻ xuống dòng riêng). */
-  contactNote: string[];
-  footerNote: string;
   orderId: number;
   /** Tên bàn đã tự gồm khu (vd "K1 - B5") — không cần thêm areaName riêng. */
   tableName: string;

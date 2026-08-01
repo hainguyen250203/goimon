@@ -11,33 +11,35 @@ const PAD_X = 24;
 const CONTENT_WIDTH = WIDTH - PAD_X * 2;
 
 // Bếp cần đọc nhanh từ xa — cột đơn giản hơn hoá đơn (không giá tiền), chữ
-// to hơn hẳn (20px thay vì 15px của bill).
+// to hơn hẳn hoá đơn.
 const COL_STT = 50;
 const COL_QTY = 70;
 const COL_NAME = CONTENT_WIDTH - COL_STT - COL_QTY;
 
-const ROW_FONT_SIZE = 20;
-const NOTE_FONT_SIZE = 16;
-const ROW_LINE_HEIGHT = 30;
-const NOTE_LINE_HEIGHT = 24;
-const ROW_PAD_TOP = 24;
-const HEADER_HEIGHT = 38;
+const ROW_FONT_SIZE = 26;
+const NOTE_FONT_SIZE = 20;
+const ROW_LINE_HEIGHT = 34;
+const NOTE_LINE_HEIGHT = 28;
+// Chiều cao TỐI THIỂU 1 dòng món dù chỉ 1 dòng ngắn — tránh dòng nào cũng
+// dính sát nhau, nội dung được canh giữa theo chiều dọc trong dòng đó.
+const MIN_ROW_HEIGHT = 56;
+const HEADER_HEIGHT = 46;
 
 const LINE = {
-  title: 46,
-  transferInfo: 32,
-  meta: 26,
-  divider: 20,
+  title: 54,
+  transferInfo: 36,
+  meta: 30,
+  divider: 22,
 };
 
-type RowInfo = { lines: string[]; note: string | null; height: number };
+type RowInfo = { lines: string[]; note: string | null; contentHeight: number; height: number };
 
 function measureRows(ctx: SKRSContext2D, payload: KitchenTicketPayload): RowInfo[] {
   ctx.font = font(ROW_FONT_SIZE);
   return payload.items.map((item) => {
     const lines = wrapText(ctx, item.itemName, COL_NAME - 12);
-    const height = lines.length * ROW_LINE_HEIGHT + (item.note ? NOTE_LINE_HEIGHT : 0);
-    return { lines, note: item.note, height };
+    const contentHeight = lines.length * ROW_LINE_HEIGHT + (item.note ? NOTE_LINE_HEIGHT : 0);
+    return { lines, note: item.note, contentHeight, height: Math.max(MIN_ROW_HEIGHT, contentHeight) };
   });
 }
 
@@ -75,14 +77,14 @@ export async function renderKitchenTicketImage(payload: KitchenTicketPayload): P
   const centerX = WIDTH / 2;
 
   ctx.textAlign = "center";
-  ctx.font = font(28, true);
-  y += 28;
+  ctx.font = font(34, true);
+  y += 34;
   ctx.fillText(payload.title, centerX, y);
-  y += LINE.title - 28;
+  y += LINE.title - 34;
 
   if (payload.transferInfo) {
-    ctx.font = font(17, true);
-    ctx.fillText(payload.transferInfo, centerX, (y += LINE.transferInfo) - LINE.transferInfo + 17);
+    ctx.font = font(20, true);
+    ctx.fillText(payload.transferInfo, centerX, (y += LINE.transferInfo) - LINE.transferInfo + 20);
   }
 
   y += LINE.divider / 2;
@@ -96,13 +98,13 @@ export async function renderKitchenTicketImage(payload: KitchenTicketPayload): P
   const metaLeftX = PAD_X;
   const metaRightX = PAD_X + CONTENT_WIDTH / 2 + 8;
   ctx.textAlign = "left";
-  ctx.font = font(17);
+  ctx.font = font(20);
   y += LINE.meta;
-  ctx.fillText(`Mã HĐ: #${payload.orderId}`, metaLeftX, y - LINE.meta + 17);
-  ctx.fillText(`Bàn: ${payload.tableName}`, metaRightX, y - LINE.meta + 17);
+  ctx.fillText(`Mã HĐ: #${payload.orderId}`, metaLeftX, y - LINE.meta + 20);
+  ctx.fillText(`Bàn: ${payload.tableName}`, metaRightX, y - LINE.meta + 20);
   y += LINE.meta;
-  ctx.fillText(`Nhân viên: ${payload.staffName}`, metaLeftX, y - LINE.meta + 17);
-  ctx.fillText(`Thời gian: ${formatDateTime(payload.createdAt)}`, metaRightX, y - LINE.meta + 17);
+  ctx.fillText(`Nhân viên: ${payload.staffName}`, metaLeftX, y - LINE.meta + 20);
+  ctx.fillText(`Thời gian: ${formatDateTime(payload.createdAt)}`, metaRightX, y - LINE.meta + 20);
 
   if (hasTable) {
     y += LINE.divider;
@@ -120,8 +122,8 @@ export async function renderKitchenTicketImage(payload: KitchenTicketPayload): P
       ctx.stroke();
     }
 
-    ctx.font = font(17, true);
-    const headerBaselineY = tableTop + HEADER_HEIGHT / 2 + 6;
+    ctx.font = font(20, true);
+    const headerBaselineY = tableTop + HEADER_HEIGHT / 2 + 7;
     ctx.textAlign = "center";
     ctx.fillText("STT", (colX[0]! + colX[1]!) / 2, headerBaselineY);
     ctx.fillText("SL", (colX[1]! + colX[2]!) / 2, headerBaselineY);
@@ -136,19 +138,37 @@ export async function renderKitchenTicketImage(payload: KitchenTicketPayload): P
     let rowTop = tableTop + HEADER_HEIGHT;
     rows.forEach((row, index) => {
       const item = payload.items[index]!;
+      // Canh giữa nội dung theo chiều dọc trong dòng — dòng chỉ 1 dòng ngắn
+      // (chưa chạm MIN_ROW_HEIGHT) vẫn nằm giữa, không dính sát mép trên.
+      const blockTop = rowTop + (row.height - row.contentHeight) / 2;
+      const numberBaselineY = rowTop + row.height / 2 + 9;
 
       ctx.font = font(ROW_FONT_SIZE);
       ctx.textAlign = "center";
-      ctx.fillText(String(index + 1), (colX[0]! + colX[1]!) / 2, rowTop + ROW_PAD_TOP);
-      ctx.fillText(String(item.quantity), (colX[1]! + colX[2]!) / 2, rowTop + ROW_PAD_TOP);
+      ctx.fillText(String(index + 1), (colX[0]! + colX[1]!) / 2, numberBaselineY);
+      ctx.fillText(String(item.quantity), (colX[1]! + colX[2]!) / 2, numberBaselineY);
       ctx.textAlign = "left";
       row.lines.forEach((line, i) => {
-        ctx.fillText(line, colX[2]! + 6, rowTop + ROW_PAD_TOP + i * ROW_LINE_HEIGHT);
+        ctx.fillText(line, colX[2]! + 6, blockTop + (i + 1) * ROW_LINE_HEIGHT - 9);
       });
+
+      // Phiếu huỷ món — gạch ngang mảnh qua giữa tên món để bếp nhận biết
+      // ngay đây là món bị trả, không phải món cần chuẩn bị.
+      if (payload.isRemoval) {
+        const nameBlockHeight = row.lines.length * ROW_LINE_HEIGHT;
+        const maxLineWidth = Math.max(...row.lines.map((line) => ctx.measureText(line).width));
+        const strikeY = blockTop + nameBlockHeight / 2;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(colX[2]! + 6, strikeY);
+        ctx.lineTo(colX[2]! + 6 + maxLineWidth, strikeY);
+        ctx.stroke();
+        ctx.lineWidth = 1;
+      }
 
       if (row.note) {
         ctx.font = font(NOTE_FONT_SIZE);
-        ctx.fillText(`* ${row.note}`, colX[2]! + 6, rowTop + ROW_PAD_TOP + row.lines.length * ROW_LINE_HEIGHT - 6);
+        ctx.fillText(`* ${row.note}`, colX[2]! + 6, blockTop + row.lines.length * ROW_LINE_HEIGHT + NOTE_LINE_HEIGHT - 9);
       }
 
       rowTop += row.height;

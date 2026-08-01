@@ -19,4 +19,7 @@ export type KitchenTicketPayload = {
   items: KitchenTicketLineItem[];
   /** vd "K1 - B5 -> K2 - B10" — chỉ có ở phiếu chuyển bàn/chuyển món. */
   transferInfo?: string;
+  /** true CHỈ ở phiếu "PHIẾU HUỶ MÓN" — renderer gạch ngang tên món để bếp
+   * nhận biết ngay đây là món bị trả/huỷ, không phải món cần chuẩn bị. */
+  isRemoval?: boolean;
 };

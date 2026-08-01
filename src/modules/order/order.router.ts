@@ -348,6 +348,7 @@ export const orderRouter = createTRPCRouter({
           printKitchenTicketIfAny(await filterPrintableToKitchen(removedItems), {
             ...baseTicket,
             title: "PHIẾU HUỶ MÓN",
+            isRemoval: true,
           }),
         ]);
         return { ...orderDetail, printResult: [...addedResult, ...removedResult] };
