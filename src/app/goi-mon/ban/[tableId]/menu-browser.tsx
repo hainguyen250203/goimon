@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Box, Flex, Grid, Input, Text } from "@chakra-ui/react";
+import { Box, Flex, Grid, IconButton, Input, Text } from "@chakra-ui/react";
+import { X } from "lucide-react";
 
 import { api } from "~/trpc/react";
 import { stripDiacritics } from "~/lib/text";
@@ -53,12 +54,29 @@ export function MenuBrowserPanel({ tableId }: { tableId: number }) {
   return (
     <Flex direction="column" flex={1} minH={0}>
       <Box flexShrink={0} bg="bg" borderBottomWidth="1px" borderColor="border" p={{ base: 2, lg: 3 }}>
-        <Input
-          placeholder="Tìm món"
-          size={{ base: "xs", lg: "sm" }}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <Box position="relative">
+          <Input
+            placeholder="Tìm món"
+            size={{ base: "xs", lg: "sm" }}
+            pr={search ? 8 : undefined}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <IconButton
+              aria-label="Xoá tìm kiếm"
+              size="xs"
+              variant="ghost"
+              position="absolute"
+              right={1}
+              top="50%"
+              transform="translateY(-50%)"
+              onClick={() => setSearch("")}
+            >
+              <X size={14} />
+            </IconButton>
+          )}
+        </Box>
       </Box>
 
       <Flex flex={1} minH={0} overflow="hidden">

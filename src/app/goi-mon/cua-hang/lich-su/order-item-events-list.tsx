@@ -2,8 +2,8 @@
 
 import { memo } from "react";
 import { keepPreviousData } from "@tanstack/react-query";
-import { Box, Button, Flex, Input, Stack, Text } from "@chakra-ui/react";
-import { Minus, Plus, Search } from "lucide-react";
+import { Box, Button, Flex, IconButton, Input, Stack, Text } from "@chakra-ui/react";
+import { Minus, Plus, Search, X } from "lucide-react";
 
 import { EmptyState } from "~/components/ui/empty-state";
 import { Skeleton } from "~/components/ui/skeleton";
@@ -94,9 +94,24 @@ export function OrderItemEventsList() {
           size="sm"
           bg="bg"
           pl={8}
+          pr={searchInput ? 8 : undefined}
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
         />
+        {searchInput && (
+          <IconButton
+            aria-label="Xoá tìm kiếm"
+            size="xs"
+            variant="ghost"
+            position="absolute"
+            right={1}
+            top="50%"
+            transform="translateY(-50%)"
+            onClick={() => setSearchInput("")}
+          >
+            <X size={14} />
+          </IconButton>
+        )}
       </Box>
 
       {isInitialLoading ? (
