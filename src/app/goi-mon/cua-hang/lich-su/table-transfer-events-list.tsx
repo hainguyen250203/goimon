@@ -84,6 +84,10 @@ export function TableTransferEventsList() {
             <TableTransferEventCard key={entry.id} entry={entry} />
           ))}
 
+          <Text fontSize="xs" color="fg.muted" textAlign="center">
+            {entries.length}/{data?.total ?? entries.length} kết quả
+          </Text>
+
           {hasMore && (
             <Button size="sm" variant="outline" loading={isFetching} onClick={() => setPage((p) => p + 1)}>
               Xem thêm

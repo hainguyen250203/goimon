@@ -115,6 +115,10 @@ export function OrderItemEventsList() {
             <OrderItemEventCard key={entry.id} entry={entry} />
           ))}
 
+          <Text fontSize="xs" color="fg.muted" textAlign="center">
+            {entries.length}/{data?.total ?? entries.length} kết quả
+          </Text>
+
           {hasMore && (
             <Button
               size="sm"

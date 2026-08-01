@@ -124,6 +124,10 @@ export function OrderHistoryList() {
             <OrderHistoryCard key={order.id} order={order} />
           ))}
 
+          <Text fontSize="xs" color="fg.muted" textAlign="center">
+            {items.length}/{data?.total ?? items.length} kết quả
+          </Text>
+
           {hasMore && (
             <Button
               size="sm"
