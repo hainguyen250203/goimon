@@ -44,6 +44,30 @@ function itemsEqual(a: OrderItems, b: OrderItems) {
   return a.every((item) => byId.get(item.id)?.quantity === item.quantity);
 }
 
+/** So `before` (bản đã đồng bộ trước đó) với `after` (bản mới từ server) —
+ * dùng hiện preview ngắn trong banner xung đột, cho biết CỤ THỂ nơi khác vừa
+ * đổi gì thay vì chỉ báo chung chung "có cập nhật". */
+function describeItemsDiff(before: OrderItems, after: OrderItems): string[] {
+  const beforeById = new Map(before.map((item) => [item.id, item]));
+  const afterIds = new Set(after.map((item) => item.id));
+  const lines: string[] = [];
+
+  for (const item of after) {
+    const prev = beforeById.get(item.id);
+    if (!prev) {
+      lines.push(`+ ${item.itemName} ×${item.quantity}`);
+    } else if (prev.quantity !== item.quantity) {
+      lines.push(`${item.itemName}: ${prev.quantity} → ${item.quantity}`);
+    }
+  }
+  for (const item of before) {
+    if (!afterIds.has(item.id)) {
+      lines.push(`− ${item.itemName}`);
+    }
+  }
+  return lines;
+}
+
 const PAYMENT_METHODS: { value: "cash" | "transfer"; label: string }[] = [
   { value: "cash", label: PAYMENT_METHOD_LABEL.cash! },
   { value: "transfer", label: PAYMENT_METHOD_LABEL.transfer! },
@@ -74,8 +98,13 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
   // thao tác đang dở — chỉ cập nhật syncedItems để không lặp cảnh báo, và
   // bật banner để người dùng tự chọn tải lại bản mới nhất.
   const [hasConflict, setHasConflict] = useState(false);
+  const [conflictDiff, setConflictDiff] = useState<string[]>([]);
   if (!itemsEqual(order.items, syncedItems)) {
     if (!itemsEqual(localItems, syncedItems)) {
+      // Tính diff TRƯỚC khi ghi đè syncedItems — syncedItems ở đây vẫn còn
+      // đang là bản CŨ (setSyncedItems bên dưới chỉ có hiệu lực ở lần render
+      // sau), đúng lúc để so với bản mới order.items.
+      setConflictDiff(describeItemsDiff(syncedItems, order.items));
       setSyncedItems(order.items);
       setHasConflict(true);
     } else {
@@ -88,12 +117,14 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
   const handleReloadFromServer = () => {
     setLocalItems(order.items);
     setHasConflict(false);
+    setConflictDiff([]);
   };
 
   const updateItemsMutation = api.order.updateItems.useMutation({
     onSuccess: (data) => {
       showPrintResultToast(data.printResult, { label: "phiếu bếp", silentOnSuccess: true });
       setHasConflict(false);
+      setConflictDiff([]);
       // Đánh dấu NGAY những gì mình vừa lưu là bản đã đồng bộ — nếu không,
       // lúc invalidate() bên dưới refetch xong sẽ mang về đúng order.items
       // mới (khớp với localItems vừa lưu) nhưng so với syncedItems CŨ (từ
@@ -187,24 +218,32 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
   return (
     <Flex direction="column" flex={1} minH={0}>
       {hasConflict && (
-        <Flex
+        <Box
           flexShrink={0}
-          align="center"
-          justify="space-between"
-          gap={2}
           bg="orange.subtle"
           borderBottomWidth="1px"
           borderColor="border"
           px={{ base: 2, lg: 3 }}
           py={2}
         >
-          <Text fontSize="xs" color="orange.fg">
-            Đơn vừa được cập nhật ở nơi khác — tải lại trước khi lưu.
-          </Text>
-          <Button size="xs" variant="outline" flexShrink={0} onClick={handleReloadFromServer}>
-            Tải lại
-          </Button>
-        </Flex>
+          <Flex align="center" justify="space-between" gap={2}>
+            <Text fontSize="xs" color="orange.fg">
+              Đơn vừa được cập nhật ở nơi khác — tải lại trước khi lưu.
+            </Text>
+            <Button size="xs" variant="outline" flexShrink={0} onClick={handleReloadFromServer}>
+              Tải lại
+            </Button>
+          </Flex>
+          {conflictDiff.length > 0 && (
+            <Stack gap={0} mt={1}>
+              {conflictDiff.map((line, i) => (
+                <Text key={i} fontSize="2xs" color="orange.fg">
+                  {line}
+                </Text>
+              ))}
+            </Stack>
+          )}
+        </Box>
       )}
 
       <Box flex={1} overflowY="auto" p={{ base: 2, lg: 3 }}>
