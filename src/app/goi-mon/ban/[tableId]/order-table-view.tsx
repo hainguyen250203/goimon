@@ -248,7 +248,7 @@ export function OrderTableView({ tableId }: { tableId: number }) {
         </Box>
         {order && (
           <Box display={tab === "submitted" ? "flex" : "none"} flexDirection="column" flex={1} minH={0}>
-            <SubmittedOrderPanel tableId={tableId} order={order} />
+            <SubmittedOrderPanel tableId={tableId} areaId={table?.areaId} order={order} />
           </Box>
         )}
       </Box>

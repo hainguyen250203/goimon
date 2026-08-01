@@ -73,7 +73,15 @@ const PAYMENT_METHODS: { value: "cash" | "transfer"; label: string }[] = [
   { value: "transfer", label: PAYMENT_METHOD_LABEL.transfer! },
 ];
 
-export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order: Order }) {
+export function SubmittedOrderPanel({
+  tableId,
+  areaId,
+  order,
+}: {
+  tableId: number;
+  areaId?: number;
+  order: Order;
+}) {
   const router = useRouter();
   const utils = api.useUtils();
 
@@ -190,10 +198,14 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
     try {
       await confirmPayment.mutateAsync({ orderId: order.id, paymentMethod });
       setPaymentOpen(false);
-      // Ở lại ngay tại bàn thay vì điều hướng về sơ đồ tầng — order vừa "paid"
-      // nên getTableOrder trả về null, OrderTableView tự chuyển tab về "Chọn
-      // món" (xem useEffect ở đó), không cần push route gây giật màn hình.
-      invalidate();
+      // Xác nhận thanh toán xong quay về màn chọn bàn (đúng khu vực của bàn
+      // vừa thanh toán) thay vì ở lại — theo yêu cầu người dùng, nhân viên
+      // xong đơn này là chuyển sang phục vụ bàn khác ngay, không cần dừng lại
+      // ở đây. Chỉ cần invalidate listTablesForOrdering để trang đích thấy
+      // đúng bàn vừa trống — getTableOrder của bàn này không cần invalidate
+      // vì panel sắp unmount theo route mới.
+      void utils.order.listTablesForOrdering.invalidate();
+      router.push(areaId !== undefined ? `/goi-mon?khuvuc=${areaId}` : "/goi-mon");
     } catch (error) {
       toaster.create({
         title: "Không thể xác nhận thanh toán",
