@@ -4,6 +4,8 @@ export type ListMenuItemsParams = {
   page: number;
   pageSize: number;
   categoryId?: number;
+  /** Tìm theo tên món, không dấu (server-side unaccent). */
+  search?: string;
 };
 
 export type ListMenuItemsResult = {

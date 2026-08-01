@@ -1,4 +1,4 @@
-import { asc, count, eq, inArray } from "drizzle-orm";
+import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 
 import { isForeignKeyViolation } from "~/lib/db-errors";
 import { db } from "~/server/db";
@@ -73,9 +73,18 @@ export const menuItemDrizzleRepository: MenuItemRepository = {
     page,
     pageSize,
     categoryId,
+    search,
   }: ListMenuItemsParams): Promise<ListMenuItemsResult> {
     const offset = (page - 1) * pageSize;
-    const where = categoryId ? eq(menuItem.categoryId, categoryId) : undefined;
+    const conditions = [];
+    if (categoryId) conditions.push(eq(menuItem.categoryId, categoryId));
+    const trimmedSearch = search?.trim();
+    if (trimmedSearch) {
+      // Tìm không dấu — cần extension unaccent (npm run db:extensions), xem
+      // pattern tương tự ở order.drizzle-repository.ts.
+      conditions.push(sql`unaccent(${menuItem.name}) ilike unaccent(${`%${trimmedSearch}%`})`);
+    }
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
 
     const [rows, totalRows] = await Promise.all([
       db

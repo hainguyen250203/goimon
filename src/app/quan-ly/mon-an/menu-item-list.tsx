@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "nextjs-toploader/app";
 import { keepPreviousData } from "@tanstack/react-query";
-import { Button, Stack } from "@chakra-ui/react";
+import { Button, Input, Stack } from "@chakra-ui/react";
 import { Plus, Settings } from "lucide-react";
 
 import {
@@ -21,7 +21,6 @@ import type { MenuItem } from "~/modules/menu/domain/menu-item.entity";
 import { MenuItemFormDialog } from "./menu-item-form-dialog";
 import { MenuItemRowActions } from "./menu-item-row-actions";
 
-const PAGE_SIZE = 20;
 const ALL_CATEGORIES = "all";
 
 function formatVnd(amount: number) {
@@ -30,15 +29,19 @@ function formatVnd(amount: number) {
 
 export function MenuItemList({
   page,
+  pageSize,
   categoryId,
+  search,
 }: {
   page: number;
+  pageSize: number;
   categoryId?: number;
+  search?: string;
 }) {
   const router = useRouter();
   const [categories] = api.menu.listCategories.useSuspenseQuery();
   const { data, isFetching } = api.menu.list.useQuery(
-    { page, pageSize: PAGE_SIZE, categoryId },
+    { page, pageSize, categoryId, search },
     // Giữ data trang cũ hiển thị trong lúc fetch trang mới — tránh nháy
     // skeleton/trắng màn hình khi đổi trang hoặc đổi filter. Đã prefetch
     // + hydrate ở Server Component nên lần render đầu luôn có sẵn data.
@@ -129,15 +132,42 @@ export function MenuItemList({
     },
   ];
 
-  const buildHref = (params: { page?: number; categoryId?: number }) => {
-    const search = new URLSearchParams();
+  const buildHref = (params: {
+    page?: number;
+    pageSize?: number;
+    categoryId?: number;
+    search?: string;
+  }) => {
+    const searchParams = new URLSearchParams();
     // Dùng "in" thay vì "??" — phải phân biệt được "không truyền categoryId"
     // (giữ filter hiện tại) với "truyền categoryId: undefined" (xoá filter).
     const nextCategoryId = "categoryId" in params ? params.categoryId : categoryId;
-    if (nextCategoryId) search.set("categoryId", String(nextCategoryId));
-    search.set("page", String(params.page ?? page));
-    return `/quan-ly/mon-an?${search.toString()}`;
+    const nextSearch = "search" in params ? params.search : search;
+    if (nextCategoryId) searchParams.set("categoryId", String(nextCategoryId));
+    if (nextSearch) searchParams.set("search", nextSearch);
+    searchParams.set("pageSize", String(params.pageSize ?? pageSize));
+    searchParams.set("page", String(params.page ?? page));
+    return `/quan-ly/mon-an?${searchParams.toString()}`;
   };
+
+  // Gõ xong đợi rồi mới điều hướng (tránh push URL mỗi ký tự) — cùng pattern
+  // với ô "Số Ca" ở order-list.tsx.
+  const [searchInput, setSearchInput] = useState(search ?? "");
+
+  useEffect(() => {
+    setSearchInput(search ?? "");
+  }, [search]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const trimmed = searchInput.trim();
+      const nextSearch = trimmed || undefined;
+      if (nextSearch !== search) {
+        router.push(buildHref({ page: 1, search: nextSearch }));
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   return (
     <Stack gap={4}>
@@ -160,6 +190,13 @@ export function MenuItemList({
           </>
         }
       >
+        <Input
+          size="sm"
+          width="14rem"
+          placeholder="Tìm món ăn..."
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+        />
         <FilterSelect
           width="14rem"
           placeholder="Danh mục"
@@ -186,12 +223,7 @@ export function MenuItemList({
         isLoading={isFetching}
         emptyMessage="Chưa có món ăn nào."
       />
-      <ListViewPagination
-        page={page}
-        pageSize={PAGE_SIZE}
-        total={total}
-        buildHref={(p) => buildHref({ page: p })}
-      />
+      <ListViewPagination page={page} pageSize={pageSize} total={total} buildHref={buildHref} />
 
       <MenuItemFormDialog
         open={dialogOpen}

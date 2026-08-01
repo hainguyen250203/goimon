@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
 import { managerProcedure, userProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "~/lib/pagination";
 import { listCategoryOptions } from "./application/list-category-options.usecase";
 import { listMenuItems } from "./application/list-menu-items.usecase";
 import { listForOrdering } from "./application/list-for-ordering.usecase";
@@ -38,8 +39,9 @@ export const menuRouter = createTRPCRouter({
     .input(
       z.object({
         page: z.number().int().min(1).default(1),
-        pageSize: z.number().int().min(1).max(100).default(20),
+        pageSize: z.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
         categoryId: z.number().int().positive().optional(),
+        search: z.string().optional(),
       }),
     )
     .query(({ input }) => listMenuItems(menuItemDrizzleRepository, input)),
