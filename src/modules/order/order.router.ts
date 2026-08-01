@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
-import { adminProcedure, userProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { adminProcedure, superadminProcedure, userProcedure, createTRPCRouter } from "~/server/api/trpc";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "~/lib/pagination";
 import { logActivity } from "~/modules/activity-log/log-activity";
 import { menuItemDrizzleRepository } from "~/modules/menu/infrastructure/menu-item.drizzle-repository";
@@ -172,11 +172,10 @@ export const orderRouter = createTRPCRouter({
       return listOrders(orderDrizzleRepository, { ...input, shiftId, createdBy });
     }),
 
-  // Xoá mềm — admin trở lên xoá được (bất kỳ trạng thái order nào), nhưng
-  // KHÔNG tự xem lại được (chỉ superadmin xem qua filter "deleted" ở `list`
-  // trên). Ghi vào activity_logs (khác order_events nội bộ) để superadmin
-  // giám sát được ai đã xoá đơn nào.
-  delete: adminProcedure
+  // Xoá mềm — chỉ superadmin xoá được (bất kỳ trạng thái order nào), cũng
+  // chỉ superadmin xem lại được qua filter "deleted" ở `list` trên. Ghi vào
+  // activity_logs (khác order_events nội bộ) làm audit trail thông thường.
+  delete: superadminProcedure
     .input(z.object({ orderId: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       await deleteOrder(orderDrizzleRepository, { orderId: input.orderId });
@@ -470,7 +469,8 @@ export const orderRouter = createTRPCRouter({
 
   // Chuyển đơn đang phục vụ sang bàn khác (khách đổi bàn) — chỉ chuyển được
   // tới bàn đang trống, dialog UI (table-switcher-dialog.tsx) chỉ cho chọn
-  // bàn trống nhưng vẫn phải chặn lại ở đây phòng gọi thẳng API.
+  // bàn trống nhưng vẫn phải chặn lại ở đây phòng gọi thẳng API. Không in
+  // phiếu bếp — chỉ đổi bàn phục vụ, món không đổi gì nên bếp không cần biết.
   moveTable: userProcedure
     .input(
       z.object({
@@ -482,9 +482,8 @@ export const orderRouter = createTRPCRouter({
       await requireOpenShift();
       const existingOrder = await orderDrizzleRepository.findById(input.orderId);
       if (!existingOrder) throw new TRPCError({ code: "NOT_FOUND", message: "Không tìm thấy đơn hàng." });
-      await requireKitchenPrinterFor(existingOrder.items.map((i) => i.menuItemId), "chuyển bàn");
       try {
-        const { order, fromTable, toTable } = await moveOrderTable(
+        const { order } = await moveOrderTable(
           orderDrizzleRepository,
           restaurantTableDrizzleRepository,
           {
@@ -493,16 +492,7 @@ export const orderRouter = createTRPCRouter({
             actorId: ctx.session.user.id,
           },
         );
-        const orderDetail = order.toDetail();
-        const printResult = await printKitchenTicketIfAny(await filterPrintableToKitchen(orderDetail.items), {
-          title: "PHIẾU CHUYỂN BÀN",
-          orderId: orderDetail.id,
-          tableName: toTable.name,
-          staffName: ctx.session.user.name,
-          createdAt: new Date(),
-          transferInfo: `${fromTable ? fromTable.name : "?"} -> ${toTable.name}`,
-        });
-        return { ...orderDetail, printResult };
+        return order.toDetail();
       } catch (error) {
         mapOrderDomainError(error);
       }
@@ -511,7 +501,8 @@ export const orderRouter = createTRPCRouter({
   // Chuyển 1 phần món (có thể chỉ 1 phần số lượng) từ đơn bàn này sang
   // order_id của bàn khác — gộp vào đơn đang mở sẵn ở bàn đích hoặc tự mở đơn
   // mới nếu bàn đích đang trống. Khác moveTable (chuyển NGUYÊN đơn sang bàn
-  // trống) — đơn nguồn ở đây vẫn tiếp tục tồn tại nếu còn món.
+  // trống) — đơn nguồn ở đây vẫn tiếp tục tồn tại nếu còn món. Không in phiếu
+  // bếp — món đã được bếp chuẩn bị rồi, chỉ đổi bàn phục vụ.
   transferItems: userProcedure
     .input(
       z.object({
@@ -531,13 +522,8 @@ export const orderRouter = createTRPCRouter({
       const shiftId = await requireOpenShift();
       const sourceOrder = await orderDrizzleRepository.findById(input.sourceOrderId);
       if (!sourceOrder) throw new TRPCError({ code: "NOT_FOUND", message: "Không tìm thấy đơn hàng." });
-      const transferItemIds = new Set(input.items.map((i) => i.itemId));
-      const affectedMenuItemIds = sourceOrder.items
-        .filter((item) => item.id !== null && transferItemIds.has(item.id))
-        .map((item) => item.menuItemId);
-      await requireKitchenPrinterFor(affectedMenuItemIds, "chuyển món");
       try {
-        const { source, target, transferredItems, sourceTableName, targetTableName } = await transferOrderItems(
+        const { source, target } = await transferOrderItems(
           orderDrizzleRepository,
           restaurantTableDrizzleRepository,
           {
@@ -548,17 +534,7 @@ export const orderRouter = createTRPCRouter({
             shiftId,
           },
         );
-        const targetDetail = target.toDetail();
-        const targetTable = await restaurantTableDrizzleRepository.findById(input.targetTableId);
-        const printResult = await printKitchenTicketIfAny(await filterPrintableToKitchen(transferredItems), {
-          title: "PHIẾU CHUYỂN MÓN",
-          orderId: targetDetail.id,
-          tableName: targetTable.name,
-          staffName: ctx.session.user.name,
-          createdAt: new Date(),
-          transferInfo: `${sourceTableName} -> ${targetTableName}`,
-        });
-        return { source: source?.toDetail() ?? null, target: targetDetail, printResult };
+        return { source: source?.toDetail() ?? null, target: target.toDetail() };
       } catch (error) {
         mapOrderDomainError(error);
       }

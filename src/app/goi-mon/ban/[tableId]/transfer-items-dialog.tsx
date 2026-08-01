@@ -18,7 +18,6 @@ import type { RouterOutputs } from "~/trpc/react";
 import { formatVnd } from "~/lib/format-order";
 import { thinScrollbar } from "~/lib/scrollbar";
 import { TablePickerGrid } from "./table-picker-grid";
-import { showPrintResultToast } from "./print-result-toast";
 
 type OrderDetail = NonNullable<RouterOutputs["order"]["getTableOrder"]>;
 
@@ -50,8 +49,7 @@ export function TransferItemsDialog({
   };
 
   const transferItems = api.order.transferItems.useMutation({
-    onSuccess: async (data, variables) => {
-      showPrintResultToast(data.printResult, { label: "phiếu bếp", silentOnSuccess: true });
+    onSuccess: async (_data, variables) => {
       resetAndClose();
       void utils.order.listTablesForOrdering.invalidate();
       void utils.order.getTableOrder.invalidate({ tableId: variables.targetTableId });

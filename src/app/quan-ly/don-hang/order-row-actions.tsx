@@ -30,7 +30,7 @@ export function OrderRowActions({
   canDelete,
 }: {
   row: OrderListItem;
-  /** admin trở lên xoá được (bất kỳ trạng thái order nào) — chặn thật ở
+  /** Chỉ superadmin xoá được (bất kỳ trạng thái order nào) — chặn thật ở
    * order.router.ts, đây chỉ là ẩn/hiện nút cho đúng UX. */
   canDelete: boolean;
 }) {

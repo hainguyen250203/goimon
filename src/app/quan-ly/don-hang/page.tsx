@@ -4,7 +4,6 @@ import { Skeleton } from "~/components/ui/skeleton";
 
 import { api, HydrateClient } from "~/trpc/server";
 import { getSession } from "~/server/better-auth/server";
-import { hasMinRole } from "~/server/better-auth/role-rank";
 import { parsePageSize } from "~/lib/pagination";
 import type { OrderStatus } from "~/modules/order/domain/order-list-item.entity";
 import { OrderList } from "./order-list";
@@ -18,7 +17,7 @@ export default async function DonHangPage({
 }) {
   const session = await getSession();
   const canViewDeleted = session?.user.role === "superadmin";
-  const canDelete = hasMinRole(session?.user.role, "admin");
+  const canDelete = session?.user.role === "superadmin";
 
   const {
     page: pageParam,
