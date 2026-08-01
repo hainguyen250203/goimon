@@ -6,6 +6,7 @@ import type {
 } from "../domain/shift.repository";
 
 export type ShiftListItemWithRevenue = ShiftListItem & {
+  grossRevenue: number;
   totalRevenue: number;
   discountAmount: number;
   paidOrderCount: number;
@@ -38,6 +39,7 @@ export async function listShifts(
       const revenue = revenueByShiftId.get(item.id);
       return {
         ...item,
+        grossRevenue: revenue?.grossRevenue ?? 0,
         totalRevenue: revenue?.totalRevenue ?? 0,
         discountAmount: revenue?.discountAmount ?? 0,
         paidOrderCount: revenue?.paidOrderCount ?? 0,

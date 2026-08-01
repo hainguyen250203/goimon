@@ -61,6 +61,12 @@ const columns: ListViewColumn<ShiftListItemWithRevenue>[] = [
     cell: (row) => (row.endTime ? formatDateTime(row.endTime) : "—"),
   },
   {
+    key: "grossRevenue",
+    header: "Doanh thu",
+    cell: (row) => formatVnd(row.grossRevenue),
+    textAlign: "right",
+  },
+  {
     key: "discountAmount",
     header: "Khuyến mãi",
     cell: (row) => formatVnd(row.discountAmount),
