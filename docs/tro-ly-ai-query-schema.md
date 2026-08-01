@@ -112,6 +112,31 @@ thức `SUM(...)`/`COUNT(...)` khi ORDER BY — xem `resolveSortTarget()` trong
 }
 ```
 
+### Ví dụ 4 — join BẮC CẦU qua nhiều bảng + lọc theo danh mục + tổng hợp
+Được phép join tối đa 3 bảng NỐI TIẾP nhau — mỗi lượt join, `left` có thể trỏ vào bảng
+gốc HOẶC bất kỳ bảng nào đã join ở lượt TRƯỚC ĐÓ (không bắt buộc join trực tiếp với
+`table` gốc), miễn đúng khoá ngoại thật giữa 2 bảng đó. Ví dụ "các món thuộc danh mục X
+đã gọi trong 1 ca" cần đi từ `order_items` -> `orders` (biết thuộc ca nào) và
+`order_items` -> `menu_items` -> `categories` (biết thuộc danh mục nào):
+```json
+{
+  "purpose": "Tổng số lượng từng món thuộc 1 danh mục đã gọi trong ca gần nhất",
+  "table": "order_items",
+  "columns": ["order_items.itemName"],
+  "aggregate": [{ "fn": "sum", "column": "order_items.quantity", "alias": "total_qty" }],
+  "join": [
+    { "table": "orders", "left": "order_items.orderId", "right": "orders.id", "type": "inner" },
+    { "table": "menu_items", "left": "order_items.menuItemId", "right": "menu_items.id", "type": "inner" },
+    { "table": "categories", "left": "menu_items.categoryId", "right": "categories.id", "type": "inner" }
+  ],
+  "filter": [
+    { "column": "orders.shiftId", "operator": "=", "value": 42 },
+    { "column": "categories.name", "operator": "LIKE", "value": "Nước" }
+  ],
+  "groupBy": ["order_items.itemName"]
+}
+```
+
 ## 5. Lỗi thường gặp & cách tránh
 
 | Lỗi | Nguyên nhân | Cách tránh |
@@ -122,3 +147,4 @@ thức `SUM(...)`/`COUNT(...)` khi ORDER BY — xem `resolveSortTarget()` trong
 | Lỗi Postgres kiểu ép kiểu ngày giờ | Trước đây do gửi chuỗi ngày cho cột timestamp mà không convert — **đã fix** ở `coerceValue()` trong `run-structured-query.ts`, tự chuyển string hợp lệ sang `Date`. | Không cần làm gì thêm — nếu vẫn gặp, kiểm tra định dạng chuỗi ngày có hợp lệ (`YYYY-MM-DD` hoặc ISO) không. |
 | Model dùng sai case cho cột enum (vd `"OPEN"` thay vì `"open"`) | Trước đây schema context không liệt kê giá trị enum hợp lệ — **đã fix**, mỗi cột enum giờ hiện kèm `giá trị hợp lệ: a/b/c`. | Không cần làm gì thêm. |
 | Lọc/loại trừ theo tên danh mục (vd "bia", "nước giải khát") không khớp dù danh mục thật sự tồn tại (tên thật: "Bia & Nước Giải Khát") | Hai nguyên nhân cộng lại: (1) `categories.name` là cột text tự do, schema context (chỉ liệt kê giá trị cột enum) không cho model biết tên thật; (2) toán tử `LIKE` trước đây map thẳng sang SQL `LIKE` — phân biệt hoa/thường và không tự thêm `%`, nên hoá thành so khớp CHÍNH XÁC, model đoán `"bia"` không bao giờ khớp `"Bia & Nước Giải Khát"`. **Đã fix cả 2**: `buildCategoryContext()` (`system-prompt.ts`) liệt kê tên danh mục thật vào system prompt mỗi lượt chat (giống cách `buildCurrentTimeContext()` nối thêm phần động); `LIKE` đổi sang `ilike()` + tự bọc `%...%`. | Không cần làm gì thêm — nếu vẫn gặp với cột text tự do khác, kiểm tra model có đang dùng `"="` thay vì `"LIKE"` không. |
+| `Không có khoá ngoại nào liên kết "order_items" và "categories"...` dù join qua bảng trung gian (`order_items` -> `menu_items` -> `categories`) đúng cú pháp | Bug thật trong `runStructuredQuery()`: khi kiểm tra khoá ngoại cho MỖI lượt join, code cũ luôn dùng `getForeignKeyEdges(base.name)` — tức luôn xét khoá ngoại của bảng GỐC (`table` truyền vào ban đầu), bất kể `left` của lượt join đó thực ra thuộc 1 bảng đã join TRƯỚC ĐÓ (vd `menu_items`) chứ không phải bảng gốc (`order_items`). Join bắc cầu qua ≥2 bảng vì vậy luôn bị chặn nhầm ở lượt join thứ 2 trở đi, dù khoá ngoại đó có thật. **Đã fix**: đổi sang `getForeignKeyEdges(left.tableName)` — luôn xét đúng bảng mà cột `left` thực sự thuộc về (`resolveJoinSide()` đã trả sẵn `tableName`), không hardcode `base.name` nữa. Xem Ví dụ 4. | Không cần làm gì thêm — join bắc cầu tối đa 3 bảng nối tiếp giờ hoạt động đúng, kể cả khi bảng cuối chỉ có khoá ngoại với 1 bảng trung gian, không phải bảng gốc. |

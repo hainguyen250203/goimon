@@ -75,4 +75,29 @@ Muốn sắp xếp theo kết quả 1 hàm tổng hợp (không phải cột th�
   "limit": 20
 }
 \`\`\`
+
+## Ví dụ 4 — join BẮC CẦU qua nhiều bảng + lọc theo danh mục + tổng hợp
+Được phép join tối đa 3 bảng NỐI TIẾP nhau (không nhất thiết bảng nào cũng phải nối
+trực tiếp với "table" gốc) — mỗi lượt join, "left" có thể trỏ vào bảng gốc HOẶC bất
+kỳ bảng nào đã join ở lượt TRƯỚC ĐÓ, miễn đúng khoá ngoại thật giữa 2 bảng đó. Ví dụ
+"các món thuộc danh mục X đã gọi trong 1 ca" cần đi từ order_items -> orders (biết
+thuộc ca nào) và order_items -> menu_items -> categories (biết thuộc danh mục nào):
+\`\`\`json
+{
+  "purpose": "Tổng số lượng từng món thuộc 1 danh mục đã gọi trong ca gần nhất",
+  "table": "order_items",
+  "columns": ["order_items.itemName"],
+  "aggregate": [{ "fn": "sum", "column": "order_items.quantity", "alias": "total_qty" }],
+  "join": [
+    { "table": "orders", "left": "order_items.orderId", "right": "orders.id", "type": "inner" },
+    { "table": "menu_items", "left": "order_items.menuItemId", "right": "menu_items.id", "type": "inner" },
+    { "table": "categories", "left": "menu_items.categoryId", "right": "categories.id", "type": "inner" }
+  ],
+  "filter": [
+    { "column": "orders.shiftId", "operator": "=", "value": 42 },
+    { "column": "categories.name", "operator": "LIKE", "value": "Nước" }
+  ],
+  "groupBy": ["order_items.itemName"]
+}
+\`\`\`
 `;

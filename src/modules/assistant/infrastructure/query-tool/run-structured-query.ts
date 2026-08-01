@@ -280,10 +280,17 @@ export async function runStructuredQuery(
     }
 
     // Chỉ cho phép join nếu có khoá ngoại THẬT nối 2 bảng — không cho join tuỳ tiện.
-    const edgesFromBase = getForeignKeyEdges(base.name);
+    // Phải xét khoá ngoại từ đúng bảng chứa "left" (base HOẶC 1 bảng đã join
+    // trước đó trong chuỗi) — không phải luôn luôn `base` cố định. Trước đây
+    // hardcode `base.name` nên join bắc cầu qua bảng trung gian (vd order_items
+    // -> menu_items -> categories, cột "left" của lượt join thứ 2 thuộc
+    // menu_items chứ không phải order_items) bị chặn NHẦM là "không có khoá
+    // ngoại", dù menu_items -> categories là khoá ngoại thật — model buộc phải
+    // vòng vo dò tìm cách khác thay vì join 1 lượt đúng như dự định.
+    const edgesFromLeft = getForeignKeyEdges(left.tableName);
     const edgesFromJoined = getForeignKeyEdges(joinCtx.name);
     const isRealFk =
-      edgesFromBase.some(
+      edgesFromLeft.some(
         (e) =>
           e.toTable === joinCtx.name &&
           ((e.fromColumn === left.columnKey && e.toColumn === rightColumnKey) ||
@@ -291,13 +298,13 @@ export async function runStructuredQuery(
       ) ||
       edgesFromJoined.some(
         (e) =>
-          e.toTable === base.name &&
+          e.toTable === left.tableName &&
           ((e.fromColumn === rightColumnKey && e.toColumn === left.columnKey) ||
             (e.fromColumn === left.columnKey && e.toColumn === rightColumnKey)),
       );
     if (!isRealFk) {
       throw new AssistantQueryError(
-        `Không có khoá ngoại nào liên kết "${base.name}" và "${joinCtx.name}" qua các cột đã cho — không thể join.`,
+        `Không có khoá ngoại nào liên kết "${left.tableName}" và "${joinCtx.name}" qua các cột đã cho — không thể join.`,
       );
     }
 
@@ -367,5 +374,15 @@ export async function runStructuredQuery(
     serialized = JSON.stringify(resultRows);
   }
 
-  return { rows: resultRows, rowCount: resultRows.length, truncated };
+  // Cột timestamp (vd shift.startTime) trả về là Date object thật từ Drizzle
+  // — không phải JSON value hợp lệ cho tool-result (AI SDK validate content
+  // theo schema string/number/boolean/null/record/array khi build lại
+  // ModelMessage, Date object thô làm convertToModelMessages throw "expected
+  // string, received Date" ngay khi lượt chat SAU cần đọc lại lịch sử này).
+  // Parse lại từ `serialized` đã tính sẵn ở trên (đo độ dài) — JSON.stringify
+  // tự gọi Date.prototype.toJSON() nên Date tự thành chuỗi ISO, không cần
+  // tính riêng thêm 1 lần.
+  const jsonSafeRows = JSON.parse(serialized) as Record<string, unknown>[];
+
+  return { rows: jsonSafeRows, rowCount: jsonSafeRows.length, truncated };
 }
