@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "nextjs-toploader/app";
-import { Button, Card, Input, Stack, Text } from "@chakra-ui/react";
+import { Button, Card, IconButton, Input, InputGroup, Stack, Text } from "@chakra-ui/react";
+import { Eye, EyeOff } from "lucide-react";
 
 import { Field } from "~/components/ui/field";
 import { NumericInput } from "~/components/ui/numeric-input";
@@ -12,6 +13,7 @@ export function LoginForm() {
   const router = useRouter();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -57,14 +59,27 @@ export function LoginForm() {
               />
             </Field>
             <Field label="Mật khẩu">
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <InputGroup
+                endElement={
+                  <IconButton
+                    aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                    variant="ghost"
+                    size="xs"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                  >
+                    {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </IconButton>
+                }
+              >
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </InputGroup>
             </Field>
             {error ? (
               <Text fontSize="sm" color="fg.error">
