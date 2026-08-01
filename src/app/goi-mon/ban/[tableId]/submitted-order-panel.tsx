@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "nextjs-toploader/app";
 import { Box, Button, Flex, IconButton, Stack, Text } from "@chakra-ui/react";
-import { X } from "lucide-react";
+import { RotateCcw, Trash2, X } from "lucide-react";
 
 import {
   DialogBody,
@@ -369,6 +369,7 @@ export function SubmittedOrderPanel({ tableId, order }: { tableId: number; order
             disabled={isBusy}
             onClick={() => (isDirty ? handleDiscardChanges() : setCancelConfirmOpen(true))}
           >
+            {isDirty ? <RotateCcw size={14} /> : <Trash2 size={14} />}
             {isDirty ? "Huỷ thay đổi" : "Huỷ đơn"}
           </Button>
           <Button
