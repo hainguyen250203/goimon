@@ -72,8 +72,9 @@ const SEED_LAYOUT = [
  * — `auth.api.createUser` không có cách nào nhận thẳng 1 hash có sẵn (luôn tự
  * hash lại chuỗi truyền vào), nên phải tạo user với 1 password ngẫu nhiên
  * (không dùng tới) rồi ghi ĐÈ thẳng cột `accounts.password` bằng Drizzle —
- * tránh hash chồng lần nữa lên 1 giá trị vốn đã là hash. Idempotent: bỏ qua
- * nếu đã tồn tại.
+ * tránh hash chồng lần nữa lên 1 giá trị vốn đã là hash. Idempotent theo SĐT:
+ * user đã tồn tại thì chỉ ghi đè lại mật khẩu (không tạo trùng), user chưa có
+ * thì tạo mới.
  */
 async function upsertSeedUser(seedUser: {
   name: string;
@@ -85,7 +86,11 @@ async function upsertSeedUser(seedUser: {
     where: (u, { eq }) => eq(u.phoneNumber, seedUser.phoneNumber),
   });
   if (existing) {
-    console.log(`  bỏ qua user ${seedUser.name} (đã tồn tại)`);
+    await db
+      .update(account)
+      .set({ password: seedUser.password })
+      .where(and(eq(account.userId, existing.id), eq(account.providerId, "credential")));
+    console.log(`  ghi đè mật khẩu user ${seedUser.name} (đã tồn tại)`);
     return;
   }
 
@@ -120,10 +125,9 @@ async function seedUsers() {
 
 /**
  * Nguồn bổ sung từ `seed-data/user.json` (data export cũ) — merge thêm bên
- * cạnh SEED_USERS ở trên, không thay thế hay đụng tới 2 user đã khai báo
- * cứng. SĐT không hợp lệ bị bỏ qua; SĐT trùng với user đã tồn tại (kể cả
- * trùng với SEED_USERS) được `upsertSeedUser` tự bỏ qua vì idempotent theo
- * SĐT.
+ * cạnh SEED_USERS ở trên. SĐT không hợp lệ bị bỏ qua; SĐT trùng với user đã
+ * tồn tại (kể cả trùng với SEED_USERS) được `upsertSeedUser` ghi đè lại mật
+ * khẩu theo giá trị trong file này, không tạo trùng.
  */
 async function seedUsersFromFile() {
   const filePath = path.join(
