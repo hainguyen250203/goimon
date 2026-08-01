@@ -6,6 +6,10 @@ import { memo, useEffect, useState } from "react";
 
 import { formatVnd } from "~/lib/format-order";
 
+// Chặn gõ nhầm số cực lớn (vd gõ thừa 1 số 0) làm sai lệch tổng tiền — 99 đủ
+// rộng cho mọi tình huống gọi món thực tế.
+const MAX_QUANTITY = 99;
+
 type OrderLineItemCardProps = {
   name: string;
   unitPrice: number;
@@ -69,7 +73,7 @@ export const OrderLineItemCard = memo(function OrderLineItemCard({
       onRemove();
       return;
     }
-    onQuantityChange(parsed);
+    onQuantityChange(Math.min(parsed, MAX_QUANTITY));
   };
 
   return (
@@ -126,6 +130,7 @@ export const OrderLineItemCard = memo(function OrderLineItemCard({
             size="xs"
             type="number"
             min={1}
+            max={MAX_QUANTITY}
             textAlign="center"
             w="36px"
             px={1}
@@ -141,7 +146,7 @@ export const OrderLineItemCard = memo(function OrderLineItemCard({
             size="xs"
             variant="outline"
             aria-label="Tăng số lượng"
-            disabled={disabled}
+            disabled={disabled || quantity >= MAX_QUANTITY}
             onClick={() => onQuantityChange(quantity + 1)}
           >
             <Plus size={13} />
