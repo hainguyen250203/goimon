@@ -25,7 +25,7 @@ export const activityLog = pgTable(
     // Không FK — polymorphic, id của các entity khác kiểu nhau (text/integer).
     entityId: varchar("entity_id", { length: 50 }).notNull(),
     metadata: jsonb("metadata"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index("activity_logs_entity_idx").on(

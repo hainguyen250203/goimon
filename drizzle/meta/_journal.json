@@ -57,6 +57,13 @@
       "when": 1785571137756,
       "tag": "0007_gigantic_lightspeed",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1785573983976,
+      "tag": "0008_crazy_forgotten_one",
+      "breakpoints": true
     }
   ]
 }

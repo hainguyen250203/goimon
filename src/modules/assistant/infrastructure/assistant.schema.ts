@@ -25,13 +25,13 @@ export const assistantSession = pgTable(
       .notNull()
       .references(() => user.id),
     title: varchar("title", { length: 200 }),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at")
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date()),
     // Xoá mềm: giữ lại phiên (và tin nhắn) để audit ngay cả khi người dùng "xoá" trên UI.
-    deletedAt: timestamp("deleted_at"),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
     index("assistant_sessions_user_id_updated_at_idx").on(t.userId, t.updatedAt),
@@ -50,7 +50,7 @@ export const assistantMessage = pgTable(
     contentJson: jsonb("content_json").notNull(),
     usageJson: jsonb("usage_json"),
     model: varchar("model", { length: 60 }),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index("assistant_messages_session_id_created_at_idx").on(

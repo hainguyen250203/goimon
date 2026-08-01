@@ -15,8 +15,8 @@ export const printer = pgTable("printers", {
   // enum Postgres riêng, khớp cách các status khác trong repo đang làm.
   type: varchar("type", { length: 20 }).notNull().default("bill"),
   isActive: boolean("is_active").notNull().default(true),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at")
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),

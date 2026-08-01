@@ -63,13 +63,13 @@ export const order = pgTable(
     promotionName: varchar("promotion_name", { length: 100 }),
     promotionDiscountType: discountTypeEnum("promotion_discount_type"),
     promotionDiscountValue: integer("promotion_discount_value"),
-    printedAt: timestamp("printed_at"),
+    printedAt: timestamp("printed_at", { withTimezone: true }),
     // Chỉ là nhãn ghi lại lúc confirmPayment, không tích hợp cổng thanh toán.
     paymentMethod: paymentMethodEnum("payment_method"),
     paidConfirmedBy: text("paid_confirmed_by").references(() => user.id),
-    paidConfirmedAt: timestamp("paid_confirmed_at"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at")
+    paidConfirmedAt: timestamp("paid_confirmed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date()),
@@ -77,7 +77,7 @@ export const order = pgTable(
     // xoá được). Chỉ admin/superadmin xoá được, chỉ superadmin xem lại được
     // (xem order.router.ts). Không load qua entity vì không có rule nghiệp vụ
     // nào cần validate lúc xoá.
-    deletedAt: timestamp("deleted_at"),
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
   },
   (t) => [
     index("orders_created_by_idx").on(t.createdBy),
@@ -114,8 +114,8 @@ export const orderItem = pgTable(
     unitPrice: integer("unit_price").notNull(),
     quantity: integer("quantity").notNull().default(1),
     note: text("note"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
-    updatedAt: timestamp("updated_at")
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date()),
@@ -141,7 +141,7 @@ export const orderEvent = pgTable(
     // ở event "items_added", dùng để hiển thị nhanh + tìm kiếm không dấu
     // (unaccent) mà không phải parse payload JSON.
     itemsSummary: text("items_summary"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     index("order_events_order_id_created_at_idx").on(

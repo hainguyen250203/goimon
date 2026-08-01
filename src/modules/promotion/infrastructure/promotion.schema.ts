@@ -16,8 +16,8 @@ export const promotion = pgTable("promotions", {
   // percent: 1-100 (%); fixed: số tiền VNĐ cố định.
   discountValue: integer("discount_value").notNull(),
   isActive: boolean("is_active").notNull().default(true),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at")
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow()
     .$onUpdate(() => new Date()),

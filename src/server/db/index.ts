@@ -34,7 +34,10 @@ const globalForDb = globalThis as unknown as {
   conn: postgres.Sql | undefined;
 };
 
-const conn = globalForDb.conn ?? postgres(env.DATABASE_URL);
+// Ép session luôn UTC — mọi cột giờ trong schema là timestamptz (đã tự mang
+// mốc UTC rõ ràng) nên việc này chỉ để không phụ thuộc ngầm định vào múi giờ
+// mặc định của provider DB, tránh lặp lại lỗi lệch giờ giữa các môi trường.
+const conn = globalForDb.conn ?? postgres(env.DATABASE_URL, { connection: { TimeZone: "UTC" } });
 if (env.NODE_ENV !== "production") globalForDb.conn = conn;
 
 export const db = drizzle(conn, { schema });

@@ -14,9 +14,9 @@ export const shift = pgTable(
       .references(() => user.id),
     closedBy: text("closed_by").references(() => user.id),
     status: shiftStatusEnum("status").notNull().default("open"),
-    startTime: timestamp("start_time").notNull().defaultNow(),
-    endTime: timestamp("end_time"),
-    createdAt: timestamp("created_at").notNull().defaultNow(),
+    startTime: timestamp("start_time", { withTimezone: true }).notNull().defaultNow(),
+    endTime: timestamp("end_time", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
     // Chỉ 1 ca được mở tại 1 thời điểm trên toàn nhà hàng.
