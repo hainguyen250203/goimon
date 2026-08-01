@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { keepPreviousData } from "@tanstack/react-query";
 import { Box, Button, Flex, Input, Stack, Text } from "@chakra-ui/react";
 import { Minus, Plus, Search } from "lucide-react";
@@ -13,7 +14,9 @@ import { usePaginationState, useDedupedList } from "../use-paginated-list";
 
 const PAGE_SIZE = 20;
 
-function OrderItemEventCard({ entry }: { entry: OrderItemEventEntry }) {
+// entry chỉ đổi reference khi data thật sự đổi — memo tránh re-render toàn
+// bộ danh sách card mỗi lần gõ ô tìm kiếm.
+const OrderItemEventCard = memo(function OrderItemEventCard({ entry }: { entry: OrderItemEventEntry }) {
   const isRemoved = entry.eventType === "items_removed";
   const accent = isRemoved ? "red" : "green";
 
@@ -57,7 +60,7 @@ function OrderItemEventCard({ entry }: { entry: OrderItemEventEntry }) {
       </Stack>
     </Box>
   );
-}
+});
 
 export function OrderItemEventsList() {
   const { search, page, setPage, searchInput, setSearchInput } = usePaginationState();

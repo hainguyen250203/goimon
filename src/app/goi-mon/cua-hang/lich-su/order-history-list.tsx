@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { keepPreviousData } from "@tanstack/react-query";
 import { Box, Button, Flex, Input, Stack, Text } from "@chakra-ui/react";
 import { Search } from "lucide-react";
@@ -14,7 +15,10 @@ import { usePaginationState, useDedupedList } from "../use-paginated-list";
 
 const PAGE_SIZE = 20;
 
-function OrderHistoryCard({ order }: { order: OrderListItem }) {
+// order chỉ đổi reference khi data thật sự đổi (useDedupedList chỉ setItems
+// khi query trả về data mới) — memo tránh re-render toàn bộ danh sách card
+// mỗi lần gõ ô tìm kiếm (searchInput đổi mỗi keystroke nhưng items thì không).
+const OrderHistoryCard = memo(function OrderHistoryCard({ order }: { order: OrderListItem }) {
   return (
     <Box bg="bg" p={{ base: 3, lg: 4 }} rounded="l3" borderWidth="1px" borderColor="border">
       <Flex justify="space-between" align="start" gap={3}>
@@ -67,7 +71,7 @@ function OrderHistoryCard({ order }: { order: OrderListItem }) {
       </Flex>
     </Box>
   );
-}
+});
 
 export function OrderHistoryList() {
   const { search, page, setPage, searchInput, setSearchInput } = usePaginationState();

@@ -2,26 +2,11 @@
 
 import { Box, Flex, IconButton, Input, Text } from "@chakra-ui/react";
 import { Minus, Plus, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 
 import { formatVnd } from "~/lib/format-order";
 
-/**
- * Card món ăn dùng chung cho tab "Món đang gọi" (ghi chú sửa được, chưa
- * submit) và "Món đã gọi" (ghi chú chỉ đọc, có thể disabled lúc đang lưu) —
- * 2 tab trước đây tự định nghĩa 2 card gần như giống hệt nhau.
- */
-export function OrderLineItemCard({
-  name,
-  unitPrice,
-  quantity,
-  note,
-  editableNote,
-  disabled = false,
-  onQuantityChange,
-  onNoteChange,
-  onRemove,
-}: {
+type OrderLineItemCardProps = {
   name: string;
   unitPrice: number;
   quantity: number;
@@ -31,7 +16,41 @@ export function OrderLineItemCard({
   onQuantityChange: (quantity: number) => void;
   onNoteChange?: (note: string) => void;
   onRemove: () => void;
-}) {
+};
+
+// Callback (onQuantityChange/onNoteChange/onRemove) luôn là arrow function
+// mới tạo mỗi lần cha render (định nghĩa trong .map()) — so sánh mặc định
+// của memo() sẽ thấy "props đổi" ở callback dù dữ liệu món không đổi gì, làm
+// memo mất tác dụng. Chỉ so các field dữ liệu thật, bỏ qua identity của
+// callback — an toàn vì callback luôn gọi đúng logic ứng với món đó dù có
+// đổi reference hay không.
+function arePropsEqual(prev: OrderLineItemCardProps, next: OrderLineItemCardProps): boolean {
+  return (
+    prev.name === next.name &&
+    prev.unitPrice === next.unitPrice &&
+    prev.quantity === next.quantity &&
+    prev.note === next.note &&
+    prev.editableNote === next.editableNote &&
+    prev.disabled === next.disabled
+  );
+}
+
+/**
+ * Card món ăn dùng chung cho tab "Món đang gọi" (ghi chú sửa được, chưa
+ * submit) và "Món đã gọi" (ghi chú chỉ đọc, có thể disabled lúc đang lưu) —
+ * 2 tab trước đây tự định nghĩa 2 card gần như giống hệt nhau.
+ */
+export const OrderLineItemCard = memo(function OrderLineItemCard({
+  name,
+  unitPrice,
+  quantity,
+  note,
+  editableNote,
+  disabled = false,
+  onQuantityChange,
+  onNoteChange,
+  onRemove,
+}: OrderLineItemCardProps) {
   const [quantityInput, setQuantityInput] = useState(String(quantity));
 
   // Đồng bộ lại khi số lượng đổi từ nơi khác (nút +/-) — effect chỉ chạy khi
@@ -134,4 +153,4 @@ export function OrderLineItemCard({
       </Flex>
     </Box>
   );
-}
+}, arePropsEqual);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import { keepPreviousData } from "@tanstack/react-query";
 import { Box, Button, Flex, Stack, Text } from "@chakra-ui/react";
 
@@ -14,8 +14,12 @@ import { useDedupedList } from "../use-paginated-list";
 
 const PAGE_SIZE = 20;
 
-/** Tái dùng describeEvent() của order-timeline.tsx — cùng cách diễn giải icon/màu/nhãn với dialog "Lịch sử đơn", chỉ khác cách trình bày (list nhiều đơn thay vì timeline 1 đơn). */
-function TableTransferEventCard({ entry }: { entry: TableTransferEventEntry }) {
+/** Tái dùng describeEvent() của order-timeline.tsx — cùng cách diễn giải icon/màu/nhãn với dialog "Lịch sử đơn", chỉ khác cách trình bày (list nhiều đơn thay vì timeline 1 đơn). memo vì entry chỉ đổi reference khi data thật sự đổi. */
+const TableTransferEventCard = memo(function TableTransferEventCard({
+  entry,
+}: {
+  entry: TableTransferEventEntry;
+}) {
   const { icon, accent, label, detail } = describeEvent(entry);
 
   return (
@@ -48,7 +52,7 @@ function TableTransferEventCard({ entry }: { entry: TableTransferEventEntry }) {
       )}
     </Box>
   );
-}
+});
 
 /** Không có ô tìm kiếm (khác 2 tab kia) — "table_changed" không có món để tìm theo tên, giữ tab này đơn giản chỉ phân trang. */
 export function TableTransferEventsList() {
