@@ -24,7 +24,6 @@ import type {
 import { TableFormDialog } from "./table-form-dialog";
 import { TableRowActions } from "./table-row-actions";
 
-const PAGE_SIZE = 20;
 const ALL_AREAS = "all";
 const ALL_STATUS = "all";
 
@@ -35,17 +34,19 @@ const STATUS_LABEL: Record<TableStatus, string> = {
 
 export function TableList({
   page,
+  pageSize,
   areaId,
   status,
 }: {
   page: number;
+  pageSize: number;
   areaId?: number;
   status?: TableStatus;
 }) {
   const router = useRouter();
   const [areas] = api.table.listAreas.useSuspenseQuery();
   const { data, isFetching } = api.table.list.useQuery(
-    { page, pageSize: PAGE_SIZE, areaId, status },
+    { page, pageSize, areaId, status },
     // Giữ data trang cũ hiển thị trong lúc fetch trang mới — tránh nháy
     // skeleton/trắng màn hình khi đổi trang hoặc đổi filter.
     { placeholderData: keepPreviousData },
@@ -113,6 +114,7 @@ export function TableList({
 
   const buildHref = (params: {
     page?: number;
+    pageSize?: number;
     areaId?: number;
     status?: TableStatus;
   }) => {
@@ -123,6 +125,7 @@ export function TableList({
     const nextStatus = "status" in params ? params.status : status;
     if (nextAreaId) search.set("areaId", String(nextAreaId));
     if (nextStatus) search.set("status", nextStatus);
+    search.set("pageSize", String(params.pageSize ?? pageSize));
     search.set("page", String(params.page ?? page));
     return `/quan-ly/ban?${search.toString()}`;
   };
@@ -193,12 +196,7 @@ export function TableList({
         isLoading={isFetching}
         emptyMessage="Chưa có bàn nào."
       />
-      <ListViewPagination
-        page={page}
-        pageSize={PAGE_SIZE}
-        total={total}
-        buildHref={(p) => buildHref({ page: p })}
-      />
+      <ListViewPagination page={page} pageSize={pageSize} total={total} buildHref={buildHref} />
 
       <TableFormDialog
         open={dialogOpen}

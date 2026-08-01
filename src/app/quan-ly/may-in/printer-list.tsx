@@ -21,7 +21,6 @@ import { PrinterFormDialog } from "./printer-form-dialog";
 import { PrinterRowActions } from "./printer-row-actions";
 import { PrinterScanDialog } from "./printer-scan-dialog";
 
-const PAGE_SIZE = 20;
 const ALL_STATUS = "all";
 
 function statusToParam(isActive?: boolean) {
@@ -32,14 +31,16 @@ function statusToParam(isActive?: boolean) {
 
 export function PrinterList({
   page,
+  pageSize,
   isActive,
 }: {
   page: number;
+  pageSize: number;
   isActive?: boolean;
 }) {
   const router = useRouter();
   const { data, isFetching } = api.printer.list.useQuery(
-    { page, pageSize: PAGE_SIZE, isActive },
+    { page, pageSize, isActive },
     // Giữ data trang cũ hiển thị trong lúc fetch trang mới — tránh nháy
     // skeleton/trắng màn hình khi đổi trang hoặc đổi filter. Đã prefetch
     // + hydrate ở Server Component nên lần render đầu luôn có sẵn data.
@@ -92,13 +93,14 @@ export function PrinterList({
     },
   ];
 
-  const buildHref = (params: { page?: number; isActive?: boolean }) => {
+  const buildHref = (params: { page?: number; pageSize?: number; isActive?: boolean }) => {
     const search = new URLSearchParams();
     // Dùng "in" thay vì "??" — phải phân biệt được "không truyền isActive"
     // (giữ filter hiện tại) với "truyền isActive: undefined" (xoá filter).
     const nextIsActive = "isActive" in params ? params.isActive : isActive;
     const statusParam = statusToParam(nextIsActive);
     if (statusParam !== ALL_STATUS) search.set("status", statusParam);
+    search.set("pageSize", String(params.pageSize ?? pageSize));
     search.set("page", String(params.page ?? page));
     return `/quan-ly/may-in?${search.toString()}`;
   };
@@ -157,12 +159,7 @@ export function PrinterList({
         isLoading={isFetching}
         emptyMessage="Chưa có máy in nào."
       />
-      <ListViewPagination
-        page={page}
-        pageSize={PAGE_SIZE}
-        total={total}
-        buildHref={(p) => buildHref({ page: p })}
-      />
+      <ListViewPagination page={page} pageSize={pageSize} total={total} buildHref={buildHref} />
 
       <PrinterFormDialog
         open={dialogOpen}

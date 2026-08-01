@@ -5,14 +5,13 @@ import { Skeleton } from "~/components/ui/skeleton";
 
 import { api, HydrateClient } from "~/trpc/server";
 import { getSession } from "~/server/better-auth/server";
+import { parsePageSize } from "~/lib/pagination";
 import { ActivityLogList } from "./activity-log-list";
-
-const PAGE_SIZE = 20;
 
 export default async function NhatKyHoatDongPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; entityType?: string }>;
+  searchParams: Promise<{ page?: string; pageSize?: string; entityType?: string }>;
 }) {
   // /quan-ly/layout.tsx chỉ chặn role "user" — route này CHỈ superadmin (list
   // dùng superadminProcedure), admin không còn xem được nữa (khác các trang
@@ -24,17 +23,18 @@ export default async function NhatKyHoatDongPage({
     redirect("/quan-ly");
   }
 
-  const { page: pageParam, entityType } = await searchParams;
+  const { page: pageParam, pageSize: pageSizeParam, entityType } = await searchParams;
   const page = Math.max(1, Number(pageParam ?? 1) || 1);
+  const pageSize = parsePageSize(pageSizeParam);
 
   // Prefetch trên server — tránh waterfall khi client hydrate.
-  void api.activityLog.list.prefetch({ page, pageSize: PAGE_SIZE, entityType });
+  void api.activityLog.list.prefetch({ page, pageSize, entityType });
 
   return (
     <Box p={{ base: 4, md: 6 }}>
       <HydrateClient>
       <Suspense fallback={<Skeleton h={96} rounded="l3" />}>
-        <ActivityLogList page={page} entityType={entityType} />
+        <ActivityLogList page={page} pageSize={pageSize} entityType={entityType} />
       </Suspense>
       </HydrateClient>
     </Box>

@@ -27,7 +27,6 @@ import {
 } from "~/lib/format-order";
 import { OrderRowActions } from "./order-row-actions";
 
-const PAGE_SIZE = 20;
 const ALL_STATUS = "all";
 const DELETED_STATUS = "deleted";
 
@@ -115,6 +114,7 @@ function buildColumns(canDelete: boolean): ListViewColumn<OrderListItem>[] {
 
 export function OrderList({
   page,
+  pageSize,
   status,
   shiftId,
   deleted,
@@ -122,6 +122,7 @@ export function OrderList({
   canDelete,
 }: {
   page: number;
+  pageSize: number;
   status?: OrderStatus;
   shiftId?: number;
   /** true = đang xem filter "Đã xoá" (page.tsx đã tự kiểm tra canViewDeleted
@@ -133,7 +134,7 @@ export function OrderList({
 }) {
   const router = useRouter();
   const { data, isFetching } = api.order.list.useQuery(
-    { page, pageSize: PAGE_SIZE, status, shiftId, deleted },
+    { page, pageSize, status, shiftId, deleted },
     // Giữ data trang cũ hiển thị trong lúc fetch trang mới — tránh nháy
     // skeleton/trắng màn hình khi đổi trang hoặc đổi filter.
     { placeholderData: keepPreviousData },
@@ -145,12 +146,18 @@ export function OrderList({
   // "statusParam" là giá trị THÔ ghi vào URL — có thể là 1 OrderStatus thật
   // hoặc sentinel "deleted" (page.tsx tự phân biệt lại 2 trường hợp này).
   const currentStatusParam = deleted ? DELETED_STATUS : status;
-  const buildHref = (params: { page?: number; statusParam?: string; shiftId?: number }) => {
+  const buildHref = (params: {
+    page?: number;
+    pageSize?: number;
+    statusParam?: string;
+    shiftId?: number;
+  }) => {
     const search = new URLSearchParams();
     const nextStatus = "statusParam" in params ? params.statusParam : currentStatusParam;
     const nextShiftId = "shiftId" in params ? params.shiftId : shiftId;
     if (nextStatus) search.set("status", nextStatus);
     if (nextShiftId) search.set("shiftId", String(nextShiftId));
+    search.set("pageSize", String(params.pageSize ?? pageSize));
     search.set("page", String(params.page ?? page));
     return `/quan-ly/don-hang?${search.toString()}`;
   };
@@ -212,12 +219,7 @@ export function OrderList({
         isLoading={isFetching}
         emptyMessage="Chưa có đơn hàng nào."
       />
-      <ListViewPagination
-        page={page}
-        pageSize={PAGE_SIZE}
-        total={total}
-        buildHref={(p) => buildHref({ page: p })}
-      />
+      <ListViewPagination page={page} pageSize={pageSize} total={total} buildHref={buildHref} />
     </Stack>
   );
 }

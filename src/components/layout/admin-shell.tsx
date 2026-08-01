@@ -165,7 +165,7 @@ export function AdminShell({
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <Flex h="100dvh" bg="bg">
+    <Flex h="100dvh" bg="bg" overflow="hidden">
       {/* Desktop sidebar */}
       <Box
         display={{ base: "none", md: "flex" }}

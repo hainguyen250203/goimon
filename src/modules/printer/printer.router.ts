@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
 import { managerProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "~/lib/pagination";
 import { listPrinters } from "./application/list-printers.usecase";
 import { createPrinter } from "./application/create-printer.usecase";
 import { updatePrinter } from "./application/update-printer.usecase";
@@ -43,7 +44,7 @@ export const printerRouter = createTRPCRouter({
     .input(
       z.object({
         page: z.number().int().min(1).default(1),
-        pageSize: z.number().int().min(1).max(100).default(20),
+        pageSize: z.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
         isActive: z.boolean().optional(),
       }),
     )

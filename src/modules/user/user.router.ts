@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
 import { adminProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "~/lib/pagination";
 import { listUsers } from "./application/list-users.usecase";
 import { createUser } from "./application/create-user.usecase";
 import { setUserRole } from "./application/set-user-role.usecase";
@@ -27,7 +28,7 @@ export const userRouter = createTRPCRouter({
     .input(
       z.object({
         page: z.number().int().min(1).default(1),
-        pageSize: z.number().int().min(1).max(100).default(20),
+        pageSize: z.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
         role: roleSchema.optional(),
         banned: z.boolean().optional(),
       }),

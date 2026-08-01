@@ -4,10 +4,18 @@
   box-sizing: border-box;
 }
 
+/* height:100% + overflow:hidden bắt buộc phải có ở đây — AdminShell chỉ dựa
+   vào Flex h="100dvh" cho phần tử con của nó, nhưng html/body không tự có
+   giới hạn chiều cao/overflow nào, nên dù <main> bên trong đã overflow-y:auto
+   đúng cách, document (html/body) vẫn cuộn được độc lập song song, kéo theo
+   cả sidebar/header (đã kiểm chứng thực tế: window.scrollTo vẫn dịch chuyển
+   được dù <main> đã tự chứa nội dung tràn của nó). */
 html,
 body {
   margin: 0;
   padding: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 /* NextTopLoader (#nprogress) mặc định không ép position:fixed toàn viewport

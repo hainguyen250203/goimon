@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
 import { managerProcedure, userProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "~/lib/pagination";
 import { openShift } from "./application/open-shift.usecase";
 import { closeShift } from "./application/close-shift.usecase";
 import { getOpenShift } from "./application/get-open-shift.usecase";
@@ -72,7 +73,7 @@ export const shiftRouter = createTRPCRouter({
     .input(
       z.object({
         page: z.number().int().min(1).default(1),
-        pageSize: z.number().int().min(1).max(100).default(20),
+        pageSize: z.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
         status: z.enum(["open", "closed"]).optional(),
       }),
     )

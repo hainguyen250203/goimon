@@ -12,7 +12,6 @@ import { api } from "~/trpc/react";
 import { formatDateTime } from "~/lib/format-order";
 import type { ActivityLogEntry } from "~/modules/activity-log/domain/activity-log.repository";
 
-const PAGE_SIZE = 20;
 const ALL_ENTITY_TYPE = "all";
 
 // Nhãn tiếng Việt cho entityType/action đang thực sự được ghi (xem các
@@ -107,10 +106,18 @@ const columns: ListViewColumn<ActivityLogEntry>[] = [
 ];
 
 /** Nhật ký hoạt động toàn hệ thống (create/update/delete menu, bàn, máy in, user...) — khác order_events (vòng đời riêng của từng đơn, xem order-timeline.tsx). */
-export function ActivityLogList({ page, entityType }: { page: number; entityType?: string }) {
+export function ActivityLogList({
+  page,
+  pageSize,
+  entityType,
+}: {
+  page: number;
+  pageSize: number;
+  entityType?: string;
+}) {
   const router = useRouter();
   const { data, isFetching } = api.activityLog.list.useQuery(
-    { page, pageSize: PAGE_SIZE, entityType },
+    { page, pageSize, entityType },
     // Giữ data trang cũ hiển thị trong lúc fetch trang mới — tránh nháy
     // skeleton/trắng màn hình khi đổi trang hoặc đổi filter.
     { placeholderData: keepPreviousData },
@@ -118,10 +125,11 @@ export function ActivityLogList({ page, entityType }: { page: number; entityType
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
 
-  const buildHref = (params: { page?: number; entityType?: string }) => {
+  const buildHref = (params: { page?: number; pageSize?: number; entityType?: string }) => {
     const search = new URLSearchParams();
     const nextEntityType = "entityType" in params ? params.entityType : entityType;
     if (nextEntityType) search.set("entityType", nextEntityType);
+    search.set("pageSize", String(params.pageSize ?? pageSize));
     search.set("page", String(params.page ?? page));
     return `/quan-ly/nhat-ky-hoat-dong?${search.toString()}`;
   };
@@ -147,12 +155,7 @@ export function ActivityLogList({ page, entityType }: { page: number; entityType
         isLoading={isFetching}
         emptyMessage="Chưa có hoạt động nào."
       />
-      <ListViewPagination
-        page={page}
-        pageSize={PAGE_SIZE}
-        total={total}
-        buildHref={(p) => buildHref({ page: p })}
-      />
+      <ListViewPagination page={page} pageSize={pageSize} total={total} buildHref={buildHref} />
     </Stack>
   );
 }

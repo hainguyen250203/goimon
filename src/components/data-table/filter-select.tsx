@@ -23,12 +23,14 @@ export function FilterSelect({
   onValueChange,
   placeholder,
   width,
+  size,
 }: {
   options: FilterOption[];
   value: string;
   onValueChange: (value: string) => void;
   placeholder?: string;
   width?: string;
+  size?: "xs" | "sm" | "md" | "lg";
 }) {
   const collection = useMemo(() => createListCollection({ items: options }), [options]);
 
@@ -38,6 +40,7 @@ export function FilterSelect({
       value={value ? [value] : []}
       onValueChange={(details) => onValueChange(details.value[0] ?? "")}
       width={width ?? "auto"}
+      size={size}
     >
       <SelectTrigger>
         <SelectValueText placeholder={placeholder} />

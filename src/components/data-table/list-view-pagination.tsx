@@ -1,21 +1,27 @@
 "use client";
 
 import { useRouter } from "nextjs-toploader/app";
-import { Flex, HStack, Text } from "@chakra-ui/react";
+import { Box, Flex, HStack, Text } from "@chakra-ui/react";
 
 import {
-  PaginationFirstTrigger,
+  PaginationEllipsis,
+  PaginationItem,
   PaginationItems,
-  PaginationLastTrigger,
   PaginationNextTrigger,
   PaginationPrevTrigger,
   PaginationRoot,
 } from "~/components/ui/pagination";
+import { FilterSelect } from "./filter-select";
+import { PAGE_SIZE_OPTIONS } from "~/lib/pagination";
 
 /**
- * Pagination dạng "<< < 1 2 ... 5 > >>", điều hướng client-side (router.push)
- * thay vì href thô — tránh full page reload/nháy trắng màn hình khi đổi
- * trang. Dùng Chakra Pagination (đã có sẵn windowing + ellipsis logic).
+ * 1 hàng — text + (select + cụm nút) gộp thành 1 khối bên phải. `wrap="wrap"`
+ * chỉ áp cho khối lớn (text | khối phải) nên nếu có lúc không đủ chỗ, nó chỉ
+ * xuống dòng ở ĐÚNG 1 điểm an toàn này (cả khối phải trôi xuống dòng dưới),
+ * không bao giờ vỡ dòng NGAY GIỮA cụm nút phân trang (từng thử và rất xấu).
+ * `siblingCount={0}` để cụm nút luôn gọn (vd "1 2 ... 10" thay vì
+ * "1 2 3 4 5 ... 10"), hiếm khi cần tới `overflowX="auto"` (chỉ còn là lưới
+ * an toàn cho trường hợp cực đoan: rất nhiều trang trên màn hình cực hẹp).
  */
 export function ListViewPagination({
   page,
@@ -26,47 +32,65 @@ export function ListViewPagination({
   page: number;
   pageSize: number;
   total: number;
-  buildHref: (page: number) => string;
+  buildHref: (params: { page: number; pageSize?: number }) => string;
 }) {
   const router = useRouter();
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  if (totalPages <= 1) return null;
 
   return (
-    <Flex direction={{ base: "column", sm: "row" }} align="center" justify="space-between" gap={3}>
-      <Text fontSize="sm" color="fg.muted" textAlign="center">
-        Trang {page}/{totalPages} — {total} kết quả
+    <Flex align="center" justify="space-between" gap={2} wrap="wrap">
+      <Text fontSize="sm" color="fg.muted" whiteSpace="nowrap">
+        {page}/{totalPages} - {total}
       </Text>
-      <PaginationRoot
-        page={page}
-        pageSize={pageSize}
-        count={total}
-        siblingCount={1}
-        onPageChange={(details) => router.push(buildHref(details.page))}
-      >
-        {/* Gộp cả cụm vào 1 pill có viền — tránh cảm giác các nút rời rạc
-            trôi nổi. Danh sách số trang + về đầu/cuối dễ tràn dòng trên màn
-            hình hẹp nên chỉ hiện từ sm trở lên; mobile thay bằng 1 ô "X / Y"
-            gọn ở giữa Trước/Sau thay vì để 2 icon trơ trọi cách xa nhau. */}
-        <HStack gap="2px" borderWidth="1px" rounded="l2" p="2px">
-          <PaginationFirstTrigger display={{ base: "none", sm: "inline-flex" }} />
-          <PaginationPrevTrigger />
-          <HStack gap="2px" display={{ base: "none", sm: "flex" }}>
-            <PaginationItems />
-          </HStack>
-          <Text
-            display={{ base: "block", sm: "none" }}
-            fontSize="sm"
-            fontWeight="medium"
-            minW="3.5rem"
-            textAlign="center"
-          >
-            {page} / {totalPages}
-          </Text>
-          <PaginationNextTrigger />
-          <PaginationLastTrigger display={{ base: "none", sm: "inline-flex" }} />
-        </HStack>
-      </PaginationRoot>
+
+      <Flex align="center" gap={2}>
+        <FilterSelect
+          size="sm"
+          width="3.5rem"
+          value={String(pageSize)}
+          onValueChange={(value) => router.push(buildHref({ page: 1, pageSize: Number(value) }))}
+          options={PAGE_SIZE_OPTIONS.map((size) => ({ value: String(size), label: String(size) }))}
+        />
+
+        {totalPages > 1 && (
+          <Box overflowX="auto">
+            <PaginationRoot
+              page={page}
+              pageSize={pageSize}
+              count={total}
+              siblingCount={0}
+              onPageChange={(details) => router.push(buildHref({ page: details.page }))}
+            >
+              {/* Không bọc border quanh cụm nút — chỉ còn khoảng cách nhỏ
+                  giữa các nút. Mobile cố định "1 2 ... trang cuối" (không
+                  đổi theo trang hiện tại đang đứng — Prev/Next lo phần bước
+                  qua các trang giữa), sm+ vẫn dùng PaginationItems (danh
+                  sách theo boundary+sibling của zag, đã đủ gọn). */}
+              <HStack gap="2px">
+                <PaginationPrevTrigger />
+                <HStack gap="2px" display={{ base: "flex", sm: "none" }}>
+                  {totalPages <= 3 ? (
+                    Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                      <PaginationItem key={p} type="page" value={p} />
+                    ))
+                  ) : (
+                    <>
+                      <PaginationItem type="page" value={1} />
+                      <PaginationItem type="page" value={2} />
+                      <PaginationEllipsis index={0} />
+                      <PaginationItem type="page" value={totalPages} />
+                    </>
+                  )}
+                </HStack>
+                <HStack gap="2px" display={{ base: "none", sm: "flex" }}>
+                  <PaginationItems />
+                </HStack>
+                <PaginationNextTrigger />
+              </HStack>
+            </PaginationRoot>
+          </Box>
+        )}
+      </Flex>
     </Flex>
   );
 }

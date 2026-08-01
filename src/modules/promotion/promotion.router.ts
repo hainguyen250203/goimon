@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
 import { managerProcedure, userProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "~/lib/pagination";
 import { listPromotions } from "./application/list-promotions.usecase";
 import { listActivePromotions } from "./application/list-active-promotions.usecase";
 import { createPromotion } from "./application/create-promotion.usecase";
@@ -24,7 +25,7 @@ export const promotionRouter = createTRPCRouter({
     .input(
       z.object({
         page: z.number().int().min(1).default(1),
-        pageSize: z.number().int().min(1).max(100).default(20),
+        pageSize: z.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
         isActive: z.boolean().optional(),
       }),
     )

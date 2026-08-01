@@ -17,7 +17,6 @@ import { formatVnd } from "~/lib/format-order";
 import type { ShiftListItemWithRevenue } from "~/modules/shift/application/list-shifts.usecase";
 import type { ShiftStatus } from "~/modules/shift/domain/shift.entity";
 
-const PAGE_SIZE = 20;
 const ALL_STATUS = "all";
 
 const STATUS_LABEL: Record<ShiftStatus, string> = {
@@ -73,19 +72,28 @@ const columns: ListViewColumn<ShiftListItemWithRevenue>[] = [
   },
 ];
 
-export function ShiftList({ page, status }: { page: number; status?: ShiftStatus }) {
+export function ShiftList({
+  page,
+  pageSize,
+  status,
+}: {
+  page: number;
+  pageSize: number;
+  status?: ShiftStatus;
+}) {
   const router = useRouter();
   const { data, isFetching } = api.shift.list.useQuery(
-    { page, pageSize: PAGE_SIZE, status },
+    { page, pageSize, status },
     { placeholderData: keepPreviousData },
   );
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
 
-  const buildHref = (params: { page?: number; status?: ShiftStatus }) => {
+  const buildHref = (params: { page?: number; pageSize?: number; status?: ShiftStatus }) => {
     const search = new URLSearchParams();
     const nextStatus = "status" in params ? params.status : status;
     if (nextStatus) search.set("status", nextStatus);
+    search.set("pageSize", String(params.pageSize ?? pageSize));
     search.set("page", String(params.page ?? page));
     return `/quan-ly/ca-lam-viec?${search.toString()}`;
   };
@@ -120,12 +128,7 @@ export function ShiftList({ page, status }: { page: number; status?: ShiftStatus
         isLoading={isFetching}
         emptyMessage="Chưa có ca làm việc nào."
       />
-      <ListViewPagination
-        page={page}
-        pageSize={PAGE_SIZE}
-        total={total}
-        buildHref={(p) => buildHref({ page: p })}
-      />
+      <ListViewPagination page={page} pageSize={pageSize} total={total} buildHref={buildHref} />
     </Stack>
   );
 }

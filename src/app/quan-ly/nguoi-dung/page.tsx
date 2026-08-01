@@ -6,10 +6,9 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { api, HydrateClient } from "~/trpc/server";
 import { getSession } from "~/server/better-auth/server";
 import { hasMinRole } from "~/server/better-auth/role-rank";
+import { parsePageSize } from "~/lib/pagination";
 import type { UserRole } from "~/modules/user/domain/user-account.entity";
 import { UserList } from "./user-list";
-
-const PAGE_SIZE = 20;
 
 function parseRole(value: string | undefined): UserRole | undefined {
   return value === "user" || value === "manager" || value === "admin" || value === "superadmin"
@@ -26,7 +25,7 @@ function parseBanned(value: string | undefined): boolean | undefined {
 export default async function NguoiDungPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; role?: string; banned?: string }>;
+  searchParams: Promise<{ page?: string; pageSize?: string; role?: string; banned?: string }>;
 }) {
   // Trang này admin-only (quản lý tài khoản) — /quan-ly/layout.tsx chỉ chặn
   // role "user", không phân biệt manager/admin, nên phải tự chặn thêm ở đây.
@@ -37,20 +36,31 @@ export default async function NguoiDungPage({
     redirect("/quan-ly");
   }
 
-  const { page: pageParam, role: roleParam, banned: bannedParam } =
-    await searchParams;
+  const {
+    page: pageParam,
+    pageSize: pageSizeParam,
+    role: roleParam,
+    banned: bannedParam,
+  } = await searchParams;
   const page = Math.max(1, Number(pageParam ?? 1) || 1);
+  const pageSize = parsePageSize(pageSizeParam);
   const role = parseRole(roleParam);
   const banned = parseBanned(bannedParam);
 
   // Prefetch trên server — tránh waterfall khi client hydrate.
-  void api.user.list.prefetch({ page, pageSize: PAGE_SIZE, role, banned });
+  void api.user.list.prefetch({ page, pageSize, role, banned });
 
   return (
     <Box p={{ base: 4, md: 6 }}>
       <HydrateClient>
       <Suspense fallback={<Skeleton h={96} rounded="l3" />}>
-        <UserList page={page} role={role} banned={banned} viewerRole={session!.user.role as UserRole} />
+        <UserList
+          page={page}
+          pageSize={pageSize}
+          role={role}
+          banned={banned}
+          viewerRole={session!.user.role as UserRole}
+        />
       </Suspense>
       </HydrateClient>
     </Box>

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
 import { managerProcedure, userProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "~/lib/pagination";
 import { listAreaOptions } from "./application/list-area-options.usecase";
 import { listTables } from "./application/list-tables.usecase";
 import { createTable } from "./application/create-table.usecase";
@@ -32,7 +33,7 @@ export const tableRouter = createTRPCRouter({
     .input(
       z.object({
         page: z.number().int().min(1).default(1),
-        pageSize: z.number().int().min(1).max(100).default(20),
+        pageSize: z.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
         areaId: z.number().int().positive().optional(),
         status: z.enum(["available", "occupied"]).optional(),
       }),

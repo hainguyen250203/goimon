@@ -20,7 +20,6 @@ import { CreateUserDialog } from "./create-user-dialog";
 import { UserRowActions } from "./user-row-actions";
 import { ROLE_DOT_COLOR, ROLE_LABEL } from "./role-label";
 
-const PAGE_SIZE = 20;
 const ALL = "all";
 
 function formatDate(date: Date) {
@@ -29,11 +28,13 @@ function formatDate(date: Date) {
 
 export function UserList({
   page,
+  pageSize,
   role,
   banned,
   viewerRole,
 }: {
   page: number;
+  pageSize: number;
   role?: UserRole;
   banned?: boolean;
   /** Role của người đang xem trang này — chỉ superadmin mới gán được
@@ -42,7 +43,7 @@ export function UserList({
 }) {
   const router = useRouter();
   const { data, isFetching } = api.user.list.useQuery(
-    { page, pageSize: PAGE_SIZE, role, banned },
+    { page, pageSize, role, banned },
     // Giữ data trang cũ trong lúc fetch trang/filter mới — tránh nháy
     // skeleton. Đã prefetch + hydrate ở Server Component nên lần render
     // đầu luôn có sẵn data.
@@ -91,6 +92,7 @@ export function UserList({
 
   const buildHref = (params: {
     page?: number;
+    pageSize?: number;
     role?: UserRole;
     banned?: boolean;
   }) => {
@@ -102,6 +104,7 @@ export function UserList({
     const nextBanned = "banned" in params ? params.banned : banned;
     if (nextRole) search.set("role", nextRole);
     if (nextBanned !== undefined) search.set("banned", String(nextBanned));
+    search.set("pageSize", String(params.pageSize ?? pageSize));
     search.set("page", String(params.page ?? page));
     return `/quan-ly/nguoi-dung?${search.toString()}`;
   };
@@ -169,12 +172,7 @@ export function UserList({
         isLoading={isFetching}
         emptyMessage="Chưa có người dùng nào."
       />
-      <ListViewPagination
-        page={page}
-        pageSize={PAGE_SIZE}
-        total={total}
-        buildHref={(p) => buildHref({ page: p })}
-      />
+      <ListViewPagination page={page} pageSize={pageSize} total={total} buildHref={buildHref} />
 
       <CreateUserDialog open={dialogOpen} onOpenChange={setDialogOpen} viewerRole={viewerRole} />
     </Stack>
