@@ -38,12 +38,17 @@ export function ListViewPagination({
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <Flex align="center" justify="space-between" gap={2} wrap="wrap">
+    <Flex align="center" gap={2} wrap="wrap">
       <Text fontSize="sm" color="fg.muted" whiteSpace="nowrap">
         {page}/{totalPages} - {total}
       </Text>
 
-      <Flex align="center" gap={2}>
+      {/* marginLeft="auto" thay vì justify="space-between" trên Flex cha —
+          space-between cư xử không ổn định khi có wrap (khoảng trắng thừa
+          xuất hiện giữa select và cụm nút trên 1 số trình duyệt di động).
+          margin-left:auto đẩy cả khối này sang phải khi đủ chỗ, và không
+          tạo khoảng trắng lạ khi phải tự xuống dòng riêng. */}
+      <Flex align="center" gap={2} marginLeft="auto">
         <FilterSelect
           size="sm"
           width="3.5rem"
