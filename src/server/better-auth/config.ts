@@ -1,3 +1,4 @@
+import bcrypt from "bcrypt";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { admin, phoneNumber } from "better-auth/plugins";
@@ -26,6 +27,12 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
+    // Dùng bcrypt thay vì scrypt mặc định của BetterAuth — đồng nhất thuật
+    // toán hash với pos-be (repo tham khảo).
+    password: {
+      hash: (password) => bcrypt.hash(password, 10),
+      verify: ({ hash, password }) => bcrypt.compare(password, hash),
+    },
   },
   // Toàn bộ bảng nghiệp vụ trong app đặt tên số nhiều (orders, tables,
   // categories...) cho nhất quán — bảng do BetterAuth sinh ra cũng theo

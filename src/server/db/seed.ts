@@ -1,12 +1,15 @@
 import "dotenv/config";
 
+import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { and, eq } from "drizzle-orm";
 
 import { category, menuItem } from "~/modules/menu/infrastructure/menu.schema";
 import { paymentConfig } from "~/modules/payment-config/infrastructure/payment-config.schema";
 import { printer } from "~/modules/printer/infrastructure/printer.schema";
 import { area, restaurantTable } from "~/modules/table/infrastructure/table.schema";
+import { account } from "~/server/better-auth/schema";
 import { auth } from "~/server/better-auth/config";
 import { db } from "~/server/db";
 
@@ -28,8 +31,8 @@ type SeedCategory = {
 // khẩu chung) để không tạo tài khoản demo thừa/dễ đoán trên môi trường không
 // phải local dev.
 const SEED_USERS = [
-  { name: "Nguyen Hai", phoneNumber: "0968916540", password: "0968916540", role: "superadmin" as const },
-  { name: "Khanh Lam", phoneNumber: "0397372410", password: "0397372410", role: "admin" as const },
+  { name: "Nguyen Hai", phoneNumber: "0968916540", password: "$2b$10$sFZStD2cIe.LqELq6Yxhj.cDAAfi2mDndKJ7kvhG32ygje8mvmZza", role: "superadmin" as const },
+  { name: "Khanh Lam", phoneNumber: "0397372410", password: "$2b$10$XWTh0Z8NGNPbItEsA3g6heCsjDmWfcMzG5hq8v3nt1UCLtLyComXK", role: "admin" as const },
 ];
 
 // Khu A..Khu I (20 bàn/khu, tên "Khu A - B1"..) + Mang về (4 bàn đại diện cho
@@ -43,9 +46,12 @@ const SEED_LAYOUT = [
 ];
 
 /**
- * Tạo user qua `auth.api.createUser` (không tự hash password bằng thư viện
- * ngoài) — BetterAuth tự hash bằng scrypt nội bộ, đảm bảo tương thích với
- * việc verify lúc đăng nhập sau này. Idempotent: bỏ qua nếu đã tồn tại.
+ * `seedUser.password` ở đây đã là HASH bcrypt tính sẵn (không phải plaintext)
+ * — `auth.api.createUser` không có cách nào nhận thẳng 1 hash có sẵn (luôn tự
+ * hash lại chuỗi truyền vào), nên phải tạo user với 1 password ngẫu nhiên
+ * (không dùng tới) rồi ghi ĐÈ thẳng cột `accounts.password` bằng Drizzle —
+ * tránh hash chồng lần nữa lên 1 giá trị vốn đã là hash. Idempotent: bỏ qua
+ * nếu đã tồn tại.
  */
 async function seedUsers() {
   for (const seedUser of SEED_USERS) {
@@ -57,10 +63,10 @@ async function seedUsers() {
       continue;
     }
 
-    await auth.api.createUser({
+    const created = await auth.api.createUser({
       body: {
         email: `${seedUser.phoneNumber}@pos.internal`,
-        password: seedUser.password,
+        password: randomUUID(),
         name: seedUser.name,
         role: seedUser.role,
         data: {
@@ -69,6 +75,12 @@ async function seedUsers() {
         },
       },
     });
+
+    await db
+      .update(account)
+      .set({ password: seedUser.password })
+      .where(and(eq(account.userId, created.user.id), eq(account.providerId, "credential")));
+
     console.log(
       `  tạo user ${seedUser.name} (${seedUser.phoneNumber}, role=${seedUser.role})`,
     );
