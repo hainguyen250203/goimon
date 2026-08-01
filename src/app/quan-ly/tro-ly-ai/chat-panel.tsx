@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { Box, Flex, IconButton, Image, Spinner, Stack, Text, Textarea } from "@chakra-ui/react";
 import { ArrowUp, Square } from "lucide-react";
 import { useChat } from "@ai-sdk/react";
@@ -14,7 +14,7 @@ import { FloatingAssistantAvatar } from "~/modules/assistant/ui/floating-avatar"
 const SUGGESTIONS = [
   "Doanh thu ca gần nhất hôm nay là bao nhiêu?",
   "Tổng doanh thu theo từng ca trong tuần này?",
-  "Có bao nhiêu đơn hàng đang mở?",
+  "Ca gần nhất đã gọi những món nước nào, số lượng bao nhiêu?",
   "Món ăn nào bán chạy nhất tuần này?",
 ];
 
@@ -33,6 +33,31 @@ function ThinkingIndicator() {
     </Flex>
   );
 }
+
+// memo theo reference của `message` — useChat chỉ tạo object mới cho tin
+// nhắn THỰC SỰ đổi (đang stream), các tin cũ giữ nguyên reference giữa các
+// lần render. Không memo thì cả danh sách render lại theo từng token của tin
+// cuối, càng nhiều tin cũ càng giật/khựng lúc đang stream.
+const MessageRow = memo(function MessageRow({ message }: { message: UIMessage }) {
+  return (
+    <Flex justify={message.role === "user" ? "flex-end" : "flex-start"} minW={0}>
+      <Box
+        maxW="42rem"
+        minW={0}
+        rounded="l3"
+        px={message.role === "user" ? 4 : 0}
+        py={message.role === "user" ? 3 : 0}
+        bg={message.role === "user" ? "bg.emphasized" : undefined}
+      >
+        <Stack gap={2} minW={0}>
+          {message.parts.map((part, i) => (
+            <MessagePart key={i} part={part} role={message.role} />
+          ))}
+        </Stack>
+      </Box>
+    </Flex>
+  );
+});
 
 export function ChatPanel({
   sessionId,
@@ -136,21 +161,51 @@ function ChatPanelInner({
     },
   });
 
-  const busy = status === "submitted" || status === "streaming";
+  // `status` (từ useChat) CHỈ chuyển "submitted" sau khi sendMessage() thực sự
+  // được gọi — với tin nhắn ĐẦU của phiên mới, submit() phải await xong
+  // createSession trước đó (xem submit() bên dưới), để hở 1 khoảng KHÔNG busy
+  // trong lúc đang tạo phiên (network round-trip) mà Enter/nút Gửi/chip gợi ý
+  // vẫn bấm được — bấm 2 lần trong khoảng đó tạo 2 phiên trùng, và request thứ
+  // 2 dễ gửi text rỗng (prepareSendMessagesRequest đọc `messages` sống, không
+  // phải biến cục bộ) → lỗi "Tin nhắn rỗng." Gộp createSession.isPending vào
+  // đây để guard DUY NHẤT (`!trimmed || busy` trong submit()) tự phủ khoảng
+  // hở này — isPending đồng bộ true ngay khi gọi mutateAsync(), trước bất kỳ
+  // await nào, nên không cần thêm state/ref riêng.
+  const busy = createSession.isPending || status === "submitted" || status === "streaming";
 
   // Neo cuối danh sách tin nhắn — mở phiên có sẵn lịch sử phải thấy NGAY tin
   // nhắn mới nhất, không bắt tự cuộn tay. useLayoutEffect (chạy trước khi
   // browser paint) để tránh nháy thấy đầu danh sách rồi mới nhảy xuống cuối.
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const prevMessageCountRef = useRef(messages.length);
   useLayoutEffect(() => {
     messagesEndRef.current?.scrollIntoView({ block: "end" });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Tự cuộn mượt theo khi có tin nhắn mới/đang stream, để luôn thấy nội dung
-  // mới nhất mà không cần tự cuộn tay giữa chừng.
+  // Có tin nhắn MỚI (đổi số lượng — gửi câu hỏi/AI bắt đầu trả lời): cuộn
+  // mượt xuống đáy. Đang STREAM nội dung tin cuối (parts đổi liên tục, số
+  // lượng tin không đổi): chỉ tự bám đáy nếu đang ở gần đáy sẵn, cuộn
+  // "instant" (không animation) — nếu vẫn dùng smooth ở đây, mỗi token stream
+  // đều gọi lại scrollIntoView({behavior:"smooth"}), animation chồng animation
+  // liên tục hàng chục lần/giây gây cảm giác giật/khựng đúng như đã gặp. Cũng
+  // không kéo người dùng xuống nếu họ đang cuộn lên đọc lại tin cũ.
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    const isNewMessage = messages.length !== prevMessageCountRef.current;
+    prevMessageCountRef.current = messages.length;
+
+    if (isNewMessage) {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      return;
+    }
+
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    if (distanceFromBottom < 150) {
+      messagesEndRef.current?.scrollIntoView({ block: "end" });
+    }
   }, [messages]);
 
   const submit = async (text: string) => {
@@ -217,6 +272,9 @@ function ChatPanelInner({
                 rounded="l2"
                 bg="bg.subtle"
                 fontSize="sm"
+                cursor="pointer"
+                opacity={busy ? 0.5 : 1}
+                pointerEvents={busy ? "none" : "auto"}
                 _hover={{ bg: "bg.muted" }}
                 onClick={() => submit(s)}
               >
@@ -226,24 +284,9 @@ function ChatPanelInner({
           </Stack>
         </Flex>
       ) : (
-        <Stack flex={1} overflowY="auto" gap={5} px={{ base: 4, md: 8 }} py={6}>
+        <Stack ref={scrollContainerRef} flex={1} overflowY="auto" gap={5} px={{ base: 4, md: 8 }} py={6}>
           {messages.map((message) => (
-            <Flex key={message.id} justify={message.role === "user" ? "flex-end" : "flex-start"} minW={0}>
-              <Box
-                maxW="42rem"
-                minW={0}
-                rounded="l3"
-                px={message.role === "user" ? 4 : 0}
-                py={message.role === "user" ? 3 : 0}
-                bg={message.role === "user" ? "bg.emphasized" : undefined}
-              >
-                <Stack gap={2} minW={0}>
-                  {message.parts.map((part, i) => (
-                    <MessagePart key={i} part={part} role={message.role} />
-                  ))}
-                </Stack>
-              </Box>
-            </Flex>
+            <MessageRow key={message.id} message={message} />
           ))}
           {showThinking && <ThinkingIndicator />}
           {error && (
@@ -259,6 +302,7 @@ function ChatPanelInner({
                 py={1.5}
                 rounded="l2"
                 borderWidth="1px"
+                cursor="pointer"
                 _hover={{ bg: "bg.muted" }}
                 onClick={() => {
                   clearError();
@@ -284,6 +328,9 @@ function ChatPanelInner({
               rounded="full"
               borderWidth="1px"
               fontSize="xs"
+              cursor="pointer"
+              opacity={busy ? 0.5 : 1}
+              pointerEvents={busy ? "none" : "auto"}
               _hover={{ bg: "bg.muted" }}
               onClick={() => submit(q)}
             >

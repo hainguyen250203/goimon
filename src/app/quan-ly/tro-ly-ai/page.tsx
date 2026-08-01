@@ -27,9 +27,17 @@ export default async function TroLyAiPage({
   const { session: sessionIdParam } = await searchParams;
   const sessionId = sessionIdParam ? Number(sessionIdParam) || undefined : undefined;
 
-  void api.assistant.listSessions.prefetch({ page: 1, pageSize: PAGE_SIZE });
+  // await (không void như các trang khác) — SessionSidebar/ChatPanel render
+  // hẳn 1 nhánh DOM KHÁC HẲN kiểu thẻ lúc chưa có data (`<Text>` placeholder
+  // "Chưa có phiên...", `<Spinner>`) so với lúc có data (`<SessionItem>`,
+  // danh sách tin nhắn) — nếu chỉ void, SSR render trước khi prefetch xong
+  // (còn ở nhánh rỗng) trong khi client hydrate đã có sẵn cache (nhánh có
+  // data), lệch hẳn loại thẻ tại cùng vị trí → React hydration error thật
+  // (không phải cảnh báo vô hại), phải bỏ cây SSR và render lại từ đầu ở
+  // client. Await ở đây đảm bảo SSR luôn render đúng nhánh có data.
+  await api.assistant.listSessions.prefetch({ page: 1, pageSize: PAGE_SIZE });
   if (sessionId) {
-    void api.assistant.getSession.prefetch({ id: sessionId });
+    await api.assistant.getSession.prefetch({ id: sessionId });
   }
 
   return (

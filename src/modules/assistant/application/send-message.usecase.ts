@@ -102,7 +102,26 @@ export async function streamAssistantReply(
 
   // merge() bơm chunk (text-delta/tool-call/tool-result) xuống client NGAY khi
   // có, chạy nền song song — không chặn dòng code bên dưới.
-  writer.merge(toUIMessageStream({ stream: result.stream, tools }));
+  //
+  // BẮT BUỘC tự truyền onError: toUIMessageStream có onError RIÊNG (khác hẳn
+  // onError của createUIMessageStream ở route.ts), mặc định
+  // `() => "An error occurred."` — không console.error gì. Lỗi OpenAI giữa
+  // chừng (rate limit/timeout/context-length-exceeded...) tới dưới dạng chunk
+  // {type: "error"} trong result.stream chứ KHÔNG throw/reject, nên không bao
+  // giờ lọt tới onError thật (có console.error) ở route.ts — chỉ lỗi throw ra
+  // mới lọt tới đó. Phải tự log + trả message rõ ràng ngay đây.
+  writer.merge(
+    toUIMessageStream({
+      stream: result.stream,
+      tools,
+      onError: (error) => {
+        console.error(`[assistant] lỗi khi stream trả lời cho session ${sessionId}:`, error);
+        return error instanceof Error
+          ? `Lỗi từ mô hình AI: ${error.message}`
+          : "Trợ lý gặp lỗi khi tạo câu trả lời, vui lòng thử lại.";
+      },
+    }),
+  );
 
   // `result.text`/`result.steps`/`result.usage` đều "tự tiêu thụ" stream nếu
   // chưa ai đọc — an toàn gọi song song với merge() ở trên vì cùng đọc từ 1
