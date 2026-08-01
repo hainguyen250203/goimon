@@ -251,7 +251,12 @@ export class Order {
   }
 
   /** Chỉ hợp lệ khi đơn đang "open" → "paid". In bill hay không không liên
-   * quan tới việc thanh toán — 2 hành động độc lập, xem printBill(). */
+   * quan tới việc thanh toán — 2 hành động độc lập, xem printBill(). Luôn
+   * chốt lại totalAmount ở đây (không chỉ dựa vào printBill()) — trước đây
+   * chỉ printBill() mới set totalAmount nên đơn thanh toán mà chưa từng in
+   * có totalAmount null vĩnh viễn, làm mọi query tính doanh thu
+   * (sum(totalAmount)) âm thầm bỏ qua đơn đó (SQL SUM bỏ qua NULL) thay vì
+   * báo lỗi — ra doanh thu 0đ dù đơn đã thanh toán thật. */
   confirmPayment(staffId: string, paymentMethod: PaymentMethod) {
     if (this.status !== "open") {
       throw new InvalidOrderStatusTransitionError(
@@ -259,6 +264,7 @@ export class Order {
       );
     }
     this.status = "paid";
+    this.totalAmount = this.payableAmount;
     this.paymentMethod = paymentMethod;
     this.paidConfirmedBy = staffId;
     this.paidConfirmedAt = new Date();

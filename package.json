@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "next build",
+    "db:backfill-paid-total-amount": "tsx src/server/db/backfill-paid-order-total-amount.ts",
     "db:extensions": "tsx src/server/db/ensure-extensions.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
