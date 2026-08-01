@@ -48,8 +48,8 @@ export type ShiftOrderStats = {
   openOrderCount: number;
   cancelledOrderCount: number;
   /** Doanh thu "sống" của các đơn `open` — tính từ orderItem hiện tại, không
-   * phải `order.totalAmount` (cột này null tới khi printBill()/confirmPayment()
-   * chạy, nên không phản ánh đúng đơn `open` chưa từng in). */
+   * phải `order.totalAmount` (cột này null tới khi confirmPayment() chạy,
+   * đơn `open` luôn null kể cả đã in bill). */
   openRevenue: number;
 };
 

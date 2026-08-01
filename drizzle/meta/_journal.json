@@ -64,6 +64,13 @@
       "when": 1785573983976,
       "tag": "0008_crazy_forgotten_one",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1785592278738,
+      "tag": "0009_curvy_jackal",
+      "breakpoints": true
     }
   ]
 }

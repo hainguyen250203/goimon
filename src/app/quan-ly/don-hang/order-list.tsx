@@ -78,7 +78,10 @@ function buildColumns(canDelete: boolean): ListViewColumn<OrderListItem>[] {
   {
     key: "totalAmount",
     header: "Tổng tiền",
-    cell: (row) => (row.totalAmount != null ? formatVnd(row.totalAmount) : "—"),
+    cell: (row) =>
+      row.totalAmount != null
+        ? formatVnd(row.totalAmount)
+        : formatVnd(row.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0)),
     textAlign: "right",
   },
   {

@@ -44,7 +44,6 @@ function toEntity(
     paymentMethod: PaymentMethod | null;
     createdByName: string | null;
     createdAt: Date;
-    printedAt: Date | null;
     paidConfirmedAt: Date | null;
     deletedAt: Date | null;
   },
@@ -61,7 +60,6 @@ function toEntity(
     paymentMethod: row.paymentMethod,
     createdByName: row.createdByName ?? "",
     createdAt: row.createdAt,
-    printedAt: row.printedAt,
     paidConfirmedAt: row.paidConfirmedAt,
     deletedAt: row.deletedAt,
     items,
@@ -102,7 +100,6 @@ function toOrderEntity(row: OrderRow, itemRows: OrderItemRow[]): Order {
     note: row.note,
     totalAmount: row.totalAmount,
     promotion,
-    printedAt: row.printedAt,
     paymentMethod: row.paymentMethod,
     paidConfirmedBy: row.paidConfirmedBy,
     paidConfirmedAt: row.paidConfirmedAt,
@@ -144,7 +141,6 @@ async function saveOrderTx(tx: Tx, orderEntity: Order): Promise<Order> {
     promotionName: orderEntity.promotion?.name ?? null,
     promotionDiscountType: orderEntity.promotion?.discountType ?? null,
     promotionDiscountValue: orderEntity.promotion?.discountValue ?? null,
-    printedAt: orderEntity.printedAt,
     paymentMethod: orderEntity.paymentMethod,
     paidConfirmedBy: orderEntity.paidConfirmedBy,
     paidConfirmedAt: orderEntity.paidConfirmedAt,
@@ -218,7 +214,6 @@ async function saveOrderTx(tx: Tx, orderEntity: Order): Promise<Order> {
       note: orderEntity.note,
       totalAmount: orderEntity.totalAmount,
       promotion: orderEntity.promotion,
-      printedAt: orderEntity.printedAt,
       paymentMethod: orderEntity.paymentMethod,
       paidConfirmedBy: orderEntity.paidConfirmedBy,
       paidConfirmedAt: orderEntity.paidConfirmedAt,
@@ -279,7 +274,6 @@ export const orderDrizzleRepository: OrderRepository = {
           paymentMethod: order.paymentMethod,
           createdByName: user.name,
           createdAt: order.createdAt,
-          printedAt: order.printedAt,
           paidConfirmedAt: order.paidConfirmedAt,
           deletedAt: order.deletedAt,
         })
@@ -417,8 +411,8 @@ export const orderDrizzleRepository: OrderRepository = {
     const byStatus = new Map(rows.map((r) => [r.status, r]));
 
     // Không dùng byStatus.get("open")?.revenue (tính từ order.totalAmount) vì
-    // cột này null tới khi printBill()/confirmPayment() chạy — đơn open chưa
-    // từng in sẽ bị tính thiếu. Tính "sống" từ orderItem, giống listActive().
+    // cột này null tới khi confirmPayment() chạy — đơn open luôn null (kể cả
+    // đã in). Tính "sống" từ orderItem, giống listActive().
     const [openRevenueRow] = await db
       .select({
         openRevenue: sql<number>`coalesce(sum(${orderItem.unitPrice} * ${orderItem.quantity}), 0)`.mapWith(

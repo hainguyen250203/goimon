@@ -94,12 +94,22 @@ export function OrderDetailDialog({
             {order.promotionName && <InfoRow label="Khuyến mãi" value={order.promotionName} />}
             <InfoRow
               label="Tổng tiền"
-              value={order.totalAmount != null ? formatVnd(order.totalAmount) : "Chưa in bill"}
+              value={
+                order.totalAmount != null ? (
+                  formatVnd(order.totalAmount)
+                ) : (
+                  <>
+                    {formatVnd(subtotal)}{" "}
+                    <Text as="span" fontSize="xs" color="fg.muted">
+                      (chưa thanh toán)
+                    </Text>
+                  </>
+                )
+              }
             />
             {order.paymentMethod && (
               <InfoRow label="Phương thức TT" value={PAYMENT_METHOD_LABEL[order.paymentMethod]} />
             )}
-            {order.printedAt && <InfoRow label="In bill lúc" value={formatDateTime(order.printedAt)} />}
             {order.paidConfirmedAt && (
               <InfoRow label="Thanh toán lúc" value={formatDateTime(order.paidConfirmedAt)} />
             )}

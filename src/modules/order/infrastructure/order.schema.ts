@@ -18,9 +18,9 @@ import { discountTypeEnum, promotion } from "~/modules/promotion/infrastructure/
 import { shift } from "~/modules/shift/infrastructure/shift.schema";
 
 // Không có entity "invoice" riêng — order tự mang vòng đời thanh toán:
-// open (đang gọi món, có thể đã in bill hay chưa) -> paid / cancelled. In bill
-// chỉ là 1 HÀNH ĐỘNG (set printedAt), KHÔNG phải 1 trạng thái riêng — tránh
-// nhầm giữa "trạng thái" và "đã làm hành động gì" trên cùng 1 đơn.
+// open (đang gọi món) -> paid / cancelled. In bill chỉ là hiển thị/in
+// payableAmount hiện tại cho khách xem, KHÔNG lưu/đổi gì trên bảng này, in
+// được ở bất kỳ trạng thái nào — xem print-order.usecase.ts.
 // Rule chuyển trạng thái nằm trong domain/order.entity.ts, KHÔNG phải ở đây.
 export const orderStatusEnum = pgEnum("order_status", [
   "open",
@@ -51,7 +51,8 @@ export const order = pgTable(
       .notNull()
       .references(() => user.id),
     note: text("note"),
-    // Chốt tại lần in bill gần nhất (đã trừ khuyến mãi nếu có); null khi order chưa từng được in.
+    // Chốt NGAY LÚC confirmPayment() (đã trừ khuyến mãi nếu có) — null khi
+    // đơn chưa thanh toán. In bill không đụng tới cột này (xem order.entity.ts).
     totalAmount: integer("total_amount"),
     // Khuyến mãi đang áp dụng — snapshot tên/loại/giá trị giảm tại thời điểm
     // áp dụng, không đổi khi promotion gốc bị sửa/xoá sau đó (giống cách
@@ -63,7 +64,6 @@ export const order = pgTable(
     promotionName: varchar("promotion_name", { length: 100 }),
     promotionDiscountType: discountTypeEnum("promotion_discount_type"),
     promotionDiscountValue: integer("promotion_discount_value"),
-    printedAt: timestamp("printed_at", { withTimezone: true }),
     // Chỉ là nhãn ghi lại lúc confirmPayment, không tích hợp cổng thanh toán.
     paymentMethod: paymentMethodEnum("payment_method"),
     paidConfirmedBy: text("paid_confirmed_by").references(() => user.id),

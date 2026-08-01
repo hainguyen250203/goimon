@@ -29,25 +29,30 @@ Hệ thống POS quản lý nhà hàng: order món, tạo hóa đơn, in bill, x
 - Không có tích hợp cổng thanh toán. Khách tự thanh toán ngoài hệ thống (tiền mặt hoặc chuyển khoản), nhân viên xác nhận thủ công.
 - **Không có entity "hóa đơn" (invoice) riêng** — `order` tự mang toàn bộ vòng đời từ gọi món đến thanh toán, vì order↔invoice luôn là quan hệ 1:1 và cùng một vòng đời, tách 2 entity là dư thừa.
 - Trạng thái `order` tối thiểu: `open` (đang gọi món/chờ thanh toán) → `paid` / `cancelled`.
-- **In hoá đơn (`printBill()`) là 1 hành động ĐỘC LẬP, không phải điều kiện tiên quyết để thanh
-  toán** — chỉ set `printedAt`/tính lại `totalAmount`, không ràng buộc gì với `confirmPayment()`.
-  Đã từng bắt buộc phải in trước khi thanh toán — bỏ theo yêu cầu người dùng, in hay không không
-  liên quan tới việc xác nhận thanh toán.
+- **In hoá đơn KHÔNG phải hành động nghiệp vụ, không có method entity riêng, không lưu/đổi gì
+  cả** — chỉ là hiển thị/in `payableAmount` hiện tại cho khách xem preview. In được ở BẤT KỲ
+  trạng thái/số món nào (kể cả in lại hoá đơn đã `paid`/`cancelled`), không validate gì —
+  `printOrder` usecase chỉ `findById` rồi trả thẳng entity cho router lắp payload. Không có khái
+  niệm "phải in lại nếu sửa món" (không có gì bị cache/invalidate), không có cột `printed_at`
+  trong DB.
+- **`totalAmount` chỉ có đúng 1 nơi được set: `confirmPayment()`** — chốt `totalAmount =
+  payableAmount` ngay lúc xác nhận thanh toán (chọn phương thức), vì đó là thời điểm số tiền thực
+  sự được thu. Trước đây `printBill()` từng set `totalAmount`, gây bug: đơn thanh toán mà chưa
+  từng in có `totalAmount` null vĩnh viễn, làm mọi query `sum(totalAmount)` tính doanh thu âm thầm
+  bỏ qua đơn đó (SQL SUM bỏ NULL) → doanh thu 0đ dù đơn đã thanh toán thật.
 - Rule nghiệp vụ nằm trong entity `Order`, không phải constraint DB:
-  - `printBill()`: chỉ hợp lệ khi đang `open` — tính lại `totalAmount` từ các món hiện tại, set
-    `printedAt`. In lại bao nhiêu lần cũng được khi đơn còn `open`.
-  - `addItem()/updateItem()/removeItem()`: nếu đã in (`printedAt` khác null) thì xoá `printedAt` để
-    phải in lại nếu muốn hoá đơn khớp món mới — không đổi status, không ảnh hưởng thanh toán.
-  - `confirmPayment(staffId)`: chỉ hợp lệ khi đang `open` → `paid`, ghi lại `paidConfirmedBy` và
-    `paidConfirmedAt` — KHÔNG yêu cầu đã in bill. Gọi khi không phải `open` phải throw domain error,
-    không đổi state. Không có trạng thái nào tự động chuyển thành `paid`.
+  - `addItem()/updateItem()/removeItem()`: chỉ cần đơn đang `open` (`assertMutable()`).
+  - `confirmPayment(staffId)`: chỉ hợp lệ khi đang `open` → `paid`, chốt `totalAmount`, ghi lại
+    `paidConfirmedBy` và `paidConfirmedAt` — KHÔNG yêu cầu đã in bill. Gọi khi không phải `open`
+    phải throw domain error, không đổi state. Không có trạng thái nào tự động chuyển thành `paid`.
   - `cancel()`: hợp lệ từ `open` → `cancelled`.
 - Mọi query tính doanh thu/số liệu đơn hàng phải lọc `isNull(order.deletedAt)` — đơn xoá mềm
   không được tính vào bất kỳ KPI/báo cáo nào. Doanh thu đơn `open` (chưa thanh toán) PHẢI tính
   "sống" từ `sum(orderItem.unitPrice * orderItem.quantity)` (join `orderItem`), KHÔNG được dùng
-  `order.totalAmount` — cột này `null` tới khi `printBill()`/`confirmPayment()` chạy, nên đơn
-  `open` chưa từng in sẽ bị tính thiếu/bằng 0. Xem `order.drizzle-repository.ts`'s
-  `getShiftOrderStats()`/`listActive()`.
+  `order.totalAmount` — cột này `null` tới khi `confirmPayment()` chạy (đơn `open` không bao giờ
+  có `totalAmount`, kể cả đã in bill). Xem `order.drizzle-repository.ts`'s
+  `getShiftOrderStats()`/`listActive()`. UI hiển thị tổng tiền đơn `open` (danh sách/lịch sử đơn)
+  cũng phải tự tính sống từ `items` tương tự, không đọc `totalAmount`.
 
 ## Route guard & trang danh sách
 
@@ -107,7 +112,7 @@ Mỗi module trong `modules/*` phân tầng rõ ràng theo 3 lớp:
   - **Cấm** import Drizzle hoặc bất kỳ thư viện DB nào.
   - **Cấm** chứa field/kiểu dữ liệu đặc thù của DB (không có `createdAt: Date` kiểu Drizzle column, không có foreign key raw).
   - Mọi thay đổi trạng thái diễn ra trên entity trong memory, có validate nghiệp vụ ngay trong method của entity.
-  - Ví dụ: `order.confirmPayment(staffId)` phải tự kiểm tra order đang ở trạng thái `printed` trước khi chuyển sang `paid`; nếu không hợp lệ thì throw domain error, không đổi state.
+  - Ví dụ: `order.confirmPayment(staffId)` phải tự kiểm tra order đang ở trạng thái `open` trước khi chuyển sang `paid`; nếu không hợp lệ thì throw domain error, không đổi state.
 
 - **`application/`** (usecases) — điều phối nghiệp vụ.
   - Gọi repository qua **interface**, không biết chi tiết implementation DB.
@@ -130,8 +135,8 @@ src/
   modules/
     order/
       domain/
-        order.entity.ts           # class/object Order, method printBill(), confirmPayment(), cancel(), addItem()...
-        order-status.ts           # enum/union: 'open' | 'printed' | 'paid' | 'cancelled'
+        order.entity.ts           # class/object Order, method assertPrintable(), confirmPayment(), cancel(), addItem()...
+        order-status.ts           # enum/union: 'open' | 'paid' | 'cancelled'
         order.repository.ts       # interface OrderRepository (không import Drizzle)
         order.errors.ts           # domain errors, ví dụ InvalidStatusTransitionError
 

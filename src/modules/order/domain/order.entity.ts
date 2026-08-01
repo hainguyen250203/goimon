@@ -1,5 +1,4 @@
 import {
-  EmptyOrderError,
   InvalidOrderStatusTransitionError,
   OrderItemNotFoundError,
 } from "./order.errors";
@@ -38,7 +37,6 @@ export type OrderProps = {
   note: string | null;
   totalAmount: number | null;
   promotion: OrderPromotion | null;
-  printedAt: Date | null;
   paymentMethod: PaymentMethod | null;
   paidConfirmedBy: string | null;
   paidConfirmedAt: Date | null;
@@ -57,7 +55,6 @@ export type OrderDetail = {
   discountAmount: number;
   payableAmount: number;
   totalAmount: number | null;
-  printedAt: Date | null;
   paymentMethod: PaymentMethod | null;
   paidConfirmedAt: Date | null;
   createdAt: Date;
@@ -79,7 +76,6 @@ export class Order {
   note: string | null;
   totalAmount: number | null;
   promotion: OrderPromotion | null;
-  printedAt: Date | null;
   paymentMethod: PaymentMethod | null;
   paidConfirmedBy: string | null;
   paidConfirmedAt: Date | null;
@@ -95,7 +91,6 @@ export class Order {
     this.note = props.note;
     this.totalAmount = props.totalAmount;
     this.promotion = props.promotion;
-    this.printedAt = props.printedAt;
     this.paymentMethod = props.paymentMethod;
     this.paidConfirmedBy = props.paidConfirmedBy;
     this.paidConfirmedAt = props.paidConfirmedAt;
@@ -113,7 +108,6 @@ export class Order {
       note: null,
       totalAmount: null,
       promotion: null,
-      printedAt: null,
       paymentMethod: null,
       paidConfirmedBy: null,
       paidConfirmedAt: null,
@@ -149,11 +143,6 @@ export class Order {
     }
   }
 
-  /** Sửa món/khuyến mãi sau khi đã in bill thì phải in lại mới thanh toán được — xoá mốc in cũ (không đụng status, status luôn "open" tới khi thanh toán/huỷ). */
-  private invalidatePrint() {
-    if (this.printedAt !== null) this.printedAt = null;
-  }
-
   addItem(
     menuItem: { id: number; name: string; price: number },
     quantity: number,
@@ -177,7 +166,6 @@ export class Order {
         note: note ?? null,
       });
     }
-    this.invalidatePrint();
   }
 
   updateItemQuantity(itemId: number, quantity: number) {
@@ -189,7 +177,6 @@ export class Order {
       return;
     }
     item.quantity = quantity;
-    this.invalidatePrint();
   }
 
   updateItemNote(itemId: number, note: string | null) {
@@ -197,7 +184,6 @@ export class Order {
     const item = this.items.find((i) => i.id === itemId);
     if (!item) throw new OrderItemNotFoundError(itemId);
     item.note = note;
-    this.invalidatePrint();
   }
 
   /**
@@ -216,47 +202,32 @@ export class Order {
       this.status = emptyStatus;
       return;
     }
-    this.invalidatePrint();
   }
 
-  /** Đổi khuyến mãi (thêm mới hoặc thay khuyến mãi đang áp dụng) — như sửa món, đã in bill rồi thì phải in lại. */
+  /** Đổi khuyến mãi (thêm mới hoặc thay khuyến mãi đang áp dụng). */
   applyPromotion(promotion: OrderPromotion) {
     this.assertMutable();
     this.promotion = promotion;
-    this.invalidatePrint();
   }
 
   removePromotion() {
     this.assertMutable();
     this.promotion = null;
-    this.invalidatePrint();
   }
 
-  /** Chuyển đơn đang phục vụ sang bàn khác (khách đổi bàn) — không đổi món/tổng tiền nên không cần in lại bill. */
+  /** Chuyển đơn đang phục vụ sang bàn khác (khách đổi bàn). */
   moveToTable(tableId: number) {
     this.assertMutable();
     this.tableId = tableId;
   }
 
-  /** In bill là 1 HÀNH ĐỘNG, không đổi status — chỉ tính lại totalAmount (đã trừ khuyến mãi) và set printedAt, in lại bao nhiêu lần cũng được khi đơn còn "open". */
-  printBill() {
-    if (this.status !== "open") {
-      throw new InvalidOrderStatusTransitionError(
-        `Không thể in bill khi đơn đã ở trạng thái "${this.status}".`,
-      );
-    }
-    if (this.items.length === 0) throw new EmptyOrderError();
-    this.totalAmount = this.payableAmount;
-    this.printedAt = new Date();
-  }
-
   /** Chỉ hợp lệ khi đơn đang "open" → "paid". In bill hay không không liên
-   * quan tới việc thanh toán — 2 hành động độc lập, xem printBill(). Luôn
-   * chốt lại totalAmount ở đây (không chỉ dựa vào printBill()) — trước đây
-   * chỉ printBill() mới set totalAmount nên đơn thanh toán mà chưa từng in
-   * có totalAmount null vĩnh viễn, làm mọi query tính doanh thu
-   * (sum(totalAmount)) âm thầm bỏ qua đơn đó (SQL SUM bỏ qua NULL) thay vì
-   * báo lỗi — ra doanh thu 0đ dù đơn đã thanh toán thật. */
+   * quan tới việc thanh toán — 2 hành động độc lập. In bill không phải hành
+   * động nghiệp vụ (không có method entity nào cho nó) — chỉ là hiển thị/in
+   * `payableAmount` hiện tại cho khách xem preview, in được ở bất kỳ trạng
+   * thái/số món nào, không validate, không lưu gì.
+   * Chốt lại totalAmount = payableAmount NGAY LÚC NÀY — đây là nơi DUY NHẤT
+   * totalAmount được set, vì đây là thời điểm số tiền thực sự được thu. */
   confirmPayment(staffId: string, paymentMethod: PaymentMethod) {
     if (this.status !== "open") {
       throw new InvalidOrderStatusTransitionError(
@@ -293,7 +264,6 @@ export class Order {
       discountAmount: this.discountAmount,
       payableAmount: this.payableAmount,
       totalAmount: this.totalAmount,
-      printedAt: this.printedAt,
       paymentMethod: this.paymentMethod,
       paidConfirmedAt: this.paidConfirmedAt,
       createdAt: this.createdAt,

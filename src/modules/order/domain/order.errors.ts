@@ -12,13 +12,6 @@ export class OrderItemNotFoundError extends Error {
   }
 }
 
-export class EmptyOrderError extends Error {
-  constructor() {
-    super("Đơn chưa có món, không thể in bill.");
-    this.name = "EmptyOrderError";
-  }
-}
-
 export class PromotionNotAvailableError extends Error {
   constructor() {
     super("Khuyến mãi không tồn tại hoặc đã ngừng hoạt động.");

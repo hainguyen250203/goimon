@@ -66,7 +66,9 @@ const OrderHistoryCard = memo(function OrderHistoryCard({ order }: { order: Orde
           {order.paymentMethod ? PAYMENT_METHOD_LABEL[order.paymentMethod] : "Chưa thanh toán"}
         </Text>
         <Text fontSize={{ base: "sm", lg: "md" }} fontWeight="bold">
-          {order.totalAmount != null ? formatVnd(order.totalAmount) : "—"}
+          {order.totalAmount != null
+            ? formatVnd(order.totalAmount)
+            : formatVnd(order.items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0))}
         </Text>
       </Flex>
     </Box>

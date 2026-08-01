@@ -40,7 +40,6 @@ import { buildVietQrImageUrl } from "~/lib/vietqr";
 import {
   InvalidOrderStatusTransitionError,
   OrderItemNotFoundError,
-  EmptyOrderError,
   PromotionNotAvailableError,
   InvalidTableTransferError,
 } from "./domain/order.errors";
@@ -105,7 +104,6 @@ function mapOrderDomainError(error: unknown): never {
   if (
     error instanceof InvalidOrderStatusTransitionError ||
     error instanceof OrderItemNotFoundError ||
-    error instanceof EmptyOrderError ||
     error instanceof PromotionNotAvailableError ||
     error instanceof InvalidTableTransferError
   ) {
@@ -365,7 +363,7 @@ export const orderRouter = createTRPCRouter({
       );
 
       // Gửi lệnh in thật là 1 side-effect BEST-EFFORT — lỗi máy in (mất kết
-      // nối, hết giấy...) không được throw ở đây, vì printedAt đã set xong
+      // nối, hết giấy...) không được throw ở đây, vì in bill không lưu gì cả
       // và đơn phải tiếp tục thanh toán được bất kể máy in có phản hồi hay
       // không (xem printBillToPrinters/escposBillPrinter). Router tự lắp
       // payload thay vì đưa việc này vào printOrder usecase vì đây là composition
