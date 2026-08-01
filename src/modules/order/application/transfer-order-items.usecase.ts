@@ -80,9 +80,10 @@ export async function transferOrderItems(
     }
   }
 
-  const savedTarget = await orderRepository.save(targetOrder);
   const sourceBecameEmpty = sourceOrder.status === "transferred";
-  const savedSource = await orderRepository.save(sourceOrder);
+  // Lưu đích + nguồn trong CÙNG 1 transaction — nếu crash giữa chừng, món sẽ
+  // không bao giờ vừa xuất hiện ở đích vừa còn ở nguồn (xem saveMany()).
+  const [savedTarget, savedSource] = await orderRepository.saveMany([targetOrder, sourceOrder]);
 
   if (isNewTargetOrder) {
     await tableRepository.setStatus(params.targetTableId, "occupied");

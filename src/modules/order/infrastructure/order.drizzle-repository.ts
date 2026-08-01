@@ -127,6 +127,110 @@ async function loadOrder(
   return toOrderEntity(orderRow, itemRows);
 }
 
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/** Thân xử lý upsert 1 order + diff order_items — tách khỏi save()/saveMany()
+ * để dùng chung được executor `tx` do CẢ 2 truyền vào, đảm bảo nhiều order
+ * lưu trong 1 lần saveMany() luôn nằm chung 1 transaction. */
+async function saveOrderTx(tx: Tx, orderEntity: Order): Promise<Order> {
+  const values = {
+    tableId: orderEntity.tableId,
+    shiftId: orderEntity.shiftId,
+    status: orderEntity.status,
+    createdBy: orderEntity.createdBy,
+    note: orderEntity.note,
+    totalAmount: orderEntity.totalAmount,
+    promotionId: orderEntity.promotion?.id ?? null,
+    promotionName: orderEntity.promotion?.name ?? null,
+    promotionDiscountType: orderEntity.promotion?.discountType ?? null,
+    promotionDiscountValue: orderEntity.promotion?.discountValue ?? null,
+    printedAt: orderEntity.printedAt,
+    paymentMethod: orderEntity.paymentMethod,
+    paidConfirmedBy: orderEntity.paidConfirmedBy,
+    paidConfirmedAt: orderEntity.paidConfirmedAt,
+  };
+
+  let orderId = orderEntity.id;
+  let isNewOrder = false;
+  if (orderId === null) {
+    const [row] = await tx.insert(order).values(values).returning({ id: order.id });
+    if (!row) throw new Error("Tạo đơn hàng thất bại.");
+    orderId = row.id;
+    isNewOrder = true;
+  } else {
+    await tx.update(order).set(values).where(eq(order.id, orderId));
+  }
+
+  // Diff order_items: xoá dòng không còn trong entity, insert dòng mới
+  // (id === null), CHỈ update dòng đã có nếu quantity/note thực sự đổi —
+  // trước đây update vô điều kiện toàn bộ items mỗi lần save(), khiến 1
+  // lần bấm +1 số lượng tốn thêm N query thừa (N = số món trong đơn).
+  const existingRows = await tx
+    .select({ id: orderItem.id, quantity: orderItem.quantity, note: orderItem.note })
+    .from(orderItem)
+    .where(eq(orderItem.orderId, orderId));
+  const existingById = new Map(existingRows.map((r) => [r.id, r]));
+  const keptIds = new Set(orderEntity.items.filter((i) => i.id !== null).map((i) => i.id!));
+  const toDelete = existingRows.map((r) => r.id).filter((id) => !keptIds.has(id));
+  if (toDelete.length > 0) {
+    await tx.delete(orderItem).where(inArray(orderItem.id, toDelete));
+  }
+
+  for (const item of orderEntity.items) {
+    if (item.id === null) {
+      const [row] = await tx
+        .insert(orderItem)
+        .values({
+          orderId,
+          menuItemId: item.menuItemId,
+          itemName: item.itemName,
+          unitPrice: item.unitPrice,
+          quantity: item.quantity,
+          note: item.note,
+        })
+        .returning({ id: orderItem.id });
+      if (!row) throw new Error("Thêm món thất bại.");
+      // Gán lại id thật vừa insert lên entity trong memory — tránh phải
+      // đọc lại toàn bộ order từ DB chỉ để lấy id món mới.
+      item.id = row.id;
+    } else {
+      const existing = existingById.get(item.id);
+      const changed =
+        !existing || existing.quantity !== item.quantity || existing.note !== item.note;
+      if (changed) {
+        await tx
+          .update(orderItem)
+          .set({ quantity: item.quantity, note: item.note })
+          .where(eq(orderItem.id, item.id));
+      }
+    }
+  }
+
+  if (isNewOrder) {
+    // id trên entity gốc là readonly (null lúc chưa persist) — phải dựng
+    // entity mới để mang id thật, không re-SELECT lại từ DB.
+    return new Order({
+      id: orderId,
+      tableId: orderEntity.tableId,
+      shiftId: orderEntity.shiftId,
+      status: orderEntity.status,
+      createdBy: orderEntity.createdBy,
+      note: orderEntity.note,
+      totalAmount: orderEntity.totalAmount,
+      promotion: orderEntity.promotion,
+      printedAt: orderEntity.printedAt,
+      paymentMethod: orderEntity.paymentMethod,
+      paidConfirmedBy: orderEntity.paidConfirmedBy,
+      paidConfirmedAt: orderEntity.paidConfirmedAt,
+      createdAt: orderEntity.createdAt,
+      items: orderEntity.items,
+    });
+  }
+  // DB đã khớp values ở trên; items trong memory đã có id thật (gán ở
+  // vòng lặp trên) — trả thẳng entity, không cần đọc lại từ DB.
+  return orderEntity;
+}
+
 export const orderDrizzleRepository: OrderRepository = {
   async list({
     page,
@@ -240,105 +344,20 @@ export const orderDrizzleRepository: OrderRepository = {
   },
 
   async save(orderEntity: Order): Promise<Order> {
+    return db.transaction((tx) => saveOrderTx(tx, orderEntity));
+  },
+
+  // 1 transaction DUY NHẤT cho nhiều order — bắt buộc dùng khi 1 nghiệp vụ
+  // đụng tới >1 order cùng lúc (chuyển món/gộp đơn: cộng vào đích + trừ khỏi
+  // nguồn). Trước đây transfer-order-items/merge-orders gọi save() 2 lần rời
+  // nhau (2 transaction riêng) — nếu crash giữa 2 lần, món bị nhân đôi (đã
+  // cộng vào đích, chưa trừ khỏi nguồn). Giữ nguyên thứ tự orders truyền vào
+  // ở mảng trả về.
+  async saveMany([first, second]: [Order, Order]): Promise<[Order, Order]> {
     return db.transaction(async (tx) => {
-      const values = {
-        tableId: orderEntity.tableId,
-        shiftId: orderEntity.shiftId,
-        status: orderEntity.status,
-        createdBy: orderEntity.createdBy,
-        note: orderEntity.note,
-        totalAmount: orderEntity.totalAmount,
-        promotionId: orderEntity.promotion?.id ?? null,
-        promotionName: orderEntity.promotion?.name ?? null,
-        promotionDiscountType: orderEntity.promotion?.discountType ?? null,
-        promotionDiscountValue: orderEntity.promotion?.discountValue ?? null,
-        printedAt: orderEntity.printedAt,
-        paymentMethod: orderEntity.paymentMethod,
-        paidConfirmedBy: orderEntity.paidConfirmedBy,
-        paidConfirmedAt: orderEntity.paidConfirmedAt,
-      };
-
-      let orderId = orderEntity.id;
-      let isNewOrder = false;
-      if (orderId === null) {
-        const [row] = await tx.insert(order).values(values).returning({ id: order.id });
-        if (!row) throw new Error("Tạo đơn hàng thất bại.");
-        orderId = row.id;
-        isNewOrder = true;
-      } else {
-        await tx.update(order).set(values).where(eq(order.id, orderId));
-      }
-
-      // Diff order_items: xoá dòng không còn trong entity, insert dòng mới
-      // (id === null), CHỈ update dòng đã có nếu quantity/note thực sự đổi —
-      // trước đây update vô điều kiện toàn bộ items mỗi lần save(), khiến 1
-      // lần bấm +1 số lượng tốn thêm N query thừa (N = số món trong đơn).
-      const existingRows = await tx
-        .select({ id: orderItem.id, quantity: orderItem.quantity, note: orderItem.note })
-        .from(orderItem)
-        .where(eq(orderItem.orderId, orderId));
-      const existingById = new Map(existingRows.map((r) => [r.id, r]));
-      const keptIds = new Set(
-        orderEntity.items.filter((i) => i.id !== null).map((i) => i.id!),
-      );
-      const toDelete = existingRows.map((r) => r.id).filter((id) => !keptIds.has(id));
-      if (toDelete.length > 0) {
-        await tx.delete(orderItem).where(inArray(orderItem.id, toDelete));
-      }
-
-      for (const item of orderEntity.items) {
-        if (item.id === null) {
-          const [row] = await tx
-            .insert(orderItem)
-            .values({
-              orderId,
-              menuItemId: item.menuItemId,
-              itemName: item.itemName,
-              unitPrice: item.unitPrice,
-              quantity: item.quantity,
-              note: item.note,
-            })
-            .returning({ id: orderItem.id });
-          if (!row) throw new Error("Thêm món thất bại.");
-          // Gán lại id thật vừa insert lên entity trong memory — tránh phải
-          // đọc lại toàn bộ order từ DB chỉ để lấy id món mới.
-          item.id = row.id;
-        } else {
-          const existing = existingById.get(item.id);
-          const changed =
-            !existing || existing.quantity !== item.quantity || existing.note !== item.note;
-          if (changed) {
-            await tx
-              .update(orderItem)
-              .set({ quantity: item.quantity, note: item.note })
-              .where(eq(orderItem.id, item.id));
-          }
-        }
-      }
-
-      if (isNewOrder) {
-        // id trên entity gốc là readonly (null lúc chưa persist) — phải dựng
-        // entity mới để mang id thật, không re-SELECT lại từ DB.
-        return new Order({
-          id: orderId,
-          tableId: orderEntity.tableId,
-          shiftId: orderEntity.shiftId,
-          status: orderEntity.status,
-          createdBy: orderEntity.createdBy,
-          note: orderEntity.note,
-          totalAmount: orderEntity.totalAmount,
-          promotion: orderEntity.promotion,
-          printedAt: orderEntity.printedAt,
-          paymentMethod: orderEntity.paymentMethod,
-          paidConfirmedBy: orderEntity.paidConfirmedBy,
-          paidConfirmedAt: orderEntity.paidConfirmedAt,
-          createdAt: orderEntity.createdAt,
-          items: orderEntity.items,
-        });
-      }
-      // DB đã khớp values ở trên; items trong memory đã có id thật (gán ở
-      // vòng lặp trên) — trả thẳng entity, không cần đọc lại từ DB.
-      return orderEntity;
+      const savedFirst = await saveOrderTx(tx, first);
+      const savedSecond = await saveOrderTx(tx, second);
+      return [savedFirst, savedSecond];
     });
   },
 

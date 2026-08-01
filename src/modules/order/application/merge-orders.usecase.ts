@@ -64,8 +64,9 @@ export async function mergeOrders(
     sourceOrder.removeItem(item.id!, "transferred");
   }
 
-  const savedTarget = await orderRepository.save(targetOrder);
-  const savedSource = await orderRepository.save(sourceOrder);
+  // Lưu đích + nguồn trong CÙNG 1 transaction — nếu crash giữa chừng, món sẽ
+  // không bao giờ vừa xuất hiện ở đích vừa còn ở nguồn (xem saveMany()).
+  const [savedTarget, savedSource] = await orderRepository.saveMany([targetOrder, sourceOrder]);
 
   await tableRepository.setStatus(savedSource.tableId, "available");
 

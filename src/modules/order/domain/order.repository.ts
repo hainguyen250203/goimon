@@ -183,6 +183,11 @@ export interface OrderRepository {
   findById(id: number): Promise<Order | null>;
   /** Upsert order + diff order_items (insert món mới/update món đổi/xoá món bị gỡ) trong 1 transaction. */
   save(order: Order): Promise<Order>;
+  /** Lưu đích + nguồn trong CÙNG 1 transaction — bắt buộc dùng khi 1 nghiệp vụ
+   * đụng 2 order cùng lúc (chuyển món/gộp đơn), tránh nửa vời nếu crash giữa
+   * chừng (vd đã cộng món vào đích nhưng chưa trừ khỏi nguồn). Tuple cố định
+   * 2 phần tử (không phải mảng bất kỳ độ dài) vì cả 2 nơi gọi đều đúng 2 order. */
+  saveMany(orders: [Order, Order]): Promise<[Order, Order]>;
   /** Ghi 1 dòng vào order_events — timeline riêng của order, khác activity_logs. */
   recordEvent(params: RecordOrderEventParams): Promise<void>;
   /** Xoá mềm — chỉ set deletedAt, không đổi status (status có thể là bất kỳ
