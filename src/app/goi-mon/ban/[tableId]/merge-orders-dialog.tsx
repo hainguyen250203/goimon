@@ -11,6 +11,7 @@ import {
   DialogRoot,
   DialogTitle,
 } from "~/components/ui/dialog";
+import { confirmAlert } from "~/components/ui/confirm-alert";
 import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
 import { TablePickerGrid } from "./table-picker-grid";
@@ -68,7 +69,15 @@ export function MergeOrdersDialog({
             tables={tables ?? []}
             currentTableId={currentTableId}
             isTableDisabled={(table) => table.activeOrder === null}
-            onSelectTable={(tableId) => mergeMutation.mutate({ sourceOrderId: orderId, targetTableId: tableId })}
+            onSelectTable={(tableId) => {
+              const table = tables?.find((t) => t.id === tableId);
+              onOpenChange(false);
+              confirmAlert({
+                title: `Xác nhận gộp đơn vào ${table?.name ?? "bàn đã chọn"}?`,
+                description: "Toàn bộ món ở bàn này sẽ gộp sang đơn đó, bàn này trở thành trống.",
+                onConfirm: () => mergeMutation.mutate({ sourceOrderId: orderId, targetTableId: tableId }),
+              });
+            }}
             disabled={mergeMutation.isPending}
           />
         </DialogBody>

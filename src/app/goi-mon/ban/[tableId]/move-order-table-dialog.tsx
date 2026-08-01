@@ -11,6 +11,7 @@ import {
   DialogRoot,
   DialogTitle,
 } from "~/components/ui/dialog";
+import { confirmAlert } from "~/components/ui/confirm-alert";
 import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
 import { TablePickerGrid } from "./table-picker-grid";
@@ -66,7 +67,15 @@ export function MoveOrderTableDialog({
             tables={tables ?? []}
             currentTableId={currentTableId}
             isTableDisabled={(table) => table.activeOrder !== null}
-            onSelectTable={(tableId) => moveTable.mutate({ orderId, targetTableId: tableId })}
+            onSelectTable={(tableId) => {
+              const table = tables?.find((t) => t.id === tableId);
+              onOpenChange(false);
+              confirmAlert({
+                title: `Xác nhận chuyển bàn sang ${table?.name ?? "bàn đã chọn"}?`,
+                description: "Đơn đang phục vụ sẽ chuyển hết sang bàn mới.",
+                onConfirm: () => moveTable.mutate({ orderId, targetTableId: tableId }),
+              });
+            }}
             disabled={moveTable.isPending}
           />
         </DialogBody>

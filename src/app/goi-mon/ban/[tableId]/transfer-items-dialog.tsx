@@ -12,6 +12,7 @@ import {
   DialogRoot,
   DialogTitle,
 } from "~/components/ui/dialog";
+import { confirmAlert } from "~/components/ui/confirm-alert";
 import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
 import type { RouterOutputs } from "~/trpc/react";
@@ -70,10 +71,14 @@ export function TransferItemsDialog({
 
   const handleSelectTable = (targetTableId: number) => {
     if (targetTableId === order.tableId || selectedItems.length === 0) return;
-    transferItems.mutate({
-      sourceOrderId: order.id,
-      items: selectedItems.map((x) => ({ itemId: x.item.id!, quantity: x.quantity })),
-      targetTableId,
+    const table = tables?.find((t) => t.id === targetTableId);
+    const itemCount = selectedItems.reduce((sum, x) => sum + x.quantity, 0);
+    const items = selectedItems.map((x) => ({ itemId: x.item.id!, quantity: x.quantity }));
+    resetAndClose();
+    confirmAlert({
+      title: `Xác nhận chuyển ${itemCount} món sang ${table?.name ?? "bàn đã chọn"}?`,
+      onConfirm: () =>
+        transferItems.mutate({ sourceOrderId: order.id, items, targetTableId }),
     });
   };
 
