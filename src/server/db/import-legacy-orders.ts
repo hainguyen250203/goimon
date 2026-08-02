@@ -1,50 +1,44 @@
 import "dotenv/config";
 
-import { like } from "drizzle-orm";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { category, menuItem } from "~/modules/menu/infrastructure/menu.schema";
 import { order, orderEvent, orderItem } from "~/modules/order/infrastructure/order.schema";
 import { shift } from "~/modules/shift/infrastructure/shift.schema";
-import { area, restaurantTable } from "~/modules/table/infrastructure/table.schema";
 import { db } from "~/server/db";
 
 /**
- * Import đơn hàng của "quán cũ" (pos-be, MySQL) vào pos-system — CHỈ đơn
- * thuộc CA GẦN NHẤT (xác định qua shift.json). Tạo MỚI đúng 1 shift trong
- * pos-system (status "closed") đại diện cho ca đó, mọi đơn import đều gắn
- * `shiftId` vào shift mới này. Dữ liệu nguồn export bằng SQL từ MySQL, xem
- * hướng dẫn export. Đây là script CHẠY 1 LẦN — không idempotent theo từng
- * dòng, tự chặn chạy lại (xem `assertNotAlreadyImported`).
+ * Seed menu THẬT từ "quán cũ" (pos-be, MySQL) + import đơn hàng của CA GẦN
+ * NHẤT vào pos-system. Chạy SAU `db:migrate` + `db:seed` (cần sẵn user admin
+ * + bàn thật). Không còn khái niệm "[Quán cũ]" ẩn — category/menu_item import
+ * ra chính là menu thật đang dùng, order gắn vào 1 bàn thật + 1 shift mới
+ * tạo, không tạo area/table riêng cho quán cũ nữa.
  *
  * Phạm vi (đã chốt với người yêu cầu):
  * - Chỉ cần thống kê — mọi actor (createdBy/actorId/openedBy/closedBy) gán
  *   cứng về 1 admin có sẵn (`ADMIN_PHONE_NUMBER`), KHÔNG migrate user/mật
  *   khẩu thật.
+ * - Mọi đơn import đều gắn `tableId` vào ĐÚNG 1 bàn thật có sẵn
+ *   (`FIXED_TABLE_NAME`) — quán cũ dùng bàn nào không còn ý nghĩa với quán
+ *   hiện tại, chỉ cần đúng doanh thu/số liệu.
  * - Đơn cũ còn `status="open"` (giỏ hàng bỏ dở) hoặc `status="billed"` mà
  *   `bill` không có kết quả rõ ràng (khác "paid") đều BỎ QUA, không import.
  * - order_events chỉ tự sinh 2 loại, đúng eventType thật đang dùng trong
  *   order.router.ts: "items_added" (lúc tạo đơn) và "payment_confirmed"
  *   (lúc thanh toán, nếu có) — không phục dựng lại toàn bộ loghistory cũ.
- * - area/table/category/menu_item của quán cũ được tạo MỚI (không map vào
- *   dữ liệu đang sống của quán hiện tại), đặt `isActive`/`isPublished:
- *   false` để không hiện trong UI gọi món/menu hiện tại, tên bàn/khu
- *   vực/danh mục có tiền tố để khỏi đụng unique constraint với dữ liệu
- *   thật đang có.
  * - Mọi timestamp export từ MySQL đều KHÔNG có timezone — server MySQL cấu
  *   hình theo giờ hệ thống (đã xác nhận `NOW()` khớp giờ VN), nên phải parse
  *   thủ công như giờ VN (UTC+7), không được để JS tự suy theo múi giờ máy
  *   chạy script (xem `parseLegacyDateTime`).
  */
 const ADMIN_PHONE_NUMBER = "0397372410";
-const LEGACY_PREFIX = "[Quán cũ] ";
+/** Bàn thật (đã có sẵn sau `db:seed`) dùng chung cho mọi đơn import. */
+const FIXED_TABLE_NAME = "Khu A - B1";
 const LEGACY_DATA_DIR = path.join(process.cwd(), "src/server/db/seed-data/legacy");
 const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
 
 // ---- Kiểu dữ liệu export từ pos-be (MySQL) — xem pos-be/prisma/schema.prisma ----
-type LegacyArea = { id: number; name: string };
-type LegacyTable = { id: number; name: string; area_id: number };
 type LegacyCategory = { id: number; name: string };
 type LegacyProduct = { id: number; name: string; price: number; category_id: number };
 type LegacyShift = { id: number; start_time: string; end_time: string | null; status: "open" | "closed" };
@@ -94,13 +88,13 @@ function parseLegacyDateTime(value: string): Date {
   );
 }
 
-/** Script này KHÔNG idempotent theo từng dòng — chặn chạy 2 lần trên cùng 1 DB (sẽ tạo trùng toàn bộ). */
-async function assertNotAlreadyImported() {
-  const [existing] = await db.select({ id: area.id }).from(area).where(like(area.name, `${LEGACY_PREFIX}%`)).limit(1);
+/** Chỉ seed 1 lần — nếu đã có category nào rồi (kể cả tạo tay qua UI) thì chặn luôn, tránh seed trùng. */
+async function assertNotAlreadySeeded() {
+  const existing = await db.query.category.findFirst();
   if (existing) {
     throw new Error(
-      "Đã có dữ liệu \"[Quán cũ]\" trong DB — script này chạy 1 lần, không tự dedupe. " +
-        "Xoá thủ công dữ liệu cũ (area/table/category/menu_item có tiền tố \"[Quán cũ]\" và các order liên quan) trước khi chạy lại.",
+      'Đã có category trong DB — script này chỉ chạy khi menu đang TRỐNG (vừa "db:migrate" + "db:seed" xong). ' +
+        "Nếu chắc chắn muốn seed lại, xoá dữ liệu category/menu_item/order liên quan trước khi chạy lại.",
     );
   }
 }
@@ -110,9 +104,19 @@ async function getAdminUserId(): Promise<string> {
     where: (u, { eq }) => eq(u.phoneNumber, ADMIN_PHONE_NUMBER),
   });
   if (!admin) {
-    throw new Error(`Không tìm thấy user với SĐT ${ADMIN_PHONE_NUMBER} — kiểm tra lại tài khoản admin trước khi chạy.`);
+    throw new Error(`Không tìm thấy user với SĐT ${ADMIN_PHONE_NUMBER} — chạy "db:seed" trước khi chạy script này.`);
   }
   return admin.id;
+}
+
+async function getFixedTableId(): Promise<number> {
+  const table = await db.query.restaurantTable.findFirst({
+    where: (t, { eq }) => eq(t.name, FIXED_TABLE_NAME),
+  });
+  if (!table) {
+    throw new Error(`Không tìm thấy bàn "${FIXED_TABLE_NAME}" — chạy "db:seed" trước khi chạy script này.`);
+  }
+  return table.id;
 }
 
 /** Ca gần nhất (start_time mới nhất) trong dữ liệu cũ. */
@@ -139,47 +143,10 @@ async function importLatestShift(latestShift: LegacyShift, adminId: string): Pro
   return created.id;
 }
 
-async function importAreas(rows: LegacyArea[]): Promise<Map<number, number>> {
-  const map = new Map<number, number>();
-  for (const row of rows) {
-    const [created] = await db
-      .insert(area)
-      .values({ name: `${LEGACY_PREFIX}${row.name}`, isActive: false })
-      .returning();
-    if (created) map.set(row.id, created.id);
-  }
-  console.log(`  ${map.size} khu vực`);
-  return map;
-}
-
-async function importTables(
-  rows: LegacyTable[],
-  areaIdMap: Map<number, number>,
-): Promise<Map<number, number>> {
-  const map = new Map<number, number>();
-  for (const row of rows) {
-    const areaId = areaIdMap.get(row.area_id);
-    if (!areaId) {
-      console.warn(`  bỏ qua bàn "${row.name}" (id=${row.id}) — không tìm thấy khu vực gốc id=${row.area_id}`);
-      continue;
-    }
-    const [created] = await db
-      .insert(restaurantTable)
-      .values({ areaId, name: `${LEGACY_PREFIX}${row.name} #${row.id}`, isActive: false })
-      .returning();
-    if (created) map.set(row.id, created.id);
-  }
-  console.log(`  ${map.size} bàn`);
-  return map;
-}
-
 async function importCategories(rows: LegacyCategory[]): Promise<Map<number, number>> {
   const map = new Map<number, number>();
   for (const row of rows) {
-    const [created] = await db
-      .insert(category)
-      .values({ name: `${LEGACY_PREFIX}${row.name}`, isActive: false })
-      .returning();
+    const [created] = await db.insert(category).values({ name: row.name }).returning();
     if (created) map.set(row.id, created.id);
   }
   console.log(`  ${map.size} danh mục`);
@@ -199,14 +166,7 @@ async function importProducts(
     }
     const [created] = await db
       .insert(menuItem)
-      .values({
-        categoryId,
-        name: row.name,
-        price: row.price,
-        isAvailable: false,
-        isPublished: false,
-        printToKitchen: false,
-      })
+      .values({ categoryId, name: row.name, price: row.price })
       .returning();
     if (created) map.set(row.id, created.id);
   }
@@ -214,29 +174,14 @@ async function importProducts(
   return map;
 }
 
-/**
- * Món "vô danh" dùng khi order_item trỏ tới product_id không có trong
- * product.json export — `assertNotAlreadyImported()` đã đảm bảo chưa có
- * category/menu_item "[Quán cũ]" nào tồn tại nên luôn tạo mới, không cần
- * tìm trước.
- */
+/** Fallback cho order_item trỏ tới product_id không có trong product.json export (hiếm khi xảy ra). */
 async function ensureFallbackMenuItem(): Promise<number> {
-  const [categoryRow] = await db
-    .insert(category)
-    .values({ name: `${LEGACY_PREFIX}Khác`, isActive: false })
-    .returning();
+  const [categoryRow] = await db.insert(category).values({ name: "Khác" }).returning();
   if (!categoryRow) throw new Error("Không tạo được danh mục fallback.");
 
   const [created] = await db
     .insert(menuItem)
-    .values({
-      categoryId: categoryRow.id,
-      name: `${LEGACY_PREFIX}Món không xác định`,
-      price: 0,
-      isAvailable: false,
-      isPublished: false,
-      printToKitchen: false,
-    })
+    .values({ categoryId: categoryRow.id, name: "Món không xác định", price: 0 })
     .returning();
   if (!created) throw new Error("Không tạo được món fallback.");
   return created.id;
@@ -245,32 +190,24 @@ async function ensureFallbackMenuItem(): Promise<number> {
 async function importOrders({
   orders,
   bills,
-  tableIdMap,
-  adminId,
+  tableId,
   shiftId,
+  adminId,
 }: {
   orders: LegacyOrder[];
   bills: LegacyBill[];
-  tableIdMap: Map<number, number>;
-  adminId: string;
+  tableId: number;
   shiftId: number;
+  adminId: string;
 }): Promise<Map<number, number>> {
   const billByOrderId = new Map(bills.map((b) => [b.order_id, b]));
   const map = new Map<number, number>();
   let skippedOpen = 0;
   let skippedNoResult = 0;
-  let skippedNoTable = 0;
 
   for (const row of orders) {
     if (row.status === "open") {
       skippedOpen++;
-      continue;
-    }
-
-    const tableId = tableIdMap.get(row.table_id);
-    if (!tableId) {
-      skippedNoTable++;
-      console.warn(`  bỏ qua order id=${row.id} — không tìm thấy bàn gốc id=${row.table_id}`);
       continue;
     }
 
@@ -315,7 +252,7 @@ async function importOrders({
   }
 
   console.log(
-    `  ${map.size} đơn import — bỏ qua ${skippedOpen} đơn "open", ${skippedNoResult} đơn "billed" chưa có kết quả rõ ràng, ${skippedNoTable} đơn thiếu bàn gốc`,
+    `  ${map.size} đơn import — bỏ qua ${skippedOpen} đơn "open", ${skippedNoResult} đơn "billed" chưa có kết quả rõ ràng`,
   );
   return map;
 }
@@ -397,12 +334,11 @@ async function importOrderItemsAndEvents({
 }
 
 async function main() {
-  await assertNotAlreadyImported();
+  await assertNotAlreadySeeded();
   const adminId = await getAdminUserId();
+  const tableId = await getFixedTableId();
 
   console.log("Đọc file export...");
-  const legacyAreas = readLegacyJson<LegacyArea>("area.json");
-  const legacyTables = readLegacyJson<LegacyTable>("table.json");
   const legacyCategories = readLegacyJson<LegacyCategory>("category.json");
   const legacyProducts = readLegacyJson<LegacyProduct>("product.json");
   const legacyShifts = readLegacyJson<LegacyShift>("shift.json");
@@ -418,16 +354,10 @@ async function main() {
   console.log("Tạo shift mới cho ca gần nhất...");
   const shiftId = await importLatestShift(latestShift, adminId);
 
-  console.log("Import khu vực...");
-  const areaIdMap = await importAreas(legacyAreas);
-
-  console.log("Import bàn...");
-  const tableIdMap = await importTables(legacyTables, areaIdMap);
-
-  console.log("Import danh mục...");
+  console.log("Seed danh mục...");
   const categoryIdMap = await importCategories(legacyCategories);
 
-  console.log("Import món...");
+  console.log("Seed món...");
   const productIdMap = await importProducts(legacyProducts, categoryIdMap);
   const fallbackMenuItemId = await ensureFallbackMenuItem();
 
@@ -435,9 +365,9 @@ async function main() {
   const orderIdMap = await importOrders({
     orders: legacyOrders,
     bills: legacyBills,
-    tableIdMap,
-    adminId,
+    tableId,
     shiftId,
+    adminId,
   });
 
   console.log("Import order_items + order_events...");
