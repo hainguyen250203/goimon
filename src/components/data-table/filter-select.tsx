@@ -10,8 +10,7 @@ import {
   SelectTrigger,
   SelectValueText,
 } from "~/components/ui/select";
-
-export type FilterOption = { value: string; label: string };
+import type { FilterOption } from "./filter-field.type";
 
 /**
  * Select đơn giản cho filter/form — bọc createListCollection (API gốc của

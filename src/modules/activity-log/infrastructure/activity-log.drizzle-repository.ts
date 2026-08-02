@@ -1,4 +1,4 @@
-import { desc, eq, count } from "drizzle-orm";
+import { and, desc, eq, gte, lt, count } from "drizzle-orm";
 
 import { db } from "~/server/db";
 import { user } from "~/server/better-auth/schema";
@@ -21,9 +21,22 @@ export const activityLogDrizzleRepository: ActivityLogRepository = {
     });
   },
 
-  async list({ page, pageSize, entityType }: ListActivitiesParams): Promise<ListActivitiesResult> {
+  async list({
+    page,
+    pageSize,
+    entityType,
+    actorId,
+    dateFrom,
+    dateTo,
+  }: ListActivitiesParams): Promise<ListActivitiesResult> {
     const offset = (page - 1) * pageSize;
-    const where = entityType ? eq(activityLog.entityType, entityType) : undefined;
+    const conditions = [
+      entityType ? eq(activityLog.entityType, entityType) : undefined,
+      actorId ? eq(activityLog.actorId, actorId) : undefined,
+      dateFrom ? gte(activityLog.createdAt, dateFrom) : undefined,
+      dateTo ? lt(activityLog.createdAt, dateTo) : undefined,
+    ].filter((c) => c !== undefined);
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
 
     const [rows, totalRows] = await Promise.all([
       db

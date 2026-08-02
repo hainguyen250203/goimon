@@ -10,6 +10,11 @@ export type ListActivitiesParams = {
   page: number;
   pageSize: number;
   entityType?: string;
+  actorId?: string;
+  /** Mốc BAO GỒM. */
+  dateFrom?: Date;
+  /** Mốc LOẠI TRỪ. */
+  dateTo?: Date;
 };
 
 /** Read model cho trang /quan-ly — kèm actorName (join sẵn), khác RecordActivityParams (write). */

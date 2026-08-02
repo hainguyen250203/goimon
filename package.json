@@ -13,9 +13,9 @@
     "db:seed": "tsx src/server/db/seed.ts",
     "db:studio": "drizzle-kit studio",
     "db:wipe-assistant-sessions": "tsx src/server/db/wipe-assistant-sessions.ts",
-    "dev": "next dev -p 4466",
+    "dev": "next dev -p 3344",
     "preview": "next build && next start",
-    "start": "next start -p 4466",
+    "start": "next start -p 3344",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

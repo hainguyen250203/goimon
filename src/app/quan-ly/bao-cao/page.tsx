@@ -7,7 +7,7 @@ import { api, HydrateClient } from "~/trpc/server";
 import { getSession } from "~/server/better-auth/server";
 import { hasMinRole } from "~/server/better-auth/role-rank";
 import { getDefaultReportRange } from "~/modules/report/application/get-default-report-range.usecase";
-import { formatVNDateInputValue, toInclusiveEndDateInputValue, toQueryRange } from "./date-range";
+import { formatVNDateInputValue, toInclusiveEndDateInputValue, toQueryRange } from "~/lib/vn-date-range";
 import { ReportView } from "./report-view";
 
 export default async function BaoCaoPage({

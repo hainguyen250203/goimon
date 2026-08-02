@@ -9,10 +9,10 @@ import { Eye } from "lucide-react";
 import { ListViewTable, type ListViewColumn } from "~/components/data-table/list-view-table";
 import { ListViewPagination } from "~/components/data-table/list-view-pagination";
 import { ListViewToolbar } from "~/components/data-table/list-view-toolbar";
+import { UserFilterCombobox } from "~/components/data-table/user-filter-combobox";
 import { api } from "~/trpc/react";
 import { formatDateTime } from "~/lib/format-order";
 import type { SessionHistoryItem } from "~/modules/assistant/application/list-all-sessions.usecase";
-import { UserFilterCombobox } from "./user-filter-combobox";
 
 const columns: ListViewColumn<SessionHistoryItem>[] = [
   { key: "id", header: "ID", cell: (row) => row.id, width: "4rem" },
@@ -113,6 +113,8 @@ export function SessionHistoryList({
           onValueChange={(nextUserId) =>
             router.push(buildHref({ page: 1, userId: nextUserId || undefined }))
           }
+          role="admin"
+          placeholder="Lọc theo admin..."
         />
       </ListViewToolbar>
 

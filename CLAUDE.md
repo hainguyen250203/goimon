@@ -58,6 +58,23 @@ Hệ thống POS quản lý nhà hàng: order món, tạo hóa đơn, in bill, x
 
 - `/quan-ly/layout.tsx` chỉ chặn role `user` (đẩy sang `/goi-mon`), không phân biệt `manager` vs `admin`. Route admin-only (vd: `nguoi-dung`, `bao-cao`) phải tự check `session.user.role !== "admin"` và `redirect("/quan-ly")` ngay trong `page.tsx` — nếu không, `manager` vẫn vào được UI nhưng mọi gọi tRPC (`adminProcedure`) đều FORBIDDEN, kẹt loading vô thời hạn thay vì bị chặn rõ ràng.
 - Trang danh sách có phân trang/filter: dùng `useQuery` + `placeholderData: keepPreviousData` (KHÔNG `useSuspenseQuery`) cho query đó — Suspense không có khái niệm giữ data cũ trong lúc fetch data mới. Điều hướng phân trang/filter phải qua `router.push` (client-side), không dùng `<a href>` thô — gây full page reload, nháy trắng màn hình.
+- Trang danh sách cần > 1-2 filter (đặc biệt có combobox tìm kiếm hoặc khoảng ngày): dùng
+  `FilterDrawer` (`src/components/data-table/filter-drawer.tsx`) thay vì nhét nhiều control rời
+  trên `ListViewToolbar` — khai báo 1 mảng `FilterField[]` (`filter-field.type.ts`), `FilterDrawer`
+  tự render field qua `FilterFieldInput` theo `field.type` (`select`/`daterange`), tự quản lý
+  draft + nút Đặt lại/Áp dụng + dot xanh báo hiệu đang lọc. Tham khảo kiến trúc
+  FilterField[]/FilterPanel của `alix-bo-frontend-v2` (KHÔNG mang theo "active filter tags" của
+  repo đó). Xem `nhat-ky-hoat-dong/activity-log-list.tsx` làm ví dụ đầy đủ.
+  - `field.type: "select"` với `variant: "combobox"` (danh sách dài cần tìm kiếm, vd người dùng)
+    dùng `FilterCombobox` — component này CHỈ nhận `options` có sẵn, KHÔNG tự fetch; trang gọi tự
+    fetch data (vd `api.user.list`) rồi map thành `FilterOption[]` trước khi đưa vào field. Khác
+    `UserFilterCombobox` (tự fetch bên trong `api.user.list`) — chỉ dùng `UserFilterCombobox` khi
+    combobox đứng riêng lẻ NGOÀI `FilterDrawer` (vd toolbar `tro-ly-ai/lich-su`).
+  - Dot xanh trên nút "Bộ lọc" chỉ hiện khi giá trị KHÁC `defaults` truyền vào `FilterDrawer`,
+    không phải check truthy — field luôn có giá trị mặc định khác rỗng (vd "Khoảng ngày" mặc định
+    "trong tháng") mà check truthy sẽ hiện dot sai ngay từ đầu dù chưa lọc gì thật. Giá trị mặc
+    định phụ thuộc "hôm nay" phải tính Ở SERVER (`page.tsx`) rồi truyền xuống, xem
+    `getDefaultVNMonthRange` (`src/lib/vn-date-range.ts`) — tránh lệch giờ/hydration mismatch.
 - **`superadmin` là vai trò giám sát ẨN — cấm tuyệt đối để lộ sự tồn tại của nó** ra bất kỳ
   text/UI nào mà người xem không phải superadmin nhìn thấy được (dialog xác nhận, toast, tooltip,
   label, error message...), kể cả gián tiếp qua câu chữ — vd dialog xoá đơn từng ghi "hành động này

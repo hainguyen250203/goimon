@@ -16,6 +16,9 @@ export const activityLogRouter = createTRPCRouter({
         page: z.number().int().min(1).default(1),
         pageSize: z.number().int().min(1).max(MAX_PAGE_SIZE).default(DEFAULT_PAGE_SIZE),
         entityType: z.string().optional(),
+        actorId: z.string().optional(),
+        dateFrom: z.coerce.date().optional(),
+        dateTo: z.coerce.date().optional(),
       }),
     )
     .query(({ input }) => listActivities(activityLogDrizzleRepository, input)),

@@ -6,7 +6,7 @@ import { Grid, Stack } from "@chakra-ui/react";
 import { api } from "~/trpc/react";
 import { formatVnd } from "~/lib/format-order";
 import { KpiCard } from "../kpi-card";
-import { toQueryRange } from "./date-range";
+import { toQueryRange } from "~/lib/vn-date-range";
 import { ReportFilters } from "./report-filters";
 import { RevenueByShiftChart } from "./ui/revenue-by-shift-chart";
 import { OrderCountByShiftChart } from "./ui/order-count-by-shift-chart";
