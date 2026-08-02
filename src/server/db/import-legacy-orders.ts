@@ -27,16 +27,18 @@ import { db } from "~/server/db";
  * - order_events chỉ tự sinh 2 loại, đúng eventType thật đang dùng trong
  *   order.router.ts: "items_added" (lúc tạo đơn) và "payment_confirmed"
  *   (lúc thanh toán, nếu có) — không phục dựng lại toàn bộ loghistory cũ.
- * - Mọi timestamp export từ MySQL đều KHÔNG có timezone — server MySQL cấu
- *   hình theo giờ hệ thống (đã xác nhận `NOW()` khớp giờ VN), nên phải parse
- *   thủ công như giờ VN (UTC+7), không được để JS tự suy theo múi giờ máy
- *   chạy script (xem `parseLegacyDateTime`).
+ * - Mọi timestamp export từ MySQL đều KHÔNG có timezone — server MySQL (container
+ *   MariaDB local dùng để test) chạy hệ điều hành UTC (`/etc/localtime ->
+ *   Etc/UTC`, tự kiểm bằng `docker exec ... mysql -e "SELECT NOW(),
+ *   UTC_TIMESTAMP()"` ra 2 giá trị BẰNG NHAU), nên chuỗi export chính là giờ
+ *   UTC, parse thẳng KHÔNG trừ/cộng offset gì thêm (xem `parseLegacyDateTime`).
+ *   Nếu sau này export từ 1 MySQL server khác cấu hình theo giờ VN thay vì
+ *   UTC, phải tự kiểm tra lại theo đúng cách trên rồi sửa hàm này cho khớp.
  */
 const ADMIN_PHONE_NUMBER = "0397372410";
 /** Bàn thật (đã có sẵn sau `db:seed`) dùng chung cho mọi đơn import. */
 const FIXED_TABLE_NAME = "Khu A - B1";
 const LEGACY_DATA_DIR = path.join(process.cwd(), "src/server/db/seed-data/legacy");
-const VN_OFFSET_MS = 7 * 60 * 60 * 1000;
 
 // ---- Kiểu dữ liệu export từ pos-be (MySQL) — xem pos-be/prisma/schema.prisma ----
 type LegacyCategory = { id: number; name: string };
@@ -76,15 +78,15 @@ function readLegacyJson<T>(fileName: string): T[] {
   return JSON.parse(readFileSync(filePath, "utf-8")) as T[];
 }
 
-/** MySQL export "YYYY-MM-DD HH:MM:SS.mmm" — không có timezone, phải tự coi là giờ VN (UTC+7). */
+/** MySQL export "YYYY-MM-DD HH:MM:SS.mmm" — không có timezone, server MySQL nguồn
+ * chạy UTC nên chuỗi này CHÍNH LÀ giờ UTC, parse thẳng không lệch offset gì. */
 function parseLegacyDateTime(value: string): Date {
   const [datePart, timePart] = value.split(" ");
   const [y, m, d] = datePart!.split("-").map(Number);
   const [hh, mm, ssRaw] = (timePart ?? "00:00:00").split(":");
   const [ss, ms] = (ssRaw ?? "0").split(".");
   return new Date(
-    Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1, Number(hh) || 0, Number(mm) || 0, Number(ss) || 0, Number(ms ?? 0)) -
-      VN_OFFSET_MS,
+    Date.UTC(y ?? 1970, (m ?? 1) - 1, d ?? 1, Number(hh) || 0, Number(mm) || 0, Number(ss) || 0, Number(ms ?? 0)),
   );
 }
 

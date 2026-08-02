@@ -1,19 +1,24 @@
 "use client";
 
 import { Bot, CalendarClock, CheckCircle2, Percent, Receipt, TrendingUp, Wallet } from "lucide-react";
-import { Grid, Stack } from "@chakra-ui/react";
+import { Flex, Grid, Stack } from "@chakra-ui/react";
 
 import { api } from "~/trpc/react";
 import { formatVnd } from "~/lib/format-order";
+import { useLocalStorageState } from "~/lib/use-local-storage-state";
 import { KpiCard } from "../kpi-card";
 import { toQueryRange } from "~/lib/vn-date-range";
-import { ReportFilters } from "./report-filters";
+import { ReportSettingsDrawer } from "./report-settings-drawer";
+import { ALL_REPORT_SECTIONS, type ReportSectionKey } from "./ui/report-section-picker";
 import { RevenueByShiftChart } from "./ui/revenue-by-shift-chart";
 import { OrderCountByShiftChart } from "./ui/order-count-by-shift-chart";
+import { BusyHoursChart } from "./ui/busy-hours-chart";
 import { TopItemsChart } from "./ui/top-items-chart";
 import { PaymentMethodPieChart } from "./ui/payment-method-pie-chart";
 import { CategoryRevenueChart } from "./ui/category-revenue-chart";
 import { PromotionUsageTable } from "./ui/promotion-usage-table";
+
+const VISIBLE_SECTIONS_STORAGE_KEY = "goimon:bao-cao:visible-sections";
 
 /** So sánh % với kỳ trước — undefined nghĩa là không có gì để so (kỳ trước = 0). */
 function formatTrend(current: number, previous: number): string | undefined {
@@ -38,81 +43,99 @@ export function ReportView({
     end,
     categoryIds: categoryIds.length > 0 ? categoryIds : undefined,
   });
+  const [visibleSections, setVisibleSections] = useLocalStorageState<ReportSectionKey[]>(
+    VISIBLE_SECTIONS_STORAGE_KEY,
+    ALL_REPORT_SECTIONS,
+  );
+  const isVisible = (section: ReportSectionKey) => visibleSections.includes(section);
 
   return (
     <Stack gap={6}>
-      <ReportFilters start={initialStart} end={initialEnd} categoryIds={categoryIds} />
+      <Flex justify="flex-end">
+        <ReportSettingsDrawer
+          start={initialStart}
+          end={initialEnd}
+          categoryIds={categoryIds}
+          visibleSections={visibleSections}
+          onApplySections={setVisibleSections}
+        />
+      </Flex>
 
       {data && (
         <>
           {/* Doanh thu gộp -> Đã giảm giá -> Thực nhận, đúng thứ tự "waterfall"
               để dễ hiểu tiền đi đâu — rồi tới số đơn/ca/TB. */}
-          <Grid templateColumns={{ base: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={{ base: 3, md: 4 }}>
-            <KpiCard
-              label="Doanh thu gộp"
-              value={formatVnd(data.summary.grossRevenue)}
-              helpText={formatTrend(data.summary.grossRevenue, data.previousSummary.grossRevenue)}
-              icon={<Receipt size={18} />}
-              colorPalette="gray"
-            />
-            <KpiCard
-              label="Đã giảm giá"
-              value={formatVnd(data.summary.discountAmount)}
-              helpText={formatTrend(data.summary.discountAmount, data.previousSummary.discountAmount)}
-              icon={<Percent size={18} />}
-              colorPalette="pink"
-            />
-            <KpiCard
-              label="Doanh thu thực nhận"
-              value={formatVnd(data.summary.totalRevenue)}
-              helpText={formatTrend(data.summary.totalRevenue, data.previousSummary.totalRevenue)}
-              icon={<Wallet size={18} />}
-              colorPalette="green"
-            />
-            <KpiCard
-              label="Đơn đã thanh toán"
-              value={String(data.summary.paidOrderCount)}
-              helpText={formatTrend(data.summary.paidOrderCount, data.previousSummary.paidOrderCount)}
-              icon={<CheckCircle2 size={18} />}
-              colorPalette="blue"
-            />
-            <KpiCard
-              label="Số ca"
-              value={String(data.summary.shiftCount)}
-              helpText={formatTrend(data.summary.shiftCount, data.previousSummary.shiftCount)}
-              icon={<CalendarClock size={18} />}
-              colorPalette="purple"
-            />
-            <KpiCard
-              label="Doanh thu TB / ca"
-              value={formatVnd(data.summary.averageRevenuePerShift)}
-              helpText={formatTrend(
-                data.summary.averageRevenuePerShift,
-                data.previousSummary.averageRevenuePerShift,
-              )}
-              icon={<TrendingUp size={18} />}
-              colorPalette="orange"
-            />
-            <KpiCard
-              label="Chi phí AI"
-              value={`$${data.summary.aiCostUsd.toFixed(2)}`}
-              helpText={formatTrend(data.summary.aiCostUsd, data.previousSummary.aiCostUsd)}
-              icon={<Bot size={18} />}
-              colorPalette="teal"
-            />
-          </Grid>
+          {isVisible("kpi") && (
+            <Grid templateColumns={{ base: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={{ base: 3, md: 4 }}>
+              <KpiCard
+                label="Doanh thu gộp"
+                value={formatVnd(data.summary.grossRevenue)}
+                helpText={formatTrend(data.summary.grossRevenue, data.previousSummary.grossRevenue)}
+                icon={<Receipt size={18} />}
+                colorPalette="gray"
+              />
+              <KpiCard
+                label="Đã giảm giá"
+                value={formatVnd(data.summary.discountAmount)}
+                helpText={formatTrend(data.summary.discountAmount, data.previousSummary.discountAmount)}
+                icon={<Percent size={18} />}
+                colorPalette="pink"
+              />
+              <KpiCard
+                label="Doanh thu thực nhận"
+                value={formatVnd(data.summary.totalRevenue)}
+                helpText={formatTrend(data.summary.totalRevenue, data.previousSummary.totalRevenue)}
+                icon={<Wallet size={18} />}
+                colorPalette="green"
+              />
+              <KpiCard
+                label="Đơn đã thanh toán"
+                value={String(data.summary.paidOrderCount)}
+                helpText={formatTrend(data.summary.paidOrderCount, data.previousSummary.paidOrderCount)}
+                icon={<CheckCircle2 size={18} />}
+                colorPalette="blue"
+              />
+              <KpiCard
+                label="Số ca"
+                value={String(data.summary.shiftCount)}
+                helpText={formatTrend(data.summary.shiftCount, data.previousSummary.shiftCount)}
+                icon={<CalendarClock size={18} />}
+                colorPalette="purple"
+              />
+              <KpiCard
+                label="Doanh thu TB / ca"
+                value={formatVnd(data.summary.averageRevenuePerShift)}
+                helpText={formatTrend(
+                  data.summary.averageRevenuePerShift,
+                  data.previousSummary.averageRevenuePerShift,
+                )}
+                icon={<TrendingUp size={18} />}
+                colorPalette="orange"
+              />
+              <KpiCard
+                label="Chi phí AI"
+                value={`$${data.summary.aiCostUsd.toFixed(2)}`}
+                helpText={formatTrend(data.summary.aiCostUsd, data.previousSummary.aiCostUsd)}
+                icon={<Bot size={18} />}
+                colorPalette="teal"
+              />
+            </Grid>
+          )}
 
-          <RevenueByShiftChart data={data.shiftBreakdown} />
-          <OrderCountByShiftChart data={data.shiftBreakdown} />
+          {isVisible("revenueByShift") && <RevenueByShiftChart data={data.shiftBreakdown} />}
+          {isVisible("orderCountByShift") && <OrderCountByShiftChart data={data.shiftBreakdown} />}
+          {isVisible("busyHours") && <BusyHoursChart data={data.busyHours} />}
 
-          <Grid templateColumns={{ base: "1fr", lg: "repeat(2, 1fr)" }} gap={4}>
-            <TopItemsChart data={data.topItems} />
-            <PaymentMethodPieChart data={data.byPaymentMethod} />
-          </Grid>
+          {(isVisible("topItems") || isVisible("paymentMethod")) && (
+            <Grid templateColumns={{ base: "1fr", lg: "repeat(2, 1fr)" }} gap={4}>
+              {isVisible("topItems") && <TopItemsChart data={data.topItems} />}
+              {isVisible("paymentMethod") && <PaymentMethodPieChart data={data.byPaymentMethod} />}
+            </Grid>
+          )}
 
-          <CategoryRevenueChart data={data.byCategory} />
+          {isVisible("categoryRevenue") && <CategoryRevenueChart data={data.byCategory} />}
 
-          <PromotionUsageTable data={data.promotionUsage} />
+          {isVisible("promotionUsage") && <PromotionUsageTable data={data.promotionUsage} />}
         </>
       )}
     </Stack>

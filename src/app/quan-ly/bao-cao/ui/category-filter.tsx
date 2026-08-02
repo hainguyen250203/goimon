@@ -8,7 +8,7 @@ import { SelectContent, SelectItem, SelectRoot, SelectTrigger, SelectValueText }
 /**
  * Multi-select chọn danh mục cho "Món bán chạy"/"Doanh thu theo danh mục" ở
  * trang Báo cáo — để bỏ bớt danh mục không cần khỏi 2 biểu đồ đó. Không cho
- * bỏ chọn hết (báo cáo trống vô nghĩa) — xử lý ở nơi gọi (report-filters.tsx).
+ * bỏ chọn hết (báo cáo trống vô nghĩa) — xử lý ở nơi gọi (report-settings-drawer.tsx).
  */
 export function CategoryFilter({
   categories,

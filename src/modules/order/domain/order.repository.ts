@@ -114,6 +114,18 @@ export type CategoryRevenue = {
 };
 
 /**
+ * 1 dòng "số lần 1 đơn đang hoạt động trùng vào khung giờ này" — TỔNG cộng
+ * dồn qua mọi ngày trong danh sách ca, CHƯA chia trung bình (usecase mới biết
+ * số ca để chia, xem get-report.usecase.ts). `hour` là giờ THẬT 0-23; mảng
+ * trả về LUÔN đủ 24 phần tử, sắp theo chu kỳ 12h trưa → 11h trưa hôm sau
+ * (index 0 = giờ 12, index 23 = giờ 11), không phải 0-23 tăng dần.
+ */
+export type BusyHourOccurrence = {
+  hour: number;
+  occurrenceCount: number;
+};
+
+/**
  * 1 dòng "gọi món"/"trả món" (event items_added hoặc items_removed) — cho
  * trang Lịch sử gọi món. Tăng/giảm số lượng món đã gọi cũng được ghi vào 2
  * loại event này (phần chênh lệch), vì bản chất tăng/giảm số lượng chính là
@@ -240,6 +252,11 @@ export interface OrderRepository {
    * vào — chỉ tính đơn đã thanh toán. `categoryIds` (nếu có) chỉ tính các
    * danh mục đó — cho phép bỏ bớt danh mục không cần khỏi báo cáo. */
   getRevenueByCategory(shiftIds: number[], categoryIds?: number[]): Promise<CategoryRevenue[]>;
+  /** "Giờ bận rộn" (occupancy, kiểu Google Maps Popular times) — với mỗi khung
+   * giờ, tổng số lần 1 đơn đang mở (từ lúc tạo tới lúc thanh toán) trùng vào
+   * khung giờ đó, cộng dồn qua toàn bộ ca truyền vào. Chỉ tính đơn đã thanh
+   * toán. Không nhận categoryIds — số liệu về LƯU LƯỢNG đơn, không phải món. */
+  getBusyHourOccurrences(shiftIds: number[]): Promise<BusyHourOccurrence[]>;
   /** Lịch sử gọi món (event items_added + items_removed), phân trang + tìm không dấu server-side. */
   listOrderItemEvents(
     params: ListOrderItemEventsParams,

@@ -13,6 +13,7 @@ import type {
 } from "../domain/order-list-item.entity";
 import type {
   ActiveOrderSummary,
+  BusyHourOccurrence,
   CategoryRevenue,
   ListOrderItemEventsParams,
   ListOrderItemEventsResult,
@@ -638,6 +639,48 @@ export const orderDrizzleRepository: OrderRepository = {
       .groupBy(category.id, category.name)
       .orderBy(desc(sql`sum(${orderItem.unitPrice} * ${orderItem.quantity})`));
     return rows;
+  },
+
+  // Cần generate_series (liệt kê MỌI khung giờ 1 đơn "đang mở" đi qua, từ lúc
+  // tạo tới lúc thanh toán) — query builder không hỗ trợ, phải viết raw SQL
+  // qua db.execute (đã có tiền lệ ở backfill-paid-order-total-amount.ts).
+  async getBusyHourOccurrences(shiftIds: number[]): Promise<BusyHourOccurrence[]> {
+    if (shiftIds.length === 0) {
+      return Array.from({ length: 24 }, (_, bucket) => ({ hour: (bucket + 12) % 24, occurrenceCount: 0 }));
+    }
+
+    const whereClause = and(
+      inArray(order.shiftId, shiftIds),
+      eq(order.status, "paid"),
+      isNull(order.deletedAt),
+      isNotNull(order.paidConfirmedAt),
+    );
+
+    const rows = await db.execute<{ bucket: number; occurrence_count: number }>(sql`
+      with order_hours as (
+        select generate_series(
+          date_trunc('hour', ${order.createdAt} at time zone 'Asia/Ho_Chi_Minh'),
+          date_trunc('hour', ${order.paidConfirmedAt} at time zone 'Asia/Ho_Chi_Minh'),
+          interval '1 hour'
+        ) as hour_mark
+        from ${order}
+        where ${whereClause}
+      )
+      select extract(hour from (hour_mark - interval '12 hours'))::int as bucket, count(*)::int as occurrence_count
+      from order_hours
+      group by bucket
+      order by bucket
+    `);
+
+    const countByBucket = new Map<number, number>();
+    for (const row of rows) {
+      countByBucket.set(Number(row.bucket), Number(row.occurrence_count));
+    }
+
+    return Array.from({ length: 24 }, (_, bucket) => ({
+      hour: (bucket + 12) % 24,
+      occurrenceCount: countByBucket.get(bucket) ?? 0,
+    }));
   },
 
   async listOrderItemEvents({
