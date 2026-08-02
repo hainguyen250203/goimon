@@ -12,7 +12,6 @@ import { ReportSettingsDrawer } from "./report-settings-drawer";
 import { ALL_REPORT_SECTIONS, type ReportSectionKey } from "./ui/report-section-picker";
 import { RevenueByShiftChart } from "./ui/revenue-by-shift-chart";
 import { OrderCountByShiftChart } from "./ui/order-count-by-shift-chart";
-import { BusyHoursChart } from "./ui/busy-hours-chart";
 import { TopItemsChart } from "./ui/top-items-chart";
 import { PaymentMethodPieChart } from "./ui/payment-method-pie-chart";
 import { CategoryRevenueChart } from "./ui/category-revenue-chart";
@@ -124,7 +123,6 @@ export function ReportView({
 
           {isVisible("revenueByShift") && <RevenueByShiftChart data={data.shiftBreakdown} />}
           {isVisible("orderCountByShift") && <OrderCountByShiftChart data={data.shiftBreakdown} />}
-          {isVisible("busyHours") && <BusyHoursChart data={data.busyHours} />}
 
           {(isVisible("topItems") || isVisible("paymentMethod")) && (
             <Grid templateColumns={{ base: "1fr", lg: "repeat(2, 1fr)" }} gap={4}>

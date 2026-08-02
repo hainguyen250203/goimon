@@ -64,18 +64,6 @@ export type ReportCategoryRow = {
   revenue: number;
 };
 
-/**
- * 1 dòng "giờ bận rộn" — `activeOrderCount` là TRUNG BÌNH số đơn đang hoạt
- * động (đã tạo, chưa thanh toán xong) tại khung giờ này, tính trên số ca
- * trong khoảng đã chọn (kiểu Google Maps Popular times, không phải số đơn
- * mới tạo). Mảng luôn đủ 24 phần tử, sắp theo chu kỳ 12h trưa → 11h trưa hôm
- * sau — thứ tự phần tử chính là thứ tự hiển thị trên biểu đồ.
- */
-export type ReportBusyHourRow = {
-  hour: number;
-  activeOrderCount: number;
-};
-
 export type ReportData = {
   summary: ReportSummary;
   /** Cùng số liệu summary nhưng cho khoảng thời gian ngay trước đó, cùng độ
@@ -86,5 +74,4 @@ export type ReportData = {
   byPaymentMethod: ReportPaymentMethodRow[];
   promotionUsage: ReportPromotionUsageRow[];
   byCategory: ReportCategoryRow[];
-  busyHours: ReportBusyHourRow[];
 };

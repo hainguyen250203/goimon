@@ -9,7 +9,6 @@ export type ReportSectionKey =
   | "kpi"
   | "revenueByShift"
   | "orderCountByShift"
-  | "busyHours"
   | "topItems"
   | "paymentMethod"
   | "categoryRevenue"
@@ -19,7 +18,6 @@ const SECTION_LABEL: Record<ReportSectionKey, string> = {
   kpi: "Tổng quan (KPI)",
   revenueByShift: "Doanh thu theo ca",
   orderCountByShift: "Số đơn theo ca",
-  busyHours: "Giờ bận rộn",
   topItems: "Món bán chạy",
   paymentMethod: "Phương thức thanh toán",
   categoryRevenue: "Doanh thu theo danh mục",

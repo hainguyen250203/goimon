@@ -22,7 +22,6 @@ const EMPTY_REPORT: ReportData = {
   byPaymentMethod: [],
   promotionUsage: [],
   byCategory: [],
-  busyHours: [],
 };
 
 /** Chỉ tính summary (không tính top items/payment method/...) — dùng cho kỳ
@@ -89,21 +88,13 @@ export async function getReport(
   }
 
   const shiftIds = shifts.map((s) => s.id);
-  const [revenueByShift, topItems, byPaymentMethod, promotionUsage, byCategory, busyHourOccurrences] =
-    await Promise.all([
-      orderRepository.getRevenueByShift(shiftIds),
-      orderRepository.getTopSellingItems(shiftIds, 10, categoryIds),
-      orderRepository.getRevenueByPaymentMethod(shiftIds),
-      orderRepository.getPromotionUsage(shiftIds),
-      orderRepository.getRevenueByCategory(shiftIds, categoryIds),
-      orderRepository.getBusyHourOccurrences(shiftIds),
-    ]);
-  // Chia trung bình theo số ca ở đây (usecase), không phải repository — cùng
-  // chỗ các số trung bình khác (vd averageRevenuePerShift) đang được tính.
-  const busyHours: ReportData["busyHours"] = busyHourOccurrences.map((row) => ({
-    hour: row.hour,
-    activeOrderCount: Math.round(row.occurrenceCount / shiftIds.length),
-  }));
+  const [revenueByShift, topItems, byPaymentMethod, promotionUsage, byCategory] = await Promise.all([
+    orderRepository.getRevenueByShift(shiftIds),
+    orderRepository.getTopSellingItems(shiftIds, 10, categoryIds),
+    orderRepository.getRevenueByPaymentMethod(shiftIds),
+    orderRepository.getPromotionUsage(shiftIds),
+    orderRepository.getRevenueByCategory(shiftIds, categoryIds),
+  ]);
 
   const revenueByShiftId = new Map(revenueByShift.map((r) => [r.shiftId, r]));
   const shiftBreakdown: ReportData["shiftBreakdown"] = shifts.map((shift) => {
@@ -157,6 +148,5 @@ export async function getReport(
     byPaymentMethod,
     promotionUsage,
     byCategory,
-    busyHours,
   };
 }
