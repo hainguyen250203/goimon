@@ -65,7 +65,7 @@ export function ReportView({
           {/* Doanh thu gộp -> Đã giảm giá -> Thực nhận, đúng thứ tự "waterfall"
               để dễ hiểu tiền đi đâu — rồi tới số đơn/ca/TB. */}
           {isVisible("kpi") && (
-            <Grid templateColumns={{ base: "repeat(2, 1fr)", lg: "repeat(3, 1fr)" }} gap={{ base: 3, md: 4 }}>
+            <Grid templateColumns={{ base: "repeat(2, 1fr)", lg: "repeat(4, 1fr)" }} gap={{ base: 3, md: 4 }}>
               <KpiCard
                 label="Doanh thu gộp"
                 value={formatVnd(data.summary.grossRevenue)}
