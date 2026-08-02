@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 
 import { api, HydrateClient } from "~/trpc/server";
-import { ShiftGate } from "./shift-gate";
 import { TableSelector } from "./table-selector";
 import { TableSelectorSkeleton } from "./table-selector-skeleton";
 
@@ -17,14 +16,10 @@ export default async function GoiMonPage({
   void api.order.listTablesForOrdering.prefetch();
 
   return (
-    <Suspense fallback={<TableSelectorSkeleton />}>
-      <ShiftGate>
-        <HydrateClient>
-          <Suspense fallback={<TableSelectorSkeleton />}>
-            <TableSelector areaId={areaId} />
-          </Suspense>
-        </HydrateClient>
-      </ShiftGate>
-    </Suspense>
+    <HydrateClient>
+      <Suspense fallback={<TableSelectorSkeleton />}>
+        <TableSelector areaId={areaId} />
+      </Suspense>
+    </HydrateClient>
   );
 }

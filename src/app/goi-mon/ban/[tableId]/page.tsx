@@ -1,7 +1,6 @@
 import { Suspense } from "react";
 
 import { api, HydrateClient } from "~/trpc/server";
-import { ShiftGate } from "../../shift-gate";
 import { OrderTableView } from "./order-table-view";
 import { OrderTableSkeleton } from "./order-table-skeleton";
 
@@ -22,14 +21,10 @@ export default async function TableOrderPage({
   void api.order.getTableOrder.prefetch({ tableId });
 
   return (
-    <Suspense fallback={<OrderTableSkeleton />}>
-      <ShiftGate>
-        <HydrateClient>
-          <Suspense fallback={<OrderTableSkeleton />}>
-            <OrderTableView tableId={tableId} />
-          </Suspense>
-        </HydrateClient>
-      </ShiftGate>
-    </Suspense>
+    <HydrateClient>
+      <Suspense fallback={<OrderTableSkeleton />}>
+        <OrderTableView tableId={tableId} />
+      </Suspense>
+    </HydrateClient>
   );
 }
