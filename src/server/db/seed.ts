@@ -5,27 +5,12 @@ import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import { category, menuItem } from "~/modules/menu/infrastructure/menu.schema";
 import { paymentConfig } from "~/modules/payment-config/infrastructure/payment-config.schema";
 import { printer } from "~/modules/printer/infrastructure/printer.schema";
 import { area, restaurantTable } from "~/modules/table/infrastructure/table.schema";
 import { auth } from "~/server/better-auth/config";
 import { account } from "~/server/better-auth/schema";
 import { db } from "~/server/db";
-
-// Dữ liệu tham khảo từ pos-be/src/utils/data/menu.json (chỉ lấy DATA, không
-// copy code/logic seed của pos-be).
-type SeedProduct = {
-  name: string;
-  is_active: boolean;
-  is_deleted: boolean;
-  price: number;
-};
-
-type SeedCategory = {
-  name: string;
-  products: SeedProduct[];
-};
 
 type UserRole = "user" | "manager" | "admin" | "superadmin";
 
@@ -184,46 +169,6 @@ async function seedAreasAndTables() {
   }
 }
 
-/** Chỉ seed 1 lần — nếu đã có category nào rồi thì bỏ qua toàn bộ. */
-async function seedMenu() {
-  const existingCategory = await db.query.category.findFirst();
-  if (existingCategory) {
-    console.log("  menu đã có dữ liệu, bỏ qua");
-    return;
-  }
-
-  const menuPath = path.join(
-    process.cwd(),
-    "src/server/db/seed-data/menu.json",
-  );
-  const menuData = JSON.parse(readFileSync(menuPath, "utf-8")) as {
-    categories: SeedCategory[];
-  };
-
-  for (const cat of menuData.categories) {
-    const [categoryRow] = await db
-      .insert(category)
-      .values({ name: cat.name })
-      .returning();
-    if (!categoryRow) continue;
-
-    const items = cat.products.map((p) => ({
-      categoryId: categoryRow.id,
-      name: p.name,
-      price: p.price,
-      isAvailable: p.is_active,
-      isPublished: !p.is_deleted,
-    }));
-
-    if (items.length > 0) {
-      await db.insert(menuItem).values(items);
-    }
-  }
-  console.log(
-    `  seeded ${menuData.categories.length} category, ${menuData.categories.reduce((n, c) => n + c.products.length, 0)} món`,
-  );
-}
-
 async function seedPrinters() {
   const existing = await db.query.printer.findFirst();
   if (existing) {
@@ -260,9 +205,6 @@ async function main() {
 
   console.log("Seeding areas & tables...");
   await seedAreasAndTables();
-
-  console.log("Seeding menu...");
-  await seedMenu();
 
   console.log("Seeding printers...");
   await seedPrinters();

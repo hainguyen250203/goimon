@@ -1,98 +1,170 @@
 [
   {
-    "full_name": "Khanh",
+    "full_name": "KHANH Q10",
     "phone": "0397372410",
-    "password": "$2b$10$qhs3nRsoNE7q4yD4.ZaC9O7qktloZXvyK4ETddJLXpdMj1dmZcNUm",
+    "password": "$2b$10$Pozp8/KujcOve2Hk7NtYhOcBgaZc0yx8wN/kKhktLn/kqGqhccwHu",
     "role": "admin"
-  },
-  {
-    "full_name": "Hoàng",
-    "phone": "7",
-    "password": "$2b$10$9eCOXPbEf7WcDUQzMzqf8.LDPECFHC56q4clbTa1uLitHEhW4zBYO",
-    "role": "employee"
-  },
-  {
-    "full_name": "Hưng B",
-    "phone": "3",
-    "password": "$2b$10$NQtFv5gjxBKKiG/ZlES7b.rAiG.tSv34djzqvGkyYqgaYHgpJLutG",
-    "role": "manager"
-  },
-  {
-    "full_name": "Khoa C",
-    "phone": "0909108781",
-    "password": "$2b$10$lPSZxuCLnC5PO6Dc6yXTJeb4ssPFgsQBZFFoy181O.7okX7Hlgi9.",
-    "role": "manager"
-  },
-  {
-    "full_name": "Lộc shadow",
-    "phone": "0794357071",
-    "password": "$2b$10$0qLjbB12iaKlvKc5k5SkreRYTZbTbAYYbOkgRscKg6rv5BDHyDEgm",
-    "role": "manager"
-  },
-  {
-    "full_name": "Danh D",
-    "phone": "0783439679",
-    "password": "$2b$10$Pb13nzeAREnXGqSMijc7ee29Ghc0SXNGkqdpOeKvp0KhitwFLpsB2",
-    "role": "employee"
-  },
-  {
-    "full_name": "QUOC ANH",
-    "phone": "0334304807",
-    "password": "$2b$10$jgppynhkyx4O6oq1iiUjgu4ZYUfjfgoBseqQX0gkpcZO3XnVLy66.",
-    "role": "employee"
-  },
-  {
-    "full_name": "An A",
-    "phone": "0337782963",
-    "password": "$2b$10$5Pa675jZnvpswAJ/KrAaa.rYe05fNnq6WBAT3gedwzbG5ChiP8xGu",
-    "role": "employee"
-  },
-  {
-    "full_name": "Mẫn ",
-    "phone": "1",
-    "password": "$2b$10$HQ/pyMdAys0MSnBVkq4LAOnxjCFFWO5aWdh6QCNNEM6jDZ11CM2Y2",
-    "role": "employee"
   },
   {
     "full_name": "Phát Vuýp",
     "phone": "0394299925",
-    "password": "$2b$10$Ol23VcVg9/5uF4QkFzf2quJvQ5TPj3qyDeULNV/nN8R.ouMPePcpC",
-    "role": "employee"
+    "password": "$2b$10$6sxoZh1QEX.yK9QySz4ZjOYlZzjrxYkxwvXcNt63DzSFpx0hrcexm",
+    "role": "admin"
   },
   {
-    "full_name": "long",
-    "phone": "0965394753",
-    "password": "$2b$10$atuz1a1EmS05htQ3I4s/cOh2hG2tpppqDlC3Vmj8ZJamZLKbjrUPS",
+    "full_name": "Khoa A",
+    "phone": "0383388795",
+    "password": "$2b$10$XEIMJaAO5wtBB9gMtwD15OrbtbGgW.6oG9sMoMcbax1j1Opz9Tk5O",
     "role": "manager"
   },
   {
-    "full_name": "Anh Khánh",
-    "phone": "0919053422",
-    "password": "$2b$10$MiwIFGD.Yj6ObxYtm.ayi.Ntr4dECPdv0m80HKAPdfu/A5vI/Tlaq",
-    "role": "admin"
-  },
-  {
-    "full_name": "Quốc anh  ",
-    "phone": "2",
-    "password": "$2b$10$8cTQk.VPVGvuAi/ObuyIzOi/pVZ9SzNdU/acGLNeO0/qVNxbvYe/C",
+    "full_name": "khanh",
+    "phone": "1",
+    "password": "$2b$10$gV7tE0.ih/9wyf/vG70t4exCAvQsOhcZJr0BhBadcxbRO1LbMmK8i",
     "role": "employee"
   },
   {
-    "full_name": "Dương domic",
+    "full_name": "nam",
+    "phone": "0784935053",
+    "password": "$2b$10$0aVcssWTE31vPQei0SaEaOmvPbB2RhMHxwE2bK0I38A5gXPf/Oo2q",
+    "role": "admin"
+  },
+  {
+    "full_name": "Thành C",
+    "phone": "0369967782",
+    "password": "$2b$10$k6KGyUKyBs5nrqgEJbm.b.RaI1lYyt5/lZTvsQU3CR.s4OA8ABO82",
+    "role": "manager"
+  },
+  {
+    "full_name": "Tân B",
+    "phone": "",
+    "password": "$2b$10$xNRuxATeiaXnUvYyx1lX9et5NmWBRlnIiL.5FMcHdqxMqg5I7moQq",
+    "role": "employee"
+  },
+  {
+    "full_name": "Mèo già",
+    "phone": "0902705704",
+    "password": "$2b$10$DExouSYW8jlaUfxGWoJVwetKwUPcryqPGToGVkh8TmutjYAWYIKdG",
+    "role": "admin"
+  },
+  {
+    "full_name": "Seven",
+    "phone": "0773073007",
+    "password": "$2b$10$hR9u.Y04Vfa8duRwy.C/ie4HNWyYjsQH5q0Qn3FybGQZeMqbtoLZG",
+    "role": "admin"
+  },
+  {
+    "full_name": "A Cường vờ lóc",
+    "phone": "0357667777",
+    "password": "$2b$10$zO4phBxBVTh6SP7/Wwy7vOO4c5ptBEexEtD0yA13oG8mkba7.DXvS",
+    "role": "admin"
+  },
+  {
+    "full_name": "Nguyet Nguyet",
+    "phone": "0798809839",
+    "password": "$2b$10$Odp7KcxnsC0zrs0MMGMZN.B2bUGiT4PBgZfg0/oEMvcUn1zDRmnYq",
+    "role": "admin"
+  },
+  {
+    "full_name": "Phương ",
+    "phone": "0765495897",
+    "password": "$2b$10$EkxaqlSh02zeSB4bSReKRud.aYG/RGl/O9.BQcdE5CWXE1ewqf.Im",
+    "role": "employee"
+  },
+  {
+    "full_name": "Quang",
+    "phone": "0867283241",
+    "password": "$2b$10$fqtSMCJJ7zFA/Iwc5l9v0OSGRFr3rIlM0goVq8H/.U3RtKH6V2OEC",
+    "role": "employee"
+  },
+  {
+    "full_name": "Khang",
+    "phone": "0702918893",
+    "password": "$2b$10$vrs0rqbZR08LwYBcRce0F.TPGv6zWMgM4lJ9.CcNQsyw9hum9qZLW",
+    "role": "employee"
+  },
+  {
+    "full_name": "Trà olong tea plus",
+    "phone": "0792888375",
+    "password": "$2b$10$mMb/jWQcKZlBU3t789nj5uGiGqBJPGN2Qgc/nK9RLTVKGGI9sth2O",
+    "role": "manager"
+  },
+  {
+    "full_name": "Kiên ",
+    "phone": "0703423975",
+    "password": "$2b$10$dRgtRmmIha.Opk2GFXa.bexICpTruYgw1ie3RyIgE4xPaKGpNM14u",
+    "role": "employee"
+  },
+  {
+    "full_name": "TrÂm ",
+    "phone": "0325585415",
+    "password": "$2b$10$IUtczKTM0D7ber/n4dCGFeJtBJPz4j1v5oOecHBqHL9SCbSHOxmdq",
+    "role": "employee"
+  },
+  {
+    "full_name": "Thư ",
+    "phone": "0707855210",
+    "password": "$2b$10$70g1SzEOrgfNILIFW8z0bOkRxWtu0iPg2F2K5reFFXgbAcFVuddiu",
+    "role": "employee"
+  },
+  {
+    "full_name": "Vũ",
+    "phone": "0792763645",
+    "password": "$2b$10$7Bvlx6quaFQLTwINMlPGYu1998KU/9K5VMv1N6apLn/bbAio60mU6",
+    "role": "employee"
+  },
+  {
+    "full_name": "A thịnh",
+    "phone": "0904975751",
+    "password": "$2b$10$5nVCPd8Kn5rgBckMK18khe5l/h71uJYxfPnPTyAacF71rxKQ4OyOO",
+    "role": "admin"
+  },
+  {
+    "full_name": "duy",
+    "phone": "0764716094",
+    "password": "$2b$10$uAqpZNupyNFDCrTwWXtjTuOR6Nd/1m0eXmroMv3asvdnY7QftfaAi",
+    "role": "employee"
+  },
+  {
+    "full_name": "Kiệt",
+    "phone": "0367833724",
+    "password": "$2b$10$f772.WM54zV1aohBFdPE0OWP23n29.yR1/yIabcDtglDmGRc3.C2u",
+    "role": "manager"
+  },
+  {
+    "full_name": "Thu ngân",
+    "phone": "0325322237",
+    "password": "$2b$10$vlgXDwv8BcR99VmcovPAXuKI9.qskOvWjBv25C1Uk2GbO.lE.fsUi",
+    "role": "admin"
+  },
+  {
+    "full_name": "Trường A",
+    "phone": "0334304807",
+    "password": "$2b$10$eX1o1Tcxi6IIzzwTaFIV9eGMFZAXP8lnJCYyU1WeDv/dqgz59Sc12",
+    "role": "manager"
+  },
+  {
+    "full_name": "Hủ",
     "phone": "123",
-    "password": "$2b$10$imcZ5/3llQmQrVeD.C33D.Ajkk79xTpZwFEcUZK16Ueuwp2T9cT3G",
+    "password": "$2b$10$8wnknbjs3xnHd/Jjb0t05OKKj09L9.SCHmjrb8gC3eF2nrQgiQAu2",
     "role": "employee"
   },
   {
-    "full_name": "Trí",
-    "phone": "234",
-    "password": "$2b$10$fQGZRO7pjoYBAm3KoE3rduiJoa/St84fU/shy07o5IJJJznLBjmyu",
+    "full_name": "Hoàng",
+    "phone": "0359244680",
+    "password": "$2b$10$x1Xr.e.hcmMRigTAEnmJD.WWk47p9x.ylIDHxu13GX8EMi.9cRuNC",
     "role": "employee"
   },
   {
-    "full_name": "Cu em",
-    "phone": "34",
-    "password": "$2b$10$f2.HFht4udI8aETildg83OCQy.4DfjMEugONHwmzOEkPfqRzcIt9K",
-    "role": "admin"
+    "full_name": "Vinh",
+    "phone": "0836676167",
+    "password": "$2b$10$yPc6gvh2AcJQ4QD4D4xliOYGptFUKWeRgoUke8PvDE9SpDc.p1P4S",
+    "role": "manager"
+  },
+  {
+    "full_name": "Hoàng nhỏ",
+    "phone": "0833131436",
+    "password": "$2b$10$9ropsn/gqBCoUcScxxDd5O4LLNEiq3e..F9.Hs95Yn/C4f1e6mrS2",
+    "role": "employee"
   }
 ]

@@ -13,6 +13,10 @@
 /prisma/db.sqlite-journal
 db.sqlite
 
+# dữ liệu export thật từ quán cũ (pos-be) — không commit vào git
+/src/server/db/seed-data/legacy/
+/src/server/db/seed-data/legacy.zip
+
 # next.js
 /.next/
 /out/

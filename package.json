@@ -8,6 +8,7 @@
     "db:backfill-paid-total-amount": "tsx src/server/db/backfill-paid-order-total-amount.ts",
     "db:extensions": "tsx src/server/db/ensure-extensions.ts",
     "db:generate": "drizzle-kit generate",
+    "db:import-legacy-orders": "tsx src/server/db/import-legacy-orders.ts",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:seed": "tsx src/server/db/seed.ts",
