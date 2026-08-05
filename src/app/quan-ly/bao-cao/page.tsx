@@ -15,10 +15,11 @@ export default async function BaoCaoPage({
 }: {
   searchParams: Promise<{ start?: string; end?: string; categories?: string }>;
 }) {
-  // Trang này admin-only — /quan-ly/layout.tsx chỉ chặn role "user", không
-  // phân biệt manager/admin, nên phải tự chặn thêm ở đây (giống nguoi-dung).
+  // Trang này admin-only (+ ngoại lệ "viewer", xem report.router.ts's
+  // adminOrViewerProcedure) — /quan-ly/layout.tsx chỉ chặn role "user",
+  // không phân biệt manager/admin, nên phải tự chặn thêm ở đây (giống nguoi-dung).
   const session = await getSession();
-  if (!hasMinRole(session?.user.role, "admin")) {
+  if (!hasMinRole(session?.user.role, "admin") && session?.user.role !== "viewer") {
     redirect("/quan-ly");
   }
 

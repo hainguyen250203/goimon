@@ -38,11 +38,13 @@ export function TableList({
   pageSize,
   areaId,
   status,
+  canManage,
 }: {
   page: number;
   pageSize: number;
   areaId?: number;
   status?: TableOccupancyStatus;
+  canManage: boolean;
 }) {
   const router = useRouter();
   const [areas] = api.table.listAreas.useSuspenseQuery();
@@ -97,20 +99,24 @@ export function TableList({
         </StatusDot>
       ),
     },
-    {
-      key: "actions",
-      header: "",
-      width: "3rem",
-      cell: (row) => (
-        <TableRowActions
-          item={row}
-          onEdit={(item) => {
-            setEditingItem(item);
-            setDialogOpen(true);
-          }}
-        />
-      ),
-    },
+    ...(canManage
+      ? [
+          {
+            key: "actions",
+            header: "",
+            width: "3rem",
+            cell: (row: RestaurantTableWithStatus) => (
+              <TableRowActions
+                item={row}
+                onEdit={(item) => {
+                  setEditingItem(item);
+                  setDialogOpen(true);
+                }}
+              />
+            ),
+          } satisfies ListViewColumn<RestaurantTableWithStatus>,
+        ]
+      : []),
   ];
 
   const buildHref = (params: {
@@ -135,21 +141,23 @@ export function TableList({
     <Stack gap={4}>
       <ListViewToolbar
         end={
-          <>
-            <Button variant="outline" onClick={() => setAreaManagerOpen(true)}>
-              <Settings size={16} />
-              Quản lý khu vực
-            </Button>
-            <Button
-              onClick={() => {
-                setEditingItem(undefined);
-                setDialogOpen(true);
-              }}
-            >
-              <Plus size={16} />
-              Thêm bàn
-            </Button>
-          </>
+          canManage && (
+            <>
+              <Button variant="outline" onClick={() => setAreaManagerOpen(true)}>
+                <Settings size={16} />
+                Quản lý khu vực
+              </Button>
+              <Button
+                onClick={() => {
+                  setEditingItem(undefined);
+                  setDialogOpen(true);
+                }}
+              >
+                <Plus size={16} />
+                Thêm bàn
+              </Button>
+            </>
+          )
         }
       >
         <FilterSelect

@@ -32,11 +32,13 @@ export function MenuItemList({
   pageSize,
   categoryId,
   search,
+  canManage,
 }: {
   page: number;
   pageSize: number;
   categoryId?: number;
   search?: string;
+  canManage: boolean;
 }) {
   const router = useRouter();
   const [categories] = api.menu.listCategories.useSuspenseQuery();
@@ -116,20 +118,24 @@ export function MenuItemList({
         </StatusDot>
       ),
     },
-    {
-      key: "actions",
-      header: "",
-      width: "3rem",
-      cell: (row) => (
-        <MenuItemRowActions
-          item={row}
-          onEdit={(item) => {
-            setEditingItem(item);
-            setDialogOpen(true);
-          }}
-        />
-      ),
-    },
+    ...(canManage
+      ? [
+          {
+            key: "actions",
+            header: "",
+            width: "3rem",
+            cell: (row: MenuItem) => (
+              <MenuItemRowActions
+                item={row}
+                onEdit={(item) => {
+                  setEditingItem(item);
+                  setDialogOpen(true);
+                }}
+              />
+            ),
+          } satisfies ListViewColumn<MenuItem>,
+        ]
+      : []),
   ];
 
   const buildHref = (params: {
@@ -173,21 +179,23 @@ export function MenuItemList({
     <Stack gap={4}>
       <ListViewToolbar
         end={
-          <>
-            <Button variant="outline" onClick={() => setCategoryManagerOpen(true)}>
-              <Settings size={16} />
-              Quản lý danh mục
-            </Button>
-            <Button
-              onClick={() => {
-                setEditingItem(undefined);
-                setDialogOpen(true);
-              }}
-            >
-              <Plus size={16} />
-              Thêm món ăn
-            </Button>
-          </>
+          canManage && (
+            <>
+              <Button variant="outline" onClick={() => setCategoryManagerOpen(true)}>
+                <Settings size={16} />
+                Quản lý danh mục
+              </Button>
+              <Button
+                onClick={() => {
+                  setEditingItem(undefined);
+                  setDialogOpen(true);
+                }}
+              >
+                <Plus size={16} />
+                Thêm món ăn
+              </Button>
+            </>
+          )
         }
       >
         <Input

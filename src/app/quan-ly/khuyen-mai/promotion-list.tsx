@@ -37,10 +37,12 @@ export function PromotionList({
   page,
   pageSize,
   isActive,
+  canManage,
 }: {
   page: number;
   pageSize: number;
   isActive?: boolean;
+  canManage: boolean;
 }) {
   const router = useRouter();
   const { data, isFetching } = api.promotion.list.useQuery(
@@ -74,20 +76,24 @@ export function PromotionList({
         </StatusDot>
       ),
     },
-    {
-      key: "actions",
-      header: "",
-      width: "3rem",
-      cell: (row) => (
-        <PromotionRowActions
-          item={row}
-          onEdit={(item) => {
-            setEditingItem(item);
-            setDialogOpen(true);
-          }}
-        />
-      ),
-    },
+    ...(canManage
+      ? [
+          {
+            key: "actions",
+            header: "",
+            width: "3rem",
+            cell: (row: Promotion) => (
+              <PromotionRowActions
+                item={row}
+                onEdit={(item) => {
+                  setEditingItem(item);
+                  setDialogOpen(true);
+                }}
+              />
+            ),
+          } satisfies ListViewColumn<Promotion>,
+        ]
+      : []),
   ];
 
   const buildHref = (params: { page?: number; pageSize?: number; isActive?: boolean }) => {
@@ -106,15 +112,17 @@ export function PromotionList({
     <Stack gap={4}>
       <ListViewToolbar
         end={
-          <Button
-            onClick={() => {
-              setEditingItem(undefined);
-              setDialogOpen(true);
-            }}
-          >
-            <Plus size={16} />
-            Thêm khuyến mãi
-          </Button>
+          canManage && (
+            <Button
+              onClick={() => {
+                setEditingItem(undefined);
+                setDialogOpen(true);
+              }}
+            >
+              <Plus size={16} />
+              Thêm khuyến mãi
+            </Button>
+          )
         }
       >
         <FilterSelect

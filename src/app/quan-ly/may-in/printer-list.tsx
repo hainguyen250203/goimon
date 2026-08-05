@@ -33,10 +33,12 @@ export function PrinterList({
   page,
   pageSize,
   isActive,
+  canManage,
 }: {
   page: number;
   pageSize: number;
   isActive?: boolean;
+  canManage: boolean;
 }) {
   const router = useRouter();
   const { data, isFetching } = api.printer.list.useQuery(
@@ -77,20 +79,24 @@ export function PrinterList({
         </StatusDot>
       ),
     },
-    {
-      key: "actions",
-      header: "",
-      width: "3rem",
-      cell: (row) => (
-        <PrinterRowActions
-          item={row}
-          onEdit={(item) => {
-            setEditingItem(item);
-            setDialogOpen(true);
-          }}
-        />
-      ),
-    },
+    ...(canManage
+      ? [
+          {
+            key: "actions",
+            header: "",
+            width: "3rem",
+            cell: (row: Printer) => (
+              <PrinterRowActions
+                item={row}
+                onEdit={(item) => {
+                  setEditingItem(item);
+                  setDialogOpen(true);
+                }}
+              />
+            ),
+          } satisfies ListViewColumn<Printer>,
+        ]
+      : []),
   ];
 
   const buildHref = (params: { page?: number; pageSize?: number; isActive?: boolean }) => {
@@ -109,22 +115,24 @@ export function PrinterList({
     <Stack gap={4}>
       <ListViewToolbar
         end={
-          <>
-            <Button variant="outline" onClick={() => setScanDialogOpen(true)}>
-              <ScanSearch size={16} />
-              Quét tìm máy in
-            </Button>
-            <Button
-              onClick={() => {
-                setEditingItem(undefined);
-                setPrefill(undefined);
-                setDialogOpen(true);
-              }}
-            >
-              <Plus size={16} />
-              Thêm máy in
-            </Button>
-          </>
+          canManage && (
+            <>
+              <Button variant="outline" onClick={() => setScanDialogOpen(true)}>
+                <ScanSearch size={16} />
+                Quét tìm máy in
+              </Button>
+              <Button
+                onClick={() => {
+                  setEditingItem(undefined);
+                  setPrefill(undefined);
+                  setDialogOpen(true);
+                }}
+              >
+                <Plus size={16} />
+                Thêm máy in
+              </Button>
+            </>
+          )
         }
       >
         <FilterSelect

@@ -12,6 +12,7 @@ export const ac = createAccessControl(statement);
 // tRPC role hierarchy (xem src/server/api/trpc.ts).
 export const user = ac.newRole({});
 export const manager = ac.newRole({});
+export const viewer = ac.newRole({});
 export const admin = ac.newRole({
   ...adminAc.statements,
 });

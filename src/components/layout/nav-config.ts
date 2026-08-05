@@ -16,9 +16,12 @@ import {
   UtensilsCrossed,
 } from "lucide-react";
 
-export type Role = "user" | "manager" | "admin" | "superadmin";
+export type Role = "user" | "manager" | "admin" | "superadmin" | "viewer";
 
-const ROLE_RANK: Record<Role, number> = { user: 0, manager: 1, admin: 2, superadmin: 3 };
+// "viewer" xếp ngang "manager" (xem CLAUDE.md) — tự động thấy mọi mục
+// minRole "manager", không thấy mục "admin"/"superadmin" (Người dùng, AI,
+// Nhật ký hoạt động) trừ khi khai báo thêm ở `extraRoles`.
+const ROLE_RANK: Record<Role, number> = { user: 0, manager: 1, viewer: 1, admin: 2, superadmin: 3 };
 
 export type NavItem = {
   key: string;
@@ -31,6 +34,10 @@ export type NavItem = {
   group?: string;
   /** Vai trò tối thiểu để thấy mục này. Mặc định "manager" (sàn của cả layout /quan-ly). */
   minRole?: Extract<Role, "manager" | "admin" | "superadmin">;
+  /** Role cụ thể được thấy mục này DÙ KHÔNG đạt `minRole` theo rank — ngoại
+   * lệ hiếm, dùng khi 1 role mới (vd viewer) cần thấy đúng 1 mục nằm ở tier
+   * cao hơn rank của nó, không theo kiểu "kế thừa toàn bộ tier cao hơn". */
+  extraRoles?: Role[];
 };
 
 // Nhóm theo nghiệp vụ, thứ tự cố định: Tổng quan đứng riêng trên cùng, rồi
@@ -150,6 +157,9 @@ export const ADMIN_NAV: NavItem[] = [
     href: "/quan-ly/bao-cao",
     group: "Quản trị",
     minRole: "admin",
+    // viewer được xem riêng Báo cáo dù rank thấp hơn admin — xem
+    // report.router.ts's adminOrViewerProcedure.
+    extraRoles: ["viewer"],
   },
 ];
 
@@ -161,7 +171,7 @@ export const ADMIN_NAV: NavItem[] = [
 export function filterNavByRole(nav: NavItem[], role: Role): NavItem[] {
   const rank = ROLE_RANK[role];
   return nav
-    .filter((item) => rank >= ROLE_RANK[item.minRole ?? "manager"])
+    .filter((item) => rank >= ROLE_RANK[item.minRole ?? "manager"] || item.extraRoles?.includes(role))
     .map((item) => ({
       ...item,
       children: item.children

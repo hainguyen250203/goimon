@@ -3,6 +3,8 @@ import { Box } from "@chakra-ui/react";
 import { Skeleton } from "~/components/ui/skeleton";
 
 import { api, HydrateClient } from "~/trpc/server";
+import { getSession } from "~/server/better-auth/server";
+import { canManage } from "~/server/better-auth/role-rank";
 import { parsePageSize } from "~/lib/pagination";
 import { MenuItemList } from "./menu-item-list";
 
@@ -25,11 +27,19 @@ export default async function MonAnPage({
   void api.menu.list.prefetch({ page, pageSize, categoryId, search });
   void api.menu.listCategories.prefetch();
 
+  const session = await getSession();
+
   return (
     <Box p={{ base: 4, md: 6 }}>
       <HydrateClient>
       <Suspense fallback={<Skeleton h={96} rounded="l3" />}>
-        <MenuItemList page={page} pageSize={pageSize} categoryId={categoryId} search={search} />
+        <MenuItemList
+          page={page}
+          pageSize={pageSize}
+          categoryId={categoryId}
+          search={search}
+          canManage={canManage(session?.user.role)}
+        />
       </Suspense>
       </HydrateClient>
     </Box>

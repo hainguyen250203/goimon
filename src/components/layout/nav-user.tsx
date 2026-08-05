@@ -23,6 +23,7 @@ export const ROLE_LABEL: Record<string, string> = {
   manager: "Quản lý",
   user: "Nhân viên",
   superadmin: "Super Admin",
+  viewer: "Người xem",
 };
 
 export const ROLE_DOT_COLOR: Record<string, string> = {
@@ -30,6 +31,7 @@ export const ROLE_DOT_COLOR: Record<string, string> = {
   manager: "blue.500",
   user: "gray.400",
   superadmin: "red.500",
+  viewer: "cyan.500",
 };
 
 export function NavUser({

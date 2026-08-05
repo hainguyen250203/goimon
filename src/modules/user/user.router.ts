@@ -15,7 +15,7 @@ import { logActivity } from "~/modules/activity-log/log-activity";
 // Module này toàn bộ admin-only (quản lý tài khoản), không như menu/table
 // dùng managerProcedure — xem adminProcedure trong ~/server/api/trpc.
 
-const roleSchema = z.enum(["user", "manager", "admin", "superadmin"]);
+const roleSchema = z.enum(["user", "manager", "admin", "superadmin", "viewer"]);
 
 // Login bằng số điện thoại nên validate lỏng định dạng di động VN, tránh
 // nhập sai gây không đăng nhập được — không cần chuẩn hoá đầu số kỹ hơn.

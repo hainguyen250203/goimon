@@ -9,6 +9,7 @@ export const ROLE_LABEL: Record<UserRole, string> = {
   manager: "Quản lý",
   admin: "Admin",
   superadmin: "Super Admin",
+  viewer: "Người xem",
 };
 
 export const ROLE_DOT_COLOR: Record<UserRole, string> = {
@@ -16,4 +17,5 @@ export const ROLE_DOT_COLOR: Record<UserRole, string> = {
   manager: "blue.500",
   admin: "purple.500",
   superadmin: "red.500",
+  viewer: "cyan.500",
 };
