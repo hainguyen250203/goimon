@@ -7,8 +7,7 @@ import { SelectContent, SelectItem, SelectRoot, SelectTrigger, SelectValueText }
 
 export type ReportSectionKey =
   | "kpi"
-  | "revenueByShift"
-  | "orderCountByShift"
+  | "shiftDetailCards"
   | "topItems"
   | "paymentMethod"
   | "categoryRevenue"
@@ -16,8 +15,7 @@ export type ReportSectionKey =
 
 const SECTION_LABEL: Record<ReportSectionKey, string> = {
   kpi: "Tổng quan (KPI)",
-  revenueByShift: "Doanh thu theo ca",
-  orderCountByShift: "Số đơn theo ca",
+  shiftDetailCards: "Chi tiết theo ca",
   topItems: "Món bán chạy",
   paymentMethod: "Phương thức thanh toán",
   categoryRevenue: "Doanh thu theo danh mục",

@@ -456,7 +456,7 @@ export const orderDrizzleRepository: OrderRepository = {
     // Nhóm thêm theo paymentMethod (ngoài shiftId/status) để tách được doanh
     // thu tiền mặt/chuyển khoản theo từng ca cho biểu đồ Báo cáo — 1 ca "paid"
     // giờ có thể ra 2 dòng (1 cho mỗi phương thức), cộng dồn bằng += thay vì =.
-    const [rows, grossRows] = await Promise.all([
+    const [rows, grossRows, promoRows] = await Promise.all([
       db
         .select({
           shiftId: order.shiftId,
@@ -482,6 +482,21 @@ export const orderDrizzleRepository: OrderRepository = {
         .innerJoin(order, eq(order.id, orderItem.orderId))
         .where(and(inArray(order.shiftId, shiftIds), eq(order.status, "paid"), isNull(order.deletedAt)))
         .groupBy(order.shiftId),
+      db
+        .select({
+          shiftId: order.shiftId,
+          promoOrderCount: count(),
+        })
+        .from(order)
+        .where(
+          and(
+            inArray(order.shiftId, shiftIds),
+            eq(order.status, "paid"),
+            isNull(order.deletedAt),
+            isNotNull(order.promotionId),
+          ),
+        )
+        .groupBy(order.shiftId),
     ]);
 
     const byShift = new Map<number, ShiftRevenueRow>(
@@ -496,6 +511,7 @@ export const orderDrizzleRepository: OrderRepository = {
           transferRevenue: 0,
           grossRevenue: 0,
           discountAmount: 0,
+          promoOrderCount: 0,
         },
       ]),
     );
@@ -520,6 +536,12 @@ export const orderDrizzleRepository: OrderRepository = {
     }
     for (const entry of byShift.values()) {
       entry.discountAmount = Math.max(0, entry.grossRevenue - entry.totalRevenue);
+    }
+    for (const row of promoRows) {
+      if (row.shiftId === null) continue;
+      const entry = byShift.get(row.shiftId);
+      if (!entry) continue;
+      entry.promoOrderCount = row.promoOrderCount;
     }
     return Array.from(byShift.values());
   },

@@ -70,6 +70,8 @@ export type ShiftRevenueRow = {
   /** grossRevenue - totalRevenue — số tiền đã giảm giá, suy ra chứ không lưu
    * cột riêng (xem giải thích ở getPromotionUsage). */
   discountAmount: number;
+  /** Số đơn paid có áp dụng khuyến mãi (promotionId khác null). */
+  promoOrderCount: number;
 };
 
 export type TopSellingItem = {

@@ -36,6 +36,8 @@ export type ReportShiftRow = {
   grossRevenue: number;
   /** grossRevenue - totalRevenue. */
   discountAmount: number;
+  /** Số đơn paid có áp dụng khuyến mãi trong ca. */
+  promoOrderCount: number;
 };
 
 export type ReportTopItem = {

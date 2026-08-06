@@ -10,8 +10,7 @@ import { KpiCard } from "../kpi-card";
 import { toQueryRange } from "~/lib/vn-date-range";
 import { ReportSettingsDrawer } from "./report-settings-drawer";
 import { ALL_REPORT_SECTIONS, type ReportSectionKey } from "./ui/report-section-picker";
-import { RevenueByShiftChart } from "./ui/revenue-by-shift-chart";
-import { OrderCountByShiftChart } from "./ui/order-count-by-shift-chart";
+import { ShiftDetailCards } from "./ui/shift-detail-cards";
 import { TopItemsChart } from "./ui/top-items-chart";
 import { PaymentMethodPieChart } from "./ui/payment-method-pie-chart";
 import { CategoryRevenueChart } from "./ui/category-revenue-chart";
@@ -121,8 +120,7 @@ export function ReportView({
             </Grid>
           )}
 
-          {isVisible("revenueByShift") && <RevenueByShiftChart data={data.shiftBreakdown} />}
-          {isVisible("orderCountByShift") && <OrderCountByShiftChart data={data.shiftBreakdown} />}
+          {isVisible("shiftDetailCards") && <ShiftDetailCards data={data.shiftBreakdown} />}
 
           {(isVisible("topItems") || isVisible("paymentMethod")) && (
             <Grid templateColumns={{ base: "1fr", lg: "repeat(2, 1fr)" }} gap={4}>

@@ -111,6 +111,7 @@ export async function getReport(
       transferRevenue: revenue?.transferRevenue ?? 0,
       grossRevenue: revenue?.grossRevenue ?? 0,
       discountAmount: revenue?.discountAmount ?? 0,
+      promoOrderCount: revenue?.promoOrderCount ?? 0,
     };
   });
 
