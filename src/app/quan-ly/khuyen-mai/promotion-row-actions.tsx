@@ -25,9 +25,13 @@ import type { Promotion } from "~/modules/promotion/domain/promotion.entity";
 
 export function PromotionRowActions({
   item,
+  canUpdate,
+  canDelete,
   onEdit,
 }: {
   item: Promotion;
+  canUpdate: boolean;
+  canDelete: boolean;
   onEdit: (item: Promotion) => void;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -52,14 +56,18 @@ export function PromotionRowActions({
         </MenuTrigger>
         <MenuContent minW="10rem">
           <MenuItemGroup>
-            <MenuItem value="edit" onClick={() => onEdit(item)}>
-              <Pencil size={16} />
-              Sửa
-            </MenuItem>
-            <MenuItem value="delete" color="fg.error" onClick={() => setConfirmOpen(true)}>
-              <Trash2 size={16} />
-              Xoá
-            </MenuItem>
+            {canUpdate && (
+              <MenuItem value="edit" onClick={() => onEdit(item)}>
+                <Pencil size={16} />
+                Sửa
+              </MenuItem>
+            )}
+            {canDelete && (
+              <MenuItem value="delete" color="fg.error" onClick={() => setConfirmOpen(true)}>
+                <Trash2 size={16} />
+                Xoá
+              </MenuItem>
+            )}
           </MenuItemGroup>
         </MenuContent>
       </MenuRoot>

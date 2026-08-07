@@ -37,12 +37,16 @@ export function PromotionList({
   page,
   pageSize,
   isActive,
-  canManage,
+  canCreate,
+  canUpdate,
+  canDelete,
 }: {
   page: number;
   pageSize: number;
   isActive?: boolean;
-  canManage: boolean;
+  canCreate: boolean;
+  canUpdate: boolean;
+  canDelete: boolean;
 }) {
   const router = useRouter();
   const { data, isFetching } = api.promotion.list.useQuery(
@@ -76,7 +80,7 @@ export function PromotionList({
         </StatusDot>
       ),
     },
-    ...(canManage
+    ...(canUpdate || canDelete
       ? [
           {
             key: "actions",
@@ -85,6 +89,8 @@ export function PromotionList({
             cell: (row: Promotion) => (
               <PromotionRowActions
                 item={row}
+                canUpdate={canUpdate}
+                canDelete={canDelete}
                 onEdit={(item) => {
                   setEditingItem(item);
                   setDialogOpen(true);
@@ -112,7 +118,7 @@ export function PromotionList({
     <Stack gap={4}>
       <ListViewToolbar
         end={
-          canManage && (
+          canCreate && (
             <Button
               onClick={() => {
                 setEditingItem(undefined);

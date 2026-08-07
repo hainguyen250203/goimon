@@ -1,4 +1,6 @@
-export type UserRole = "user" | "manager" | "admin" | "superadmin" | "viewer";
+// Role giờ là dữ liệu (bảng `role`, quản lý qua trang Vai trò), không còn 1
+// union cố định trong code — bất kỳ tên role nào admin tạo thêm đều hợp lệ.
+export type UserRole = string;
 
 export type UserAccount = {
   id: string;

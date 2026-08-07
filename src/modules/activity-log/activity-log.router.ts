@@ -1,16 +1,17 @@
 import { z } from "zod";
 
-import { createTRPCRouter, superadminProcedure } from "~/server/api/trpc";
+import { createTRPCRouter, permissionProcedure } from "~/server/api/trpc";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "~/lib/pagination";
 import { listActivities } from "./application/list-activities.usecase";
 import { activityLogDrizzleRepository } from "./infrastructure/activity-log.drizzle-repository";
 
-// superadminProcedure — nhật ký hoạt động phơi bày thao tác của MỌI người
-// dùng trên toàn hệ thống (kể cả admin xoá order/thay đổi vai trò/mật khẩu),
-// nên chỉ vai trò giám sát superadmin xem được — admin (người thực hiện thao
-// tác) không tự xem lại được nữa (xem CLAUDE.md).
+// "nhat-ky-hoat-dong.get" — nhật ký hoạt động phơi bày thao tác của MỌI
+// người dùng trên toàn hệ thống (kể cả admin xoá order/thay đổi vai trò/mật
+// khẩu), nên cấp key này nghĩa là role đó xem được TOÀN BỘ, không chỉ hoạt
+// động của chính mình. Trước đây isSuper-only tuyệt đối, nay cấp được qua
+// trang Vai trò theo yêu cầu — isSuper vẫn bypass như mọi trang khác.
 export const activityLogRouter = createTRPCRouter({
-  list: superadminProcedure
+  list: permissionProcedure("nhat-ky-hoat-dong.get")
     .input(
       z.object({
         page: z.number().int().min(1).default(1),

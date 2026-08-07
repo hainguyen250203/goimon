@@ -11,17 +11,14 @@ import {
   Percent,
   Printer,
   ScrollText,
+  ShieldCheck,
   Table2,
   Users,
   UtensilsCrossed,
 } from "lucide-react";
 
-export type Role = "user" | "manager" | "admin" | "superadmin" | "viewer";
-
-// "viewer" xếp ngang "manager" (xem CLAUDE.md) — tự động thấy mọi mục
-// minRole "manager", không thấy mục "admin"/"superadmin" (Người dùng, AI,
-// Nhật ký hoạt động) trừ khi khai báo thêm ở `extraRoles`.
-const ROLE_RANK: Record<Role, number> = { user: 0, manager: 1, viewer: 1, admin: 2, superadmin: 3 };
+import type { PermissionKey } from "~/modules/role/domain/permission-definitions";
+import type { ResolvedPermissions } from "~/modules/role/get-my-permissions";
 
 export type NavItem = {
   key: string;
@@ -32,20 +29,27 @@ export type NavItem = {
   pathPrefix?: string;
   children?: NavItem[];
   group?: string;
-  /** Vai trò tối thiểu để thấy mục này. Mặc định "manager" (sàn của cả layout /quan-ly). */
-  minRole?: Extract<Role, "manager" | "admin" | "superadmin">;
-  /** Role cụ thể được thấy mục này DÙ KHÔNG đạt `minRole` theo rank — ngoại
-   * lệ hiếm, dùng khi 1 role mới (vd viewer) cần thấy đúng 1 mục nằm ở tier
-   * cao hơn rank của nó, không theo kiểu "kế thừa toàn bộ tier cao hơn". */
-  extraRoles?: Role[];
+  /** Permission key `.get` cần có để thấy mục này. Bỏ trống = luôn thấy
+   * (vd "Tổng quan"). */
+  getKey?: PermissionKey;
+  /** Chỉ hiện khi `isSuper` — dành riêng Nhật ký hoạt động/Lịch sử trò
+   * chuyện AI, nằm ngoài hệ thống permission-key hẳn (xem CLAUDE.md). */
+  superOnly?: boolean;
 };
 
 // Nhóm theo nghiệp vụ, thứ tự cố định: Tổng quan đứng riêng trên cùng, rồi
 // tới "Vận hành" (thao tác ngày qua ngày), "Cấu hình" (thiết lập hệ thống,
-// ít đổi), cuối cùng "Quản trị" (admin-only, giám sát/audit) — pattern nhóm
-// nav tham khảo từ alix-bo-frontend-v2's lib/nav/nav-admin.ts.
+// ít đổi), "Trợ lý AI" (tách riêng khỏi Quản trị cho dễ tìm — vẫn admin-only
+// qua getKey/superOnly), cuối cùng "Quản trị" (người dùng/vai trò/nhật ký/báo
+// cáo) — pattern nhóm nav tham khảo từ alix-bo-frontend-v2's lib/nav/nav-admin.ts.
 export const ADMIN_NAV: NavItem[] = [
-  { key: "dashboard", label: "Tổng quan", icon: LayoutDashboard, href: "/quan-ly" },
+  {
+    key: "dashboard",
+    label: "Tổng quan",
+    icon: LayoutDashboard,
+    href: "/quan-ly",
+    getKey: "dashboard.get",
+  },
 
   {
     key: "menu",
@@ -53,7 +57,7 @@ export const ADMIN_NAV: NavItem[] = [
     icon: UtensilsCrossed,
     href: "/quan-ly/mon-an",
     group: "Vận hành",
-    minRole: "manager",
+    getKey: "mon-an.get",
   },
   {
     key: "table",
@@ -61,7 +65,7 @@ export const ADMIN_NAV: NavItem[] = [
     icon: Table2,
     href: "/quan-ly/ban",
     group: "Vận hành",
-    minRole: "manager",
+    getKey: "ban.get",
   },
   {
     key: "order",
@@ -69,7 +73,7 @@ export const ADMIN_NAV: NavItem[] = [
     icon: ClipboardList,
     href: "/quan-ly/don-hang",
     group: "Vận hành",
-    minRole: "manager",
+    getKey: "don-hang.get",
   },
   {
     key: "promotion",
@@ -77,7 +81,7 @@ export const ADMIN_NAV: NavItem[] = [
     icon: Percent,
     href: "/quan-ly/khuyen-mai",
     group: "Vận hành",
-    minRole: "manager",
+    getKey: "khuyen-mai.get",
   },
   {
     key: "shift",
@@ -85,7 +89,7 @@ export const ADMIN_NAV: NavItem[] = [
     icon: Clock,
     href: "/quan-ly/ca-lam-viec",
     group: "Vận hành",
-    minRole: "manager",
+    getKey: "ca-lam-viec.get",
   },
 
   {
@@ -94,7 +98,7 @@ export const ADMIN_NAV: NavItem[] = [
     icon: Printer,
     href: "/quan-ly/may-in",
     group: "Cấu hình",
-    minRole: "manager",
+    getKey: "may-in.get",
   },
   {
     key: "payment-config",
@@ -102,8 +106,7 @@ export const ADMIN_NAV: NavItem[] = [
     icon: Landmark,
     href: "/quan-ly/thanh-toan",
     group: "Cấu hình",
-    // manager chỉ xem, admin mới sửa được — chặn ở payment-config.router.ts.
-    minRole: "manager",
+    getKey: "thanh-toan.get",
   },
 
   {
@@ -111,26 +114,26 @@ export const ADMIN_NAV: NavItem[] = [
     label: "Trợ lý AI",
     icon: Bot,
     href: "/quan-ly/tro-ly-ai",
-    group: "Quản trị",
-    minRole: "admin",
+    group: "Trợ lý AI",
+    getKey: "tro-ly-ai.get",
   },
   {
     key: "assistant-usage",
     label: "Thống kê AI",
     icon: Gauge,
     href: "/quan-ly/tro-ly-ai/thong-ke",
-    group: "Quản trị",
-    minRole: "admin",
+    group: "Trợ lý AI",
+    getKey: "tro-ly-ai-thong-ke.get",
   },
   {
     key: "assistant-history",
     label: "Lịch sử trò chuyện AI",
     icon: History,
     href: "/quan-ly/tro-ly-ai/lich-su",
-    group: "Quản trị",
-    // Chỉ superadmin — xem được lịch sử chat AI của MỌI user, khác trang
-    // "Trợ lý AI" (chỉ chat của chính người đang đăng nhập).
-    minRole: "superadmin",
+    group: "Trợ lý AI",
+    // Chỉ isSuper — xem được lịch sử chat AI của MỌI user, khác trang "Trợ lý
+    // AI" (chỉ chat của chính người đang đăng nhập). Nằm ngoài permission-key.
+    superOnly: true,
   },
   {
     key: "user",
@@ -138,7 +141,15 @@ export const ADMIN_NAV: NavItem[] = [
     icon: Users,
     href: "/quan-ly/nguoi-dung",
     group: "Quản trị",
-    minRole: "admin",
+    getKey: "nguoi-dung.get",
+  },
+  {
+    key: "role",
+    label: "Vai trò",
+    icon: ShieldCheck,
+    href: "/quan-ly/vai-tro",
+    group: "Quản trị",
+    getKey: "vai-tro.get",
   },
   {
     key: "activity-log",
@@ -146,9 +157,7 @@ export const ADMIN_NAV: NavItem[] = [
     icon: ScrollText,
     href: "/quan-ly/nhat-ky-hoat-dong",
     group: "Quản trị",
-    // Chỉ superadmin — vai trò giám sát toàn hệ thống, admin không còn xem
-    // được nhật ký hoạt động nữa (xem CLAUDE.md).
-    minRole: "superadmin",
+    getKey: "nhat-ky-hoat-dong.get",
   },
   {
     key: "report",
@@ -156,27 +165,27 @@ export const ADMIN_NAV: NavItem[] = [
     icon: BarChart3,
     href: "/quan-ly/bao-cao",
     group: "Quản trị",
-    minRole: "admin",
-    // viewer được xem riêng Báo cáo dù rank thấp hơn admin — xem
-    // report.router.ts's adminOrViewerProcedure.
-    extraRoles: ["viewer"],
+    getKey: "bao-cao.get",
   },
 ];
 
 /**
- * Lọc nav theo role: giữ item mà role hiện tại đủ quyền (>= minRole), lọc đệ
- * quy xuống children, rồi drop luôn item cha nếu không còn con nào hợp lệ.
- * Pattern giống hệt `buildAdminNav` tham khảo từ alix-bo-frontend-v2.
+ * Lọc nav theo permission đã resolve: giữ item mà role hiện tại có đúng
+ * `getKey` (hoặc `isSuper`/`superOnly` khớp), lọc đệ quy xuống children, rồi
+ * drop luôn item cha nếu không còn con nào hợp lệ. Pattern giống hệt
+ * `buildAdminNav` tham khảo từ alix-bo-frontend-v2.
  */
-export function filterNavByRole(nav: NavItem[], role: Role): NavItem[] {
-  const rank = ROLE_RANK[role];
+export function filterNavByRole(nav: NavItem[], permissions: ResolvedPermissions): NavItem[] {
+  const canSee = (item: NavItem) => {
+    if (item.superOnly) return permissions.isSuper;
+    if (!item.getKey) return true;
+    return permissions.isSuper || permissions.keys.includes(item.getKey);
+  };
   return nav
-    .filter((item) => rank >= ROLE_RANK[item.minRole ?? "manager"] || item.extraRoles?.includes(role))
+    .filter(canSee)
     .map((item) => ({
       ...item,
-      children: item.children
-        ? filterNavByRole(item.children, role)
-        : undefined,
+      children: item.children ? filterNavByRole(item.children, permissions) : undefined,
     }))
     .filter((item) => !item.children || item.children.length > 0);
 }

@@ -1,10 +1,10 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { Box } from "@chakra-ui/react";
 import { Skeleton } from "~/components/ui/skeleton";
 
 import { api, HydrateClient } from "~/trpc/server";
-import { getSession } from "~/server/better-auth/server";
-import { canManage } from "~/server/better-auth/role-rank";
+import { getMyPermissions, hasPermission } from "~/modules/role/get-my-permissions";
 import { parsePageSize } from "~/lib/pagination";
 import { MenuItemList } from "./menu-item-list";
 
@@ -13,6 +13,16 @@ export default async function MonAnPage({
 }: {
   searchParams: Promise<{ page?: string; pageSize?: string; categoryId?: string; search?: string }>;
 }) {
+  // menu.list/listCategories là permissionProcedure("mon-an.get") — thiếu
+  // guard riêng ở đây thì role không có quyền vẫn vào được UI (menu sidebar
+  // đã ẩn link, nhưng gõ thẳng URL vẫn tới trang), gọi tRPC FORBIDDEN và
+  // crash Suspense (listCategories dùng useSuspenseQuery) thay vì bị chặn rõ
+  // ràng (xem CLAUDE.md).
+  const permissions = await getMyPermissions();
+  if (!hasPermission(permissions, "mon-an.get")) {
+    redirect("/quan-ly");
+  }
+
   const {
     page: pageParam,
     pageSize: pageSizeParam,
@@ -27,8 +37,6 @@ export default async function MonAnPage({
   void api.menu.list.prefetch({ page, pageSize, categoryId, search });
   void api.menu.listCategories.prefetch();
 
-  const session = await getSession();
-
   return (
     <Box p={{ base: 4, md: 6 }}>
       <HydrateClient>
@@ -38,7 +46,10 @@ export default async function MonAnPage({
           pageSize={pageSize}
           categoryId={categoryId}
           search={search}
-          canManage={canManage(session?.user.role)}
+          canCreate={hasPermission(permissions, "mon-an.tao")}
+          canUpdate={hasPermission(permissions, "mon-an.sua")}
+          canDelete={hasPermission(permissions, "mon-an.xoa")}
+          canManageCategories={hasPermission(permissions, "mon-an.danh-muc")}
         />
       </Suspense>
       </HydrateClient>

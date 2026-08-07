@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { adminOrViewerProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { permissionProcedure, createTRPCRouter } from "~/server/api/trpc";
 import { assistantDrizzleRepository } from "~/modules/assistant/infrastructure/assistant.drizzle-repository";
 import { orderDrizzleRepository } from "~/modules/order/infrastructure/order.drizzle-repository";
 import { shiftDrizzleRepository } from "~/modules/shift/infrastructure/shift.drizzle-repository";
@@ -8,8 +8,8 @@ import { getDefaultReportRange } from "./application/get-default-report-range.us
 import { getReport } from "./application/get-report.usecase";
 
 export const reportRouter = createTRPCRouter({
-  getDefaultRange: adminOrViewerProcedure.query(() => getDefaultReportRange()),
-  getReport: adminOrViewerProcedure
+  getDefaultRange: permissionProcedure("bao-cao.get").query(() => getDefaultReportRange()),
+  getReport: permissionProcedure("bao-cao.get")
     .input(
       z.object({
         start: z.coerce.date(),

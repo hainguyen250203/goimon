@@ -1,11 +1,11 @@
 import { createAuthClient } from "better-auth/react";
 import { adminClient, phoneNumberClient } from "better-auth/client/plugins";
 
-import { ac, admin, manager, superadmin, user, viewer } from "./permissions";
+import { ac, admin, manager, user, viewer } from "./permissions";
 
 export const authClient = createAuthClient({
   plugins: [
-    adminClient({ ac, roles: { admin, manager, user, superadmin, viewer } }),
+    adminClient({ ac, roles: { admin, manager, user, viewer } }),
     phoneNumberClient(),
   ],
 });

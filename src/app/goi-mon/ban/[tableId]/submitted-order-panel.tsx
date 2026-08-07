@@ -77,10 +77,18 @@ export function SubmittedOrderPanel({
   tableId,
   areaId,
   order,
+  canConfirmPayment,
+  canCancel,
+  canRemoveItems,
+  canManagePromotion,
 }: {
   tableId: number;
   areaId?: number;
   order: Order;
+  canConfirmPayment: boolean;
+  canCancel: boolean;
+  canRemoveItems: boolean;
+  canManagePromotion: boolean;
 }) {
   const router = useRouter();
   const utils = api.useUtils();
@@ -263,7 +271,11 @@ export function SubmittedOrderPanel({
           <Flex flex={1} align="center" justify="center" py={10}>
             <EmptyState
               title="Đã trả hết món"
-              description="Bàn vẫn đang phục vụ — gọi thêm món hoặc bấm Huỷ đơn nếu không dùng nữa."
+              description={
+                canCancel
+                  ? "Bàn vẫn đang phục vụ — gọi thêm món hoặc bấm Huỷ đơn nếu không dùng nữa."
+                  : "Bàn vẫn đang phục vụ — gọi thêm món cho bàn này."
+              }
             />
           </Flex>
         ) : (
@@ -277,6 +289,7 @@ export function SubmittedOrderPanel({
                 note={item.note}
                 editableNote={false}
                 disabled={isBusy}
+                canRemove={canRemoveItems}
                 onQuantityChange={(quantity) =>
                   setLocalItems((items) => items.map((i) => (i.id === item.id ? { ...i, quantity } : i)))
                 }
@@ -327,41 +340,45 @@ export function SubmittedOrderPanel({
                 Giảm {formatDiscount(order.promotion)} · -{formatVnd(discountAmount)}
               </Text>
             </Box>
-            <Flex align="center" gap={1}>
+            {canManagePromotion && (
+              <Flex align="center" gap={1}>
+                <Button
+                  size={{ base: "xs", lg: "sm" }}
+                  variant="ghost"
+                  disabled={isBusy}
+                  onClick={() => setPromotionPickerOpen(true)}
+                >
+                  Đổi
+                </Button>
+                <IconButton
+                  size={{ base: "xs", lg: "sm" }}
+                  variant="ghost"
+                  colorPalette="red"
+                  aria-label="Gỡ khuyến mãi"
+                  disabled={isBusy}
+                  onClick={() => removePromotion.mutate({ orderId: order.id })}
+                >
+                  <X size={14} />
+                </IconButton>
+              </Flex>
+            )}
+          </Flex>
+        ) : (
+          canManagePromotion && (
+            <Flex justify="space-between" align="center" mb={1}>
+              <Text fontSize={{ base: "xs", lg: "sm" }} color="fg.muted">
+                Khuyến mãi
+              </Text>
               <Button
                 size={{ base: "xs", lg: "sm" }}
-                variant="ghost"
+                variant="outline"
                 disabled={isBusy}
                 onClick={() => setPromotionPickerOpen(true)}
               >
-                Đổi
+                Thêm
               </Button>
-              <IconButton
-                size={{ base: "xs", lg: "sm" }}
-                variant="ghost"
-                colorPalette="red"
-                aria-label="Gỡ khuyến mãi"
-                disabled={isBusy}
-                onClick={() => removePromotion.mutate({ orderId: order.id })}
-              >
-                <X size={14} />
-              </IconButton>
             </Flex>
-          </Flex>
-        ) : (
-          <Flex justify="space-between" align="center" mb={1}>
-            <Text fontSize={{ base: "xs", lg: "sm" }} color="fg.muted">
-              Khuyến mãi
-            </Text>
-            <Button
-              size={{ base: "xs", lg: "sm" }}
-              variant="outline"
-              disabled={isBusy}
-              onClick={() => setPromotionPickerOpen(true)}
-            >
-              Thêm
-            </Button>
-          </Flex>
+          )
         ))}
 
         <Flex justify="space-between" align="center" mb={2}>
@@ -373,30 +390,34 @@ export function SubmittedOrderPanel({
           </Text>
         </Flex>
         <Flex gap={2}>
-          <Button
-            flex={1}
-            variant="outline"
-            colorPalette={isDirty ? undefined : "red"}
-            size={{ base: "sm", lg: "md" }}
-            disabled={isBusy}
-            onClick={() => (isDirty ? handleDiscardChanges() : setCancelConfirmOpen(true))}
-          >
-            {isDirty ? <RotateCcw size={14} /> : <Trash2 size={14} />}
-            {isDirty ? "Huỷ thay đổi" : "Huỷ đơn"}
-          </Button>
-          <Button
-            flex={1}
-            colorPalette="blue"
-            size={{ base: "sm", lg: "md" }}
-            loading={updateItemsMutation.isPending}
-            // Đơn đã lưu mà 0 món thì chưa có gì để thanh toán — "Xác nhận"
-            // (lưu thay đổi, kể cả trả hết món) vẫn luôn bấm được. Thanh toán
-            // không phụ thuộc đã in bill hay chưa — 2 hành động độc lập.
-            disabled={!isDirty && localItems.length === 0}
-            onClick={() => (isDirty ? handleConfirmChanges() : handleOpenPayment())}
-          >
-            {isDirty ? "Xác nhận" : "Thanh toán"}
-          </Button>
+          {(isDirty || canCancel) && (
+            <Button
+              flex={1}
+              variant="outline"
+              colorPalette={isDirty ? undefined : "red"}
+              size={{ base: "sm", lg: "md" }}
+              disabled={isBusy}
+              onClick={() => (isDirty ? handleDiscardChanges() : setCancelConfirmOpen(true))}
+            >
+              {isDirty ? <RotateCcw size={14} /> : <Trash2 size={14} />}
+              {isDirty ? "Huỷ thay đổi" : "Huỷ đơn"}
+            </Button>
+          )}
+          {(isDirty || canConfirmPayment) && (
+            <Button
+              flex={1}
+              colorPalette="blue"
+              size={{ base: "sm", lg: "md" }}
+              loading={updateItemsMutation.isPending}
+              // Đơn đã lưu mà 0 món thì chưa có gì để thanh toán — "Xác nhận"
+              // (lưu thay đổi, kể cả trả hết món) vẫn luôn bấm được. Thanh toán
+              // không phụ thuộc đã in bill hay chưa — 2 hành động độc lập.
+              disabled={!isDirty && localItems.length === 0}
+              onClick={() => (isDirty ? handleConfirmChanges() : handleOpenPayment())}
+            >
+              {isDirty ? "Xác nhận" : "Thanh toán"}
+            </Button>
+          )}
         </Flex>
       </Box>
 

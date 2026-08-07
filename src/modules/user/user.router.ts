@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
-import { adminProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { permissionProcedure, createTRPCRouter } from "~/server/api/trpc";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "~/lib/pagination";
 import { listUsers } from "./application/list-users.usecase";
 import { createUser } from "./application/create-user.usecase";
@@ -11,11 +11,21 @@ import { banUser } from "./application/ban-user.usecase";
 import { unbanUser } from "./application/unban-user.usecase";
 import { userBetterAuthRepository } from "./infrastructure/user.betterauth-repository";
 import { logActivity } from "~/modules/activity-log/log-activity";
+import { roleDrizzleRepository } from "~/modules/role/infrastructure/role.drizzle-repository";
 
-// Module này toàn bộ admin-only (quản lý tài khoản), không như menu/table
-// dùng managerProcedure — xem adminProcedure trong ~/server/api/trpc.
+// roleSchema chỉ validate "có phải chuỗi không rỗng" — role thật là dữ liệu
+// (bảng `role`, xem trang Vai trò), không còn union cố định. `assertRoleExists`
+// verify tên role có tồn tại trước khi gán, tránh gõ tay 1 tên role không
+// tồn tại (không phá gì nhưng user đó sẽ trắng quyền vô lý do không role nào
+// khớp).
+const roleSchema = z.string().min(1);
 
-const roleSchema = z.enum(["user", "manager", "admin", "superadmin", "viewer"]);
+async function assertRoleExists(name: string) {
+  const role = await roleDrizzleRepository.findByName(name);
+  if (!role) {
+    throw new TRPCError({ code: "BAD_REQUEST", message: `Vai trò "${name}" không tồn tại.` });
+  }
+}
 
 // Login bằng số điện thoại nên validate lỏng định dạng di động VN, tránh
 // nhập sai gây không đăng nhập được — không cần chuẩn hoá đầu số kỹ hơn.
@@ -24,7 +34,7 @@ const phoneNumberSchema = z
   .regex(/^0\d{9}$/, "Số điện thoại không hợp lệ (vd: 0912345678)");
 
 export const userRouter = createTRPCRouter({
-  list: adminProcedure
+  list: permissionProcedure("nguoi-dung.get")
     .input(
       z.object({
         page: z.number().int().min(1).default(1),
@@ -33,23 +43,9 @@ export const userRouter = createTRPCRouter({
         banned: z.boolean().optional(),
       }),
     )
-    .query(({ ctx, input }) => {
-      const isSuperadmin = ctx.session.user.role === "superadmin";
-      // superadmin là vai trò giám sát ẨN — không cho non-superadmin biết nó
-      // tồn tại. Lọc filter role="superadmin" thẳng ra kết quả rỗng (im lặng,
-      // không FORBIDDEN — báo lỗi sẽ xác nhận ngược lại rằng vai trò này có
-      // thật), và loại nó khỏi MỌI danh sách khác bất kể filter gì.
-      if (!isSuperadmin && input.role === "superadmin") {
-        return { items: [], total: 0 };
-      }
-      return listUsers(userBetterAuthRepository, {
-        ...input,
-        excludeSuperadmin: !isSuperadmin,
-        headers: ctx.headers,
-      });
-    }),
+    .query(({ ctx, input }) => listUsers(userBetterAuthRepository, { ...input, headers: ctx.headers })),
 
-  create: adminProcedure
+  create: permissionProcedure("nguoi-dung.tao")
     .input(
       z.object({
         name: z.string().min(1, "Tên không được để trống"),
@@ -59,12 +55,7 @@ export const userRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (input.role === "superadmin" && ctx.session.user.role !== "superadmin") {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Chỉ superadmin mới có thể gán vai trò superadmin.",
-        });
-      }
+      await assertRoleExists(input.role);
       let created;
       try {
         created = await createUser(userBetterAuthRepository, input);
@@ -87,15 +78,10 @@ export const userRouter = createTRPCRouter({
       return created;
     }),
 
-  setRole: adminProcedure
+  setRole: permissionProcedure("nguoi-dung.gan-vai-tro")
     .input(z.object({ userId: z.string().min(1), role: roleSchema }))
     .mutation(async ({ ctx, input }) => {
-      if (input.role === "superadmin" && ctx.session.user.role !== "superadmin") {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Chỉ superadmin mới có thể gán vai trò superadmin.",
-        });
-      }
+      await assertRoleExists(input.role);
       const { before, after } = await setUserRole(userBetterAuthRepository, {
         ...input,
         headers: ctx.headers,
@@ -110,7 +96,7 @@ export const userRouter = createTRPCRouter({
       return after;
     }),
 
-  ban: adminProcedure
+  ban: permissionProcedure("nguoi-dung.khoa-mo-khoa")
     .input(
       z.object({
         userId: z.string().min(1),
@@ -135,7 +121,7 @@ export const userRouter = createTRPCRouter({
       return after;
     }),
 
-  unban: adminProcedure
+  unban: permissionProcedure("nguoi-dung.khoa-mo-khoa")
     .input(z.object({ userId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const { before, after } = await unbanUser(userBetterAuthRepository, {
@@ -155,7 +141,7 @@ export const userRouter = createTRPCRouter({
       return after;
     }),
 
-  setPassword: adminProcedure
+  setPassword: permissionProcedure("nguoi-dung.doi-mat-khau")
     .input(
       z.object({
         userId: z.string().min(1),

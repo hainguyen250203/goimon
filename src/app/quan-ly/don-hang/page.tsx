@@ -1,9 +1,10 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { Box } from "@chakra-ui/react";
 import { Skeleton } from "~/components/ui/skeleton";
 
 import { api, HydrateClient } from "~/trpc/server";
-import { getSession } from "~/server/better-auth/server";
+import { getMyPermissions, hasPermission } from "~/modules/role/get-my-permissions";
 import { parsePageSize } from "~/lib/pagination";
 import type { OrderStatus } from "~/modules/order/domain/order-list-item.entity";
 import { OrderList } from "./order-list";
@@ -15,9 +16,14 @@ export default async function DonHangPage({
 }: {
   searchParams: Promise<{ page?: string; pageSize?: string; status?: string; shiftId?: string }>;
 }) {
-  const session = await getSession();
-  const canViewDeleted = session?.user.role === "superadmin";
-  const canDelete = session?.user.role === "superadmin";
+  // order.router.ts's `list` giờ là staffProcedure (dùng chung goi-mon, không
+  // tự chặn quyền) — trang admin này phải tự chặn riêng "don-hang.get" ở đây.
+  const permissions = await getMyPermissions();
+  if (!hasPermission(permissions, "don-hang.get")) {
+    redirect("/quan-ly");
+  }
+  const canViewDeleted = hasPermission(permissions, "don-hang.xem-da-xoa");
+  const canDelete = hasPermission(permissions, "don-hang.xoa-don");
 
   const {
     page: pageParam,
@@ -27,9 +33,10 @@ export default async function DonHangPage({
   } = await searchParams;
   const page = Math.max(1, Number(pageParam ?? 1) || 1);
   const pageSize = parsePageSize(pageSizeParam);
-  // "status=deleted" chỉ có tác dụng với superadmin — non-superadmin gõ tay
-  // URL này rơi về danh sách thường (status=undefined), không lỗi, không lộ
-  // dữ liệu (xem CLAUDE.md/order.router.ts's FORBIDDEN check ở list).
+  // "status=deleted" chỉ có tác dụng khi có "don-hang.xem-da-xoa" (hoặc
+  // isSuper) — người khác gõ tay URL này rơi về danh sách thường
+  // (status=undefined), không lỗi, không lộ dữ liệu (xem order.router.ts's
+  // requireCanViewDeleted).
   const deleted = statusParam === "deleted" && canViewDeleted;
   const status = !deleted && VALID_STATUS.includes(statusParam as OrderStatus)
     ? (statusParam as OrderStatus)

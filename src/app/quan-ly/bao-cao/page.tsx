@@ -4,24 +4,29 @@ import { Box } from "@chakra-ui/react";
 
 import { Skeleton } from "~/components/ui/skeleton";
 import { api, HydrateClient } from "~/trpc/server";
-import { getSession } from "~/server/better-auth/server";
-import { hasMinRole } from "~/server/better-auth/role-rank";
+import { getMyPermissions, hasPermission } from "~/modules/role/get-my-permissions";
 import { getDefaultReportRange } from "~/modules/report/application/get-default-report-range.usecase";
 import { formatVNDateInputValue, toInclusiveEndDateInputValue, toQueryRange } from "~/lib/vn-date-range";
 import { ReportView } from "./report-view";
+import { ALL_REPORT_SECTIONS, SECTION_PERMISSION_KEY } from "./ui/report-section-picker";
 
 export default async function BaoCaoPage({
   searchParams,
 }: {
   searchParams: Promise<{ start?: string; end?: string; categories?: string }>;
 }) {
-  // Trang này admin-only (+ ngoại lệ "viewer", xem report.router.ts's
-  // adminOrViewerProcedure) — /quan-ly/layout.tsx chỉ chặn role "user",
-  // không phân biệt manager/admin, nên phải tự chặn thêm ở đây (giống nguoi-dung).
-  const session = await getSession();
-  if (!hasMinRole(session?.user.role, "admin") && session?.user.role !== "viewer") {
+  // Trang này cần riêng "bao-cao.get" — /quan-ly/layout.tsx chỉ chặn khi
+  // KHÔNG có quyền quan-ly nào, nên phải tự chặn thêm ở đây (giống nguoi-dung).
+  const permissions = await getMyPermissions();
+  if (!hasPermission(permissions, "bao-cao.get")) {
     redirect("/quan-ly");
   }
+  // Mỗi phần trong trang Báo cáo có quyền riêng — tính ở đây (Server
+  // Component, nơi duy nhất gọi được hasPermission) rồi truyền xuống, thay vì
+  // để ReportView tự quyết định (Client Component không có session).
+  const allowedSections = ALL_REPORT_SECTIONS.filter((section) =>
+    hasPermission(permissions, SECTION_PERMISSION_KEY[section]),
+  );
 
   const { start: startParam, end: endParam, categories: categoriesParam } = await searchParams;
   const categoryIds = categoriesParam
@@ -60,7 +65,12 @@ export default async function BaoCaoPage({
     <Box p={{ base: 4, md: 6 }}>
       <HydrateClient>
         <Suspense fallback={<Skeleton h={96} rounded="l3" />}>
-          <ReportView initialStart={initialStart} initialEnd={initialEnd} categoryIds={categoryIds} />
+          <ReportView
+            initialStart={initialStart}
+            initialEnd={initialEnd}
+            categoryIds={categoryIds}
+            allowedSections={allowedSections}
+          />
         </Suspense>
       </HydrateClient>
     </Box>

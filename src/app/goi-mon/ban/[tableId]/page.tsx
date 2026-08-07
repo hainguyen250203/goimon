@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 
 import { api, HydrateClient } from "~/trpc/server";
+import { getMyPermissions, hasPermission } from "~/modules/role/get-my-permissions";
 import { OrderTableView } from "./order-table-view";
 import { OrderTableSkeleton } from "./order-table-skeleton";
 
@@ -20,10 +21,22 @@ export default async function TableOrderPage({
   // nữa cho cùng 1 dữ liệu.
   void api.order.getTableOrder.prefetch({ tableId });
 
+  // Luồng gọi món cốt lõi (xem/gọi/thêm món, chuyển bàn/món, gộp bàn, in bill)
+  // không cần permission key nào — nhưng thanh toán/huỷ đơn/xoá món/khuyến
+  // mãi thì có (xem CLAUDE.md, permission-definitions.ts), nên phải tự resolve
+  // ở đây rồi truyền xuống thay vì để SubmittedOrderPanel coi mọi thứ là public.
+  const permissions = await getMyPermissions();
+
   return (
     <HydrateClient>
       <Suspense fallback={<OrderTableSkeleton />}>
-        <OrderTableView tableId={tableId} />
+        <OrderTableView
+          tableId={tableId}
+          canConfirmPayment={hasPermission(permissions, "don-hang.thanh-toan")}
+          canCancel={hasPermission(permissions, "don-hang.huy")}
+          canRemoveItems={hasPermission(permissions, "don-hang.xoa-mon")}
+          canManagePromotion={hasPermission(permissions, "don-hang.khuyen-mai")}
+        />
       </Suspense>
     </HydrateClient>
   );

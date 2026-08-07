@@ -13,8 +13,9 @@ import { VisuallyHidden } from "@chakra-ui/react";
 import { Tooltip } from "~/components/ui/tooltip";
 
 import { AdminSidebarItem } from "./admin-sidebar-item";
-import { ADMIN_NAV, filterNavByRole, type NavItem, type Role } from "./nav-config";
+import { ADMIN_NAV, filterNavByRole, type NavItem } from "./nav-config";
 import { NavUser } from "./nav-user";
+import type { ResolvedPermissions } from "~/modules/role/get-my-permissions";
 
 const SIDEBAR_W = "224px";
 const SIDEBAR_COLLAPSED_W = "60px";
@@ -149,14 +150,16 @@ function MobileHeaderTrigger({ onOpen }: { onOpen: () => void }) {
 
 export function AdminShell({
   user,
+  permissions,
   children,
 }: {
-  user: { name: string; role: Role; phoneNumber?: string | null };
+  user: { name: string; role: string; phoneNumber?: string | null };
+  permissions: ResolvedPermissions;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const nav = filterNavByRole(ADMIN_NAV, user.role);
+  const nav = filterNavByRole(ADMIN_NAV, permissions);
   const title = findActiveLabel(nav, pathname);
 
   // Mặc định mở rộng — không lưu lại lựa chọn thu gọn giữa các lần tải

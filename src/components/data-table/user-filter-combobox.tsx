@@ -16,7 +16,6 @@ import { api } from "~/trpc/react";
 import { MAX_PAGE_SIZE } from "~/lib/pagination";
 
 type UserOption = { value: string; label: string };
-type UserRole = "user" | "manager" | "admin" | "superadmin";
 
 /**
  * Combobox lọc theo người dùng — tải toàn bộ danh sách 1 lần (số lượng nhỏ
@@ -33,7 +32,7 @@ export function UserFilterCombobox({
 }: {
   value: string;
   onValueChange: (userId: string) => void;
-  role?: UserRole;
+  role?: string;
   placeholder?: string;
   width?: string;
 }) {

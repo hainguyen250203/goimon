@@ -38,13 +38,19 @@ export function TableList({
   pageSize,
   areaId,
   status,
-  canManage,
+  canCreate,
+  canUpdate,
+  canDelete,
+  canManageAreas,
 }: {
   page: number;
   pageSize: number;
   areaId?: number;
   status?: TableOccupancyStatus;
-  canManage: boolean;
+  canCreate: boolean;
+  canUpdate: boolean;
+  canDelete: boolean;
+  canManageAreas: boolean;
 }) {
   const router = useRouter();
   const [areas] = api.table.listAreas.useSuspenseQuery();
@@ -99,7 +105,7 @@ export function TableList({
         </StatusDot>
       ),
     },
-    ...(canManage
+    ...(canUpdate || canDelete
       ? [
           {
             key: "actions",
@@ -108,6 +114,8 @@ export function TableList({
             cell: (row: RestaurantTableWithStatus) => (
               <TableRowActions
                 item={row}
+                canUpdate={canUpdate}
+                canDelete={canDelete}
                 onEdit={(item) => {
                   setEditingItem(item);
                   setDialogOpen(true);
@@ -141,12 +149,14 @@ export function TableList({
     <Stack gap={4}>
       <ListViewToolbar
         end={
-          canManage && (
-            <>
+          <>
+            {canManageAreas && (
               <Button variant="outline" onClick={() => setAreaManagerOpen(true)}>
                 <Settings size={16} />
                 Quản lý khu vực
               </Button>
+            )}
+            {canCreate && (
               <Button
                 onClick={() => {
                   setEditingItem(undefined);
@@ -156,8 +166,8 @@ export function TableList({
                 <Plus size={16} />
                 Thêm bàn
               </Button>
-            </>
-          )
+            )}
+          </>
         }
       >
         <FilterSelect

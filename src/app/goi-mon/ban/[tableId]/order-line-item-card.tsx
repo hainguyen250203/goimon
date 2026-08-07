@@ -18,6 +18,10 @@ type OrderLineItemCardProps = {
   note?: string | null;
   editableNote: boolean;
   disabled?: boolean;
+  /** Mặc định `true` — tab "Món đang gọi" (chưa lưu) luôn được xoá tự do, chỉ
+   * "Món đã gọi" (submitted-order-panel.tsx) mới cần "don-hang.xoa-mon" và
+   * truyền `false` khi không có quyền. */
+  canRemove?: boolean;
   onQuantityChange: (quantity: number) => void;
   onNoteChange?: (note: string) => void;
   onRemove: () => void;
@@ -36,7 +40,8 @@ function arePropsEqual(prev: OrderLineItemCardProps, next: OrderLineItemCardProp
     prev.quantity === next.quantity &&
     prev.note === next.note &&
     prev.editableNote === next.editableNote &&
-    prev.disabled === next.disabled
+    prev.disabled === next.disabled &&
+    prev.canRemove === next.canRemove
   );
 }
 
@@ -52,6 +57,7 @@ export const OrderLineItemCard = memo(function OrderLineItemCard({
   note,
   editableNote,
   disabled = false,
+  canRemove = true,
   onQuantityChange,
   onNoteChange,
   onRemove,
@@ -71,7 +77,11 @@ export const OrderLineItemCard = memo(function OrderLineItemCard({
       return;
     }
     if (parsed <= 0) {
-      onRemove();
+      if (canRemove) {
+        onRemove();
+      } else {
+        setQuantityInput(String(quantity));
+      }
       return;
     }
     onQuantityChange(Math.min(parsed, MAX_QUANTITY));
@@ -93,16 +103,18 @@ export const OrderLineItemCard = memo(function OrderLineItemCard({
             </Text>
           )}
         </Box>
-        <IconButton
-          size="xs"
-          variant="ghost"
-          colorPalette="red"
-          aria-label="Xoá món"
-          disabled={disabled}
-          onClick={onRemove}
-        >
-          <Trash2 size={13} />
-        </IconButton>
+        {canRemove && (
+          <IconButton
+            size="xs"
+            variant="ghost"
+            colorPalette="red"
+            aria-label="Xoá món"
+            disabled={disabled}
+            onClick={onRemove}
+          >
+            <Trash2 size={13} />
+          </IconButton>
+        )}
       </Flex>
 
       {editableNote && (

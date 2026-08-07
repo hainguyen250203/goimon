@@ -1,10 +1,10 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { Box } from "@chakra-ui/react";
 import { Skeleton } from "~/components/ui/skeleton";
 
 import { api, HydrateClient } from "~/trpc/server";
-import { getSession } from "~/server/better-auth/server";
-import { canManage } from "~/server/better-auth/role-rank";
+import { getMyPermissions, hasPermission } from "~/modules/role/get-my-permissions";
 import { parsePageSize } from "~/lib/pagination";
 import type { TableOccupancyStatus } from "~/modules/table/application/list-tables.usecase";
 import { TableList } from "./table-list";
@@ -14,6 +14,13 @@ export default async function BanPage({
 }: {
   searchParams: Promise<{ page?: string; pageSize?: string; areaId?: string; status?: string }>;
 }) {
+  // table.list là permissionProcedure("ban.get") — tự chặn ở đây, không dựa
+  // vào nav sidebar ẩn link (gõ thẳng URL vẫn tới trang nếu thiếu, xem CLAUDE.md).
+  const permissions = await getMyPermissions();
+  if (!hasPermission(permissions, "ban.get")) {
+    redirect("/quan-ly");
+  }
+
   const {
     page: pageParam,
     pageSize: pageSizeParam,
@@ -32,8 +39,6 @@ export default async function BanPage({
   void api.table.list.prefetch({ page, pageSize, areaId, status });
   void api.table.listAreas.prefetch();
 
-  const session = await getSession();
-
   return (
     <Box p={{ base: 4, md: 6 }}>
       <HydrateClient>
@@ -43,7 +48,10 @@ export default async function BanPage({
           pageSize={pageSize}
           areaId={areaId}
           status={status}
-          canManage={canManage(session?.user.role)}
+          canCreate={hasPermission(permissions, "ban.tao")}
+          canUpdate={hasPermission(permissions, "ban.sua")}
+          canDelete={hasPermission(permissions, "ban.xoa")}
+          canManageAreas={hasPermission(permissions, "ban.khu-vuc")}
         />
       </Suspense>
       </HydrateClient>

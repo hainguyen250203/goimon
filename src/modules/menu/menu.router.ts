@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
-import { managerProcedure, userProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { permissionProcedure, staffProcedure, createTRPCRouter } from "~/server/api/trpc";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "~/lib/pagination";
 import { listCategoryOptions } from "./application/list-category-options.usecase";
 import { listMenuItems } from "./application/list-menu-items.usecase";
@@ -35,7 +35,7 @@ const menuItemInputSchema = z.object({
 });
 
 export const menuRouter = createTRPCRouter({
-  list: managerProcedure
+  list: permissionProcedure("mon-an.get")
     .input(
       z.object({
         page: z.number().int().min(1).default(1),
@@ -46,16 +46,16 @@ export const menuRouter = createTRPCRouter({
     )
     .query(({ input }) => listMenuItems(menuItemDrizzleRepository, input)),
 
-  listCategories: managerProcedure.query(() =>
+  listCategories: permissionProcedure("mon-an.get").query(() =>
     listCategoryOptions(menuItemDrizzleRepository),
   ),
 
   /** Cho màn hình gọi món (/goi-mon) — mọi nhân viên đã đăng nhập đều gọi được. */
-  listForOrdering: userProcedure.query(() =>
+  listForOrdering: staffProcedure.query(() =>
     listForOrdering(menuItemDrizzleRepository),
   ),
 
-  create: managerProcedure
+  create: permissionProcedure("mon-an.tao")
     .input(menuItemInputSchema)
     .mutation(async ({ ctx, input }) => {
       const item = await createMenuItem(menuItemDrizzleRepository, input);
@@ -69,7 +69,7 @@ export const menuRouter = createTRPCRouter({
       return item;
     }),
 
-  update: managerProcedure
+  update: permissionProcedure("mon-an.sua")
     .input(menuItemInputSchema.extend({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       const { before, after } = await updateMenuItem(menuItemDrizzleRepository, input);
@@ -100,7 +100,7 @@ export const menuRouter = createTRPCRouter({
       return after;
     }),
 
-  delete: managerProcedure
+  delete: permissionProcedure("mon-an.xoa")
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -120,11 +120,11 @@ export const menuRouter = createTRPCRouter({
     }),
 
   // Quản trị danh mục — dialog "Quản lý danh mục" ở /quan-ly/mon-an.
-  listCategoriesFull: managerProcedure.query(() =>
+  listCategoriesFull: permissionProcedure("mon-an.get").query(() =>
     listCategories(menuItemDrizzleRepository),
   ),
 
-  createCategory: managerProcedure
+  createCategory: permissionProcedure("mon-an.danh-muc")
     .input(categoryInputSchema)
     .mutation(async ({ ctx, input }) => {
       const item = await createCategory(menuItemDrizzleRepository, input);
@@ -138,7 +138,7 @@ export const menuRouter = createTRPCRouter({
       return item;
     }),
 
-  updateCategory: managerProcedure
+  updateCategory: permissionProcedure("mon-an.danh-muc")
     .input(categoryInputSchema.extend({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       const { before, after } = await updateCategory(menuItemDrizzleRepository, input);
@@ -155,7 +155,7 @@ export const menuRouter = createTRPCRouter({
       return after;
     }),
 
-  deleteCategory: managerProcedure
+  deleteCategory: permissionProcedure("mon-an.danh-muc")
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       try {

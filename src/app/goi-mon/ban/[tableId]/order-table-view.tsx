@@ -87,7 +87,19 @@ function TabButton({
  * qua dialog — thay cho luồng cũ 3-4 cấp trang lồng nhau, đỡ phải bấm back
  * nhiều lần khi đổi bàn hoặc xem việc đã làm.
  */
-export function OrderTableView({ tableId }: { tableId: number }) {
+export function OrderTableView({
+  tableId,
+  canConfirmPayment,
+  canCancel,
+  canRemoveItems,
+  canManagePromotion,
+}: {
+  tableId: number;
+  canConfirmPayment: boolean;
+  canCancel: boolean;
+  canRemoveItems: boolean;
+  canManagePromotion: boolean;
+}) {
   const router = useRouter();
   const utils = api.useUtils();
   // Poll nhẹ đơn đang mở — bàn có thể bị nhân viên khác sửa gần như đồng
@@ -248,7 +260,15 @@ export function OrderTableView({ tableId }: { tableId: number }) {
         </Box>
         {order && (
           <Box display={tab === "submitted" ? "flex" : "none"} flexDirection="column" flex={1} minH={0}>
-            <SubmittedOrderPanel tableId={tableId} areaId={table?.areaId} order={order} />
+            <SubmittedOrderPanel
+              tableId={tableId}
+              areaId={table?.areaId}
+              order={order}
+              canConfirmPayment={canConfirmPayment}
+              canCancel={canCancel}
+              canRemoveItems={canRemoveItems}
+              canManagePromotion={canManagePromotion}
+            />
           </Box>
         )}
       </Box>

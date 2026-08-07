@@ -1,7 +1,7 @@
 "use client";
 
 import { Bot, CalendarClock, CheckCircle2, Percent, Receipt, TrendingUp, Wallet } from "lucide-react";
-import { Flex, Grid, Stack } from "@chakra-ui/react";
+import { Box, Flex, Grid, Stack } from "@chakra-ui/react";
 
 import { api } from "~/trpc/react";
 import { formatVnd } from "~/lib/format-order";
@@ -9,7 +9,7 @@ import { useLocalStorageState } from "~/lib/use-local-storage-state";
 import { KpiCard } from "../kpi-card";
 import { toQueryRange } from "~/lib/vn-date-range";
 import { ReportSettingsDrawer } from "./report-settings-drawer";
-import { ALL_REPORT_SECTIONS, type ReportSectionKey } from "./ui/report-section-picker";
+import { type ReportSectionKey } from "./ui/report-section-picker";
 import { ShiftDetailCards } from "./ui/shift-detail-cards";
 import { TopItemsChart } from "./ui/top-items-chart";
 import { PaymentMethodPieChart } from "./ui/payment-method-pie-chart";
@@ -30,10 +30,14 @@ export function ReportView({
   initialStart,
   initialEnd,
   categoryIds,
+  allowedSections,
 }: {
   initialStart: string;
   initialEnd: string;
   categoryIds: number[];
+  /** Phần role có quyền xem (permission, không phải sở thích cá nhân) — xem
+   * report-section-picker.tsx's SECTION_PERMISSION_KEY. */
+  allowedSections: ReportSectionKey[];
 }) {
   const { start, end } = toQueryRange(initialStart, initialEnd);
   const { data } = api.report.getReport.useQuery({
@@ -43,9 +47,13 @@ export function ReportView({
   });
   const [visibleSections, setVisibleSections] = useLocalStorageState<ReportSectionKey[]>(
     VISIBLE_SECTIONS_STORAGE_KEY,
-    ALL_REPORT_SECTIONS,
+    allowedSections,
   );
-  const isVisible = (section: ReportSectionKey) => visibleSections.includes(section);
+  // Quyền là gate CỨNG — dù localStorage còn lưu section đã từng bật trước
+  // khi bị thu hồi quyền, vẫn phải ẩn (không tin tưởng state cũ trên máy
+  // người dùng để quyết định hiển thị dữ liệu nhạy cảm).
+  const isVisible = (section: ReportSectionKey) =>
+    visibleSections.includes(section) && allowedSections.includes(section);
 
   return (
     <Stack gap={6}>
@@ -56,6 +64,7 @@ export function ReportView({
           categoryIds={categoryIds}
           visibleSections={visibleSections}
           onApplySections={setVisibleSections}
+          allowedSections={allowedSections}
         />
       </Flex>
 
@@ -122,12 +131,29 @@ export function ReportView({
 
           {isVisible("shiftDetailCards") && <ShiftDetailCards data={data.shiftBreakdown} />}
 
-          {(isVisible("topItems") || isVisible("paymentMethod")) && (
-            <Grid templateColumns={{ base: "1fr", lg: "repeat(2, 1fr)" }} gap={4}>
-              {isVisible("topItems") && <TopItemsChart data={data.topItems} />}
-              {isVisible("paymentMethod") && <PaymentMethodPieChart data={data.byPaymentMethod} />}
-            </Grid>
-          )}
+          {(() => {
+            const showTopItems = isVisible("topItems");
+            const showPaymentMethod = isVisible("paymentMethod");
+            if (!showTopItems && !showPaymentMethod) return null;
+            // Chỉ còn 1 trong 2 (bị ẩn do quyền hoặc do tự tắt ở "Tuỳ chỉnh
+            // báo cáo") thì phần còn lại giãn full-width thay vì chừa nửa
+            // dòng trống bên cạnh.
+            const bothVisible = showTopItems && showPaymentMethod;
+            return (
+              <Grid templateColumns={{ base: "1fr", lg: "repeat(2, 1fr)" }} gap={4}>
+                {showTopItems && (
+                  <Box gridColumn={bothVisible ? undefined : { lg: "span 2" }}>
+                    <TopItemsChart data={data.topItems} />
+                  </Box>
+                )}
+                {showPaymentMethod && (
+                  <Box gridColumn={bothVisible ? undefined : { lg: "span 2" }}>
+                    <PaymentMethodPieChart data={data.byPaymentMethod} />
+                  </Box>
+                )}
+              </Grid>
+            );
+          })()}
 
           {isVisible("categoryRevenue") && <CategoryRevenueChart data={data.byCategory} />}
 

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { Skeleton } from "~/components/ui/skeleton";
 
 import { api, HydrateClient } from "~/trpc/server";
-import { getSession } from "~/server/better-auth/server";
+import { getMyPermissions, hasPermission } from "~/modules/role/get-my-permissions";
 import { parsePageSize } from "~/lib/pagination";
 import {
   endOfVNDayExclusive,
@@ -27,13 +27,11 @@ export default async function NhatKyHoatDongPage({
     dateTo?: string;
   }>;
 }) {
-  // /quan-ly/layout.tsx chỉ chặn role "user" — route này CHỈ superadmin (list
-  // dùng superadminProcedure), admin không còn xem được nữa (khác các trang
-  // admin-only khác — đây là 1 trong số ít trang cần THU HẸP thay vì mở rộng,
-  // xem CLAUDE.md). Không chặn thì admin vẫn vào được UI nhưng gọi tRPC
-  // FORBIDDEN, kẹt loading vô thời hạn thay vì bị chặn rõ ràng.
-  const session = await getSession();
-  if (session?.user.role !== "superadmin") {
+  // "nhat-ky-hoat-dong.get" — cấp được qua trang Vai trò (isSuper vẫn bypass).
+  // Không chặn thì vẫn vào được UI nhưng gọi tRPC FORBIDDEN, kẹt loading vô
+  // thời hạn thay vì bị chặn rõ ràng.
+  const permissions = await getMyPermissions();
+  if (!hasPermission(permissions, "nhat-ky-hoat-dong.get")) {
     redirect("/quan-ly");
   }
 

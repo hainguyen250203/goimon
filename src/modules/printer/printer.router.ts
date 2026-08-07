@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
-import { managerProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { permissionProcedure, createTRPCRouter } from "~/server/api/trpc";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "~/lib/pagination";
 import { listPrinters } from "./application/list-printers.usecase";
 import { createPrinter } from "./application/create-printer.usecase";
@@ -36,11 +36,11 @@ export const printerRouter = createTRPCRouter({
   // Quét mạng LAN tìm IP máy in đang mở cổng 9100 — máy chạy server này vừa
   // nối Wi-Fi vừa nối dây LAN thẳng tới máy in (xem tcp-printer-scanner.ts),
   // nên phải chạy trên server chứ không thể quét từ trình duyệt người dùng.
-  scanNetwork: managerProcedure
+  scanNetwork: permissionProcedure("may-in.quet-mang")
     .input(z.object({ port: z.number().int().min(1).max(65535).default(DEFAULT_SCAN_PORT) }).optional())
     .mutation(({ input }) => scanNetworkForPrinters(tcpPrinterScanner, input?.port ?? DEFAULT_SCAN_PORT)),
 
-  list: managerProcedure
+  list: permissionProcedure("may-in.get")
     .input(
       z.object({
         page: z.number().int().min(1).default(1),
@@ -50,7 +50,7 @@ export const printerRouter = createTRPCRouter({
     )
     .query(({ input }) => listPrinters(printerDrizzleRepository, input)),
 
-  create: managerProcedure
+  create: permissionProcedure("may-in.tao")
     .input(printerInputSchema)
     .mutation(async ({ ctx, input }) => {
       const item = await createPrinter(printerDrizzleRepository, input);
@@ -64,7 +64,7 @@ export const printerRouter = createTRPCRouter({
       return item;
     }),
 
-  update: managerProcedure
+  update: permissionProcedure("may-in.sua")
     .input(printerInputSchema.extend({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       const { before, after } = await updatePrinter(printerDrizzleRepository, input);
@@ -81,7 +81,7 @@ export const printerRouter = createTRPCRouter({
       return after;
     }),
 
-  delete: managerProcedure
+  delete: permissionProcedure("may-in.xoa")
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       try {

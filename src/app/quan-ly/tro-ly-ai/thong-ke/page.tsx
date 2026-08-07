@@ -4,13 +4,12 @@ import { redirect } from "next/navigation";
 import { Skeleton } from "~/components/ui/skeleton";
 
 import { api, HydrateClient } from "~/trpc/server";
-import { getSession } from "~/server/better-auth/server";
-import { hasMinRole } from "~/server/better-auth/role-rank";
+import { getMyPermissions, hasPermission } from "~/modules/role/get-my-permissions";
 import { UsageSummaryTable } from "./usage-summary-table";
 
 export default async function ThongKeTroLyAiPage() {
-  const session = await getSession();
-  if (!hasMinRole(session?.user.role, "admin")) {
+  const permissions = await getMyPermissions();
+  if (!hasPermission(permissions, "tro-ly-ai-thong-ke.get")) {
     redirect("/quan-ly");
   }
 

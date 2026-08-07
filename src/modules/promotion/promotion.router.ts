@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
-import { managerProcedure, userProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { permissionProcedure, staffProcedure, createTRPCRouter } from "~/server/api/trpc";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "~/lib/pagination";
 import { listPromotions } from "./application/list-promotions.usecase";
 import { listActivePromotions } from "./application/list-active-promotions.usecase";
@@ -21,7 +21,7 @@ const promotionInputSchema = z.object({
 });
 
 export const promotionRouter = createTRPCRouter({
-  list: managerProcedure
+  list: permissionProcedure("khuyen-mai.get")
     .input(
       z.object({
         page: z.number().int().min(1).default(1),
@@ -31,10 +31,11 @@ export const promotionRouter = createTRPCRouter({
     )
     .query(({ input }) => listPromotions(promotionDrizzleRepository, input)),
 
-  // Picker ở màn hình gọi món — mọi nhân viên đã đăng nhập đều gọi được.
-  listActive: userProcedure.query(() => listActivePromotions(promotionDrizzleRepository)),
+  // staffProcedure (không cần permission key): picker ở màn hình gọi món —
+  // mọi nhân viên đã đăng nhập đều gọi được.
+  listActive: staffProcedure.query(() => listActivePromotions(promotionDrizzleRepository)),
 
-  create: managerProcedure
+  create: permissionProcedure("khuyen-mai.tao")
     .input(promotionInputSchema)
     .mutation(async ({ ctx, input }) => {
       const item = await createPromotion(promotionDrizzleRepository, input);
@@ -48,7 +49,7 @@ export const promotionRouter = createTRPCRouter({
       return item;
     }),
 
-  update: managerProcedure
+  update: permissionProcedure("khuyen-mai.sua")
     .input(promotionInputSchema.extend({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       const { before, after } = await updatePromotion(promotionDrizzleRepository, input);
@@ -75,7 +76,7 @@ export const promotionRouter = createTRPCRouter({
       return after;
     }),
 
-  delete: managerProcedure
+  delete: permissionProcedure("khuyen-mai.xoa")
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       try {

@@ -15,7 +15,7 @@ import {
 import { Field } from "~/components/ui/field";
 import { api } from "~/trpc/react";
 import { CategoryFilter } from "./ui/category-filter";
-import { ALL_REPORT_SECTIONS, ReportSectionPicker, type ReportSectionKey } from "./ui/report-section-picker";
+import { ReportSectionPicker, type ReportSectionKey } from "./ui/report-section-picker";
 
 /**
  * Drawer điều khiển trang Báo cáo — layout copy từ
@@ -33,6 +33,7 @@ export function ReportSettingsDrawer({
   categoryIds,
   visibleSections,
   onApplySections,
+  allowedSections,
 }: {
   start: string;
   end: string;
@@ -40,6 +41,10 @@ export function ReportSettingsDrawer({
   categoryIds: number[];
   visibleSections: ReportSectionKey[];
   onApplySections: (sections: ReportSectionKey[]) => void;
+  /** Phần role có quyền xem — giới hạn option của ReportSectionPicker và là
+   * giá trị "Đặt lại" (không dùng ALL_REPORT_SECTIONS nữa vì có thể có phần
+   * role không có quyền). */
+  allowedSections: ReportSectionKey[];
 }) {
   const router = useRouter();
   const { data: categories } = api.menu.listCategories.useQuery();
@@ -76,7 +81,7 @@ export function ReportSettingsDrawer({
 
   function handleReset() {
     router.push("/quan-ly/bao-cao");
-    onApplySections(ALL_REPORT_SECTIONS);
+    onApplySections(allowedSections);
     setOpen(false);
   }
 
@@ -141,7 +146,11 @@ export function ReportSettingsDrawer({
 
               <Box gridColumn="span 2">
                 <Field label="Hiển thị phần báo cáo">
-                  <ReportSectionPicker selected={draftSections} onChange={setDraftSections} />
+                  <ReportSectionPicker
+                    selected={draftSections}
+                    onChange={setDraftSections}
+                    allowedSections={allowedSections}
+                  />
                 </Field>
               </Box>
             </Grid>

@@ -12,27 +12,8 @@ import {
   MenuRoot,
   MenuTrigger,
 } from "~/components/ui/menu";
-import { StatusDot } from "~/components/ui/status-dot";
 import { authClient } from "~/server/better-auth/client";
 import { ThemeToggle } from "./theme-toggle";
-
-// Export để store-view.tsx (tab "Cửa hàng" ở /goi-mon) dùng chung — cùng
-// thuộc phạm vi "layout chrome", tránh định nghĩa trùng lần thứ 3.
-export const ROLE_LABEL: Record<string, string> = {
-  admin: "Admin",
-  manager: "Quản lý",
-  user: "Nhân viên",
-  superadmin: "Super Admin",
-  viewer: "Người xem",
-};
-
-export const ROLE_DOT_COLOR: Record<string, string> = {
-  admin: "purple.500",
-  manager: "blue.500",
-  user: "gray.400",
-  superadmin: "red.500",
-  viewer: "cyan.500",
-};
 
 export function NavUser({
   user,
@@ -58,14 +39,9 @@ export function NavUser({
           <Flex align="center" gap={3}>
             <Avatar name={user.name} size="lg" />
             <Stack gap="1px">
-              <Flex align="center" gap={2}>
-                <Text fontSize="sm" fontWeight="semibold">
-                  {user.name}
-                </Text>
-                <StatusDot color={ROLE_DOT_COLOR[user.role] ?? "gray.400"}>
-                  {ROLE_LABEL[user.role] ?? user.role}
-                </StatusDot>
-              </Flex>
+              <Text fontSize="sm" fontWeight="semibold">
+                {user.name}
+              </Text>
               {user.phoneNumber ? (
                 <Text fontSize="xs" color="fg.muted">
                   {user.phoneNumber}

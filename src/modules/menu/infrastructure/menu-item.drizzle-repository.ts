@@ -80,7 +80,7 @@ export const menuItemDrizzleRepository: MenuItemRepository = {
     if (categoryId) conditions.push(eq(menuItem.categoryId, categoryId));
     const trimmedSearch = search?.trim();
     if (trimmedSearch) {
-      // Tìm không dấu — cần extension unaccent (npm run db:extensions), xem
+      // Tìm không dấu — cần extension unaccent (npm run db:ensure-extensions), xem
       // pattern tương tự ở order.drizzle-repository.ts.
       conditions.push(sql`unaccent(${menuItem.name}) ilike unaccent(${`%${trimmedSearch}%`})`);
     }

@@ -2,7 +2,7 @@ import { type NextRequest } from "next/server";
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 
 import { getSession } from "~/server/better-auth/server";
-import { hasMinRole } from "~/server/better-auth/role-rank";
+import { getMyPermissions, hasPermission } from "~/modules/role/get-my-permissions";
 import { assistantDrizzleRepository } from "~/modules/assistant/infrastructure/assistant.drizzle-repository";
 import { menuItemDrizzleRepository } from "~/modules/menu/infrastructure/menu-item.drizzle-repository";
 import {
@@ -14,8 +14,8 @@ import { AssistantSessionNotFoundError } from "~/modules/assistant/domain/assist
 // Route Handler riêng cho lượt chat (POST = 1 câu hỏi, response là UI Message
 // Stream/SSE cho useChat) — tRPC mutation không stream được token/tool-call
 // theo thời gian thực (xem send-message.usecase.ts). Đây là lớp enforcement
-// THẬT: check role admin ngay tại route (giống adminProcedure), không đi qua
-// tRPC nên phải tự kiểm tra.
+// THẬT: check quyền "tro-ly-ai.su-dung" ngay tại route (giống permissionProcedure),
+// không đi qua tRPC nên phải tự kiểm tra.
 //
 // Body do client tự dựng qua `prepareSendMessagesRequest` (xem chat-panel.tsx)
 // — chỉ gửi đúng {sessionId, text} thay vì cả mảng messages, vì server đã có
@@ -28,7 +28,8 @@ type ChatRequestBody = {
 
 export async function POST(req: NextRequest) {
   const session = await getSession();
-  if (!hasMinRole(session?.user.role, "admin")) {
+  const permissions = await getMyPermissions();
+  if (!hasPermission(permissions, "tro-ly-ai.su-dung")) {
     return new Response("Bạn không có quyền dùng trợ lý AI.", { status: 403 });
   }
   const userId = session!.user.id;

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
-import { managerProcedure, userProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { permissionProcedure, staffProcedure, createTRPCRouter } from "~/server/api/trpc";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "~/lib/pagination";
 import { openShift } from "./application/open-shift.usecase";
 import { closeShift } from "./application/close-shift.usecase";
@@ -18,13 +18,14 @@ import {
 import { logActivity } from "~/modules/activity-log/log-activity";
 
 export const shiftRouter = createTRPCRouter({
-  // Mọi nhân viên đều cần biết ca hiện có đang mở hay không để vào /goi-mon.
-  getOpen: userProcedure.query(async () => {
+  // staffProcedure (không cần permission key): mọi nhân viên đều cần biết ca
+  // hiện có đang mở hay không để vào /goi-mon.
+  getOpen: staffProcedure.query(async () => {
     const shift = await getOpenShift(shiftDrizzleRepository);
     return shift ? shift.toDetail() : null;
   }),
 
-  open: managerProcedure.mutation(async ({ ctx }) => {
+  open: permissionProcedure("ca-lam-viec.mo-dong").mutation(async ({ ctx }) => {
     try {
       const shift = await openShift(shiftDrizzleRepository, ctx.session.user.id);
       await logActivity({
@@ -42,7 +43,7 @@ export const shiftRouter = createTRPCRouter({
     }
   }),
 
-  close: managerProcedure.mutation(async ({ ctx }) => {
+  close: permissionProcedure("ca-lam-viec.mo-dong").mutation(async ({ ctx }) => {
     try {
       const { before, after } = await closeShift(shiftDrizzleRepository, orderDrizzleRepository, ctx.session.user.id);
       const afterDetail = after.toDetail();
@@ -65,11 +66,11 @@ export const shiftRouter = createTRPCRouter({
     }
   }),
 
-  getSummary: managerProcedure
+  getSummary: permissionProcedure("ca-lam-viec.get")
     .input(z.object({ shiftId: z.number().int().positive() }))
     .query(({ input }) => getShiftSummary(orderDrizzleRepository, input.shiftId)),
 
-  list: managerProcedure
+  list: permissionProcedure("ca-lam-viec.get")
     .input(
       z.object({
         page: z.number().int().min(1).default(1),

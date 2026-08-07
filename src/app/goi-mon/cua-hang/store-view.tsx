@@ -5,20 +5,20 @@ import { Box, Button, Flex, Separator, Stack, Text } from "@chakra-ui/react";
 import { History, LayoutDashboard, LogOut } from "lucide-react";
 
 import { Avatar } from "~/components/ui/avatar";
-import { StatusDot } from "~/components/ui/status-dot";
 import { ThemeToggle } from "~/components/layout/theme-toggle";
-import { ROLE_LABEL, ROLE_DOT_COLOR } from "~/components/layout/nav-user";
 import { authClient } from "~/server/better-auth/client";
-import { hasMinRole } from "~/server/better-auth/role-rank";
 import { ShiftSection } from "./shift-section";
 
 export function StoreView({
   user,
+  canManageShift,
+  canAccessAdmin,
 }: {
-  user: { name: string; role: string; phoneNumber?: string | null };
+  user: { name: string; phoneNumber?: string | null };
+  canManageShift: boolean;
+  canAccessAdmin: boolean;
 }) {
   const router = useRouter();
-  const canManage = hasMinRole(user.role, "manager");
 
   const handleSignOut = async () => {
     await authClient.signOut();
@@ -41,14 +41,9 @@ export function StoreView({
           <Flex align="center" gap={3}>
             <Avatar name={user.name} size="lg" />
             <Stack gap="1px">
-              <Flex align="center" gap={2}>
-                <Text fontSize={{ base: "sm", lg: "md" }} fontWeight="semibold">
-                  {user.name}
-                </Text>
-                <StatusDot color={ROLE_DOT_COLOR[user.role] ?? "gray.400"}>
-                  {ROLE_LABEL[user.role] ?? user.role}
-                </StatusDot>
-              </Flex>
+              <Text fontSize={{ base: "sm", lg: "md" }} fontWeight="semibold">
+                {user.name}
+              </Text>
               {user.phoneNumber && (
                 <Text fontSize={{ base: "2xs", lg: "xs" }} color="fg.muted">
                   {user.phoneNumber}
@@ -68,7 +63,7 @@ export function StoreView({
             <ThemeToggle />
           </Flex>
           <Separator />
-          <ShiftSection canManage={canManage} />
+          <ShiftSection canManage={canManageShift} />
           <Separator />
           <Flex
             align="center"
@@ -82,7 +77,7 @@ export function StoreView({
             <History size={16} />
             <Text fontSize={{ base: "xs", lg: "sm" }}>Lịch sử</Text>
           </Flex>
-          {canManage && (
+          {canAccessAdmin && (
             <>
               <Separator />
               <Flex

@@ -249,7 +249,7 @@ export const orderDrizzleRepository: OrderRepository = {
     const trimmedSearch = search?.trim();
     if (trimmedSearch) {
       // Lọc đơn có ít nhất 1 món khớp tên (không dấu) — cần extension
-      // unaccent (npm run db:extensions).
+      // unaccent (npm run db:ensure-extensions).
       const matchingOrders = await db
         .selectDistinct({ orderId: orderItem.orderId })
         .from(orderItem)

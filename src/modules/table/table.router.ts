@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
-import { managerProcedure, userProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { permissionProcedure, staffProcedure, createTRPCRouter } from "~/server/api/trpc";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "~/lib/pagination";
 import { orderDrizzleRepository } from "~/modules/order/infrastructure/order.drizzle-repository";
 import { listAreaOptions } from "./application/list-area-options.usecase";
@@ -29,7 +29,7 @@ const tableInputSchema = z.object({
 });
 
 export const tableRouter = createTRPCRouter({
-  list: managerProcedure
+  list: permissionProcedure("ban.get")
     .input(
       z.object({
         page: z.number().int().min(1).default(1),
@@ -40,12 +40,11 @@ export const tableRouter = createTRPCRouter({
     )
     .query(({ input }) => listTables(restaurantTableDrizzleRepository, orderDrizzleRepository, input)),
 
-  // userProcedure (không phải managerProcedure): màn hình gọi món (/goi-mon,
-  // vai trò "user") cũng cần danh sách khu vực để chọn bàn — xem chỉ danh
-  // sách id+name, không phải hành động quản trị nên không cần chặn ở mức manager.
-  listAreas: userProcedure.query(() => listAreaOptions(restaurantTableDrizzleRepository)),
+  // staffProcedure (không cần permission key): màn hình gọi món (/goi-mon)
+  // cần danh sách khu vực để chọn bàn — bất kỳ ai đã đăng nhập đều gọi được.
+  listAreas: staffProcedure.query(() => listAreaOptions(restaurantTableDrizzleRepository)),
 
-  create: managerProcedure
+  create: permissionProcedure("ban.tao")
     .input(tableInputSchema)
     .mutation(async ({ ctx, input }) => {
       const item = await createTable(restaurantTableDrizzleRepository, input);
@@ -59,7 +58,7 @@ export const tableRouter = createTRPCRouter({
       return item;
     }),
 
-  update: managerProcedure
+  update: permissionProcedure("ban.sua")
     .input(tableInputSchema.extend({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       const { before, after } = await updateTable(restaurantTableDrizzleRepository, input);
@@ -76,7 +75,7 @@ export const tableRouter = createTRPCRouter({
       return after;
     }),
 
-  delete: managerProcedure
+  delete: permissionProcedure("ban.xoa")
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -96,9 +95,9 @@ export const tableRouter = createTRPCRouter({
     }),
 
   // Quản trị khu vực — dialog "Quản lý khu vực" ở /quan-ly/ban.
-  listAreasFull: managerProcedure.query(() => listAreas(restaurantTableDrizzleRepository)),
+  listAreasFull: permissionProcedure("ban.get").query(() => listAreas(restaurantTableDrizzleRepository)),
 
-  createArea: managerProcedure
+  createArea: permissionProcedure("ban.khu-vuc")
     .input(areaInputSchema)
     .mutation(async ({ ctx, input }) => {
       const item = await createArea(restaurantTableDrizzleRepository, input);
@@ -112,7 +111,7 @@ export const tableRouter = createTRPCRouter({
       return item;
     }),
 
-  updateArea: managerProcedure
+  updateArea: permissionProcedure("ban.khu-vuc")
     .input(areaInputSchema.extend({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       const { before, after } = await updateArea(restaurantTableDrizzleRepository, input);
@@ -129,7 +128,7 @@ export const tableRouter = createTRPCRouter({
       return after;
     }),
 
-  deleteArea: managerProcedure
+  deleteArea: permissionProcedure("ban.khu-vuc")
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       try {

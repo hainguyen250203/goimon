@@ -16,14 +16,12 @@ import { NumericInput } from "~/components/ui/numeric-input";
 import { FilterSelect } from "~/components/data-table/filter-select";
 import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
-import type { UserRole } from "~/modules/user/domain/user-account.entity";
-import { ROLE_LABEL } from "./role-label";
 
 type FormState = {
   name: string;
   phoneNumber: string;
   password: string;
-  role: UserRole;
+  role: string;
 };
 
 const EMPTY_FORM: FormState = {
@@ -43,18 +41,12 @@ const PHONE_NUMBER_REGEX = /^0\d{9}$/;
 export function CreateUserDialog({
   open,
   onOpenChange,
-  viewerRole,
+  roleOptions,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Chỉ superadmin mới gán được vai trò superadmin cho người khác — ẩn hẳn
-   * option này khỏi dropdown nếu người xem không phải superadmin (server vẫn
-   * tự chặn lại ở user.router.ts, đây chỉ là UX). */
-  viewerRole: UserRole;
+  roleOptions: { value: string; label: string }[];
 }) {
-  const roleOptions = (Object.keys(ROLE_LABEL) as UserRole[])
-    .filter((r) => r !== "superadmin" || viewerRole === "superadmin")
-    .map((value) => ({ value, label: ROLE_LABEL[value] }));
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
 
@@ -152,7 +144,7 @@ export function CreateUserDialog({
                 placeholder="Chọn vai trò"
                 value={form.role}
                 onValueChange={(value) =>
-                  setForm((f) => ({ ...f, role: value as UserRole }))
+                  setForm((f) => ({ ...f, role: value }))
                 }
                 options={roleOptions}
               />

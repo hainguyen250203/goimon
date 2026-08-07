@@ -5,7 +5,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 
 import { api, HydrateClient } from "~/trpc/server";
 import { getSession } from "~/server/better-auth/server";
-import { hasMinRole } from "~/server/better-auth/role-rank";
+import { getMyPermissions, hasPermission } from "~/modules/role/get-my-permissions";
 import { AssistantShell } from "./assistant-shell";
 
 const PAGE_SIZE = 20;
@@ -15,12 +15,13 @@ export default async function TroLyAiPage({
 }: {
   searchParams: Promise<{ session?: string }>;
 }) {
-  // /quan-ly/layout.tsx chỉ chặn role "user", không phân biệt manager/admin —
-  // trang này chỉ admin (router dùng adminProcedure), phải tự chặn thêm ở đây.
-  // Không chặn thì manager vẫn vào được UI nhưng gọi tRPC FORBIDDEN, kẹt
-  // loading vô thời hạn thay vì bị chặn rõ ràng (xem CLAUDE.md).
+  // /quan-ly/layout.tsx chỉ chặn khi KHÔNG có quyền quan-ly nào — trang này
+  // cần riêng "tro-ly-ai.get", phải tự chặn thêm ở đây. Không chặn thì role
+  // thiếu quyền vẫn vào được UI nhưng gọi tRPC FORBIDDEN, kẹt loading vô thời
+  // hạn thay vì bị chặn rõ ràng (xem CLAUDE.md).
   const session = await getSession();
-  if (!hasMinRole(session?.user.role, "admin")) {
+  const permissions = await getMyPermissions();
+  if (!hasPermission(permissions, "tro-ly-ai.get")) {
     redirect("/quan-ly");
   }
 

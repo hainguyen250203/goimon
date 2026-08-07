@@ -7,15 +7,15 @@ const statement = {
 
 export const ac = createAccessControl(statement);
 
-// Quản lý tài khoản (tạo/khóa/đổi role qua BetterAuth admin API) chỉ dành cho admin.
-// Quyền nghiệp vụ POS (order, menu, printer...) không đi qua ac này — enforce ở
-// tRPC role hierarchy (xem src/server/api/trpc.ts).
+// Quyền nghiệp vụ POS (order, menu, printer, quản lý user...) không đi qua ac
+// này nữa — enforce hoàn toàn ở permission key theo trang (xem
+// src/modules/role/domain/permission-definitions.ts + src/server/api/trpc.ts).
+// `roles` map ở đây chỉ còn ý nghĩa lịch sử với `admin()` plugin (ban-enforcement
+// lúc đăng nhập, field role/banned trên schema) — role "superadmin" đã bỏ hẳn,
+// thay bằng cờ `user.isSuper` (xem CLAUDE.md).
 export const user = ac.newRole({});
 export const manager = ac.newRole({});
 export const viewer = ac.newRole({});
 export const admin = ac.newRole({
-  ...adminAc.statements,
-});
-export const superadmin = ac.newRole({
   ...adminAc.statements,
 });

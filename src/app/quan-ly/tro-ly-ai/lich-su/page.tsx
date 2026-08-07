@@ -13,12 +13,12 @@ export default async function LichSuTroChuyenAiPage({
 }: {
   searchParams: Promise<{ page?: string; pageSize?: string; userId?: string }>;
 }) {
-  // Trang giám sát phiên chat AI của MỌI user — chỉ superadmin (listAllSessions
-  // dùng superadminProcedure), khác /quan-ly/tro-ly-ai (chỉ chat của chính
-  // người đang đăng nhập). Không chặn ở đây thì admin vẫn vào được UI nhưng
-  // gọi tRPC FORBIDDEN, kẹt loading vô thời hạn thay vì bị chặn rõ ràng.
+  // Trang giám sát phiên chat AI của MỌI user — chỉ isSuper (listAllSessions
+  // dùng superOnlyProcedure), khác /quan-ly/tro-ly-ai (chỉ chat của chính
+  // người đang đăng nhập). Không chặn ở đây thì vẫn vào được UI nhưng gọi
+  // tRPC FORBIDDEN, kẹt loading vô thời hạn thay vì bị chặn rõ ràng.
   const session = await getSession();
-  if (session?.user.role !== "superadmin") {
+  if (!session?.user.isSuper) {
     redirect("/quan-ly");
   }
 

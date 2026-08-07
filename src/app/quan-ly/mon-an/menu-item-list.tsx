@@ -32,13 +32,19 @@ export function MenuItemList({
   pageSize,
   categoryId,
   search,
-  canManage,
+  canCreate,
+  canUpdate,
+  canDelete,
+  canManageCategories,
 }: {
   page: number;
   pageSize: number;
   categoryId?: number;
   search?: string;
-  canManage: boolean;
+  canCreate: boolean;
+  canUpdate: boolean;
+  canDelete: boolean;
+  canManageCategories: boolean;
 }) {
   const router = useRouter();
   const [categories] = api.menu.listCategories.useSuspenseQuery();
@@ -118,7 +124,7 @@ export function MenuItemList({
         </StatusDot>
       ),
     },
-    ...(canManage
+    ...(canUpdate || canDelete
       ? [
           {
             key: "actions",
@@ -127,6 +133,8 @@ export function MenuItemList({
             cell: (row: MenuItem) => (
               <MenuItemRowActions
                 item={row}
+                canUpdate={canUpdate}
+                canDelete={canDelete}
                 onEdit={(item) => {
                   setEditingItem(item);
                   setDialogOpen(true);
@@ -179,12 +187,14 @@ export function MenuItemList({
     <Stack gap={4}>
       <ListViewToolbar
         end={
-          canManage && (
-            <>
+          <>
+            {canManageCategories && (
               <Button variant="outline" onClick={() => setCategoryManagerOpen(true)}>
                 <Settings size={16} />
                 Quản lý danh mục
               </Button>
+            )}
+            {canCreate && (
               <Button
                 onClick={() => {
                   setEditingItem(undefined);
@@ -194,8 +204,8 @@ export function MenuItemList({
                 <Plus size={16} />
                 Thêm món ăn
               </Button>
-            </>
-          )
+            )}
+          </>
         }
       >
         <Input

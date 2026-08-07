@@ -30,8 +30,9 @@ export function OrderRowActions({
   canDelete,
 }: {
   row: OrderListItem;
-  /** Chỉ superadmin xoá được (bất kỳ trạng thái order nào) — chặn thật ở
-   * order.router.ts, đây chỉ là ẩn/hiện nút cho đúng UX. */
+  /** Role có "don-hang.xoa-don" (hoặc isSuper) mới xoá được (bất kỳ trạng
+   * thái order nào) — chặn thật ở order.router.ts, đây chỉ là ẩn/hiện nút
+   * cho đúng UX. */
   canDelete: boolean;
 }) {
   const [detailOpen, setDetailOpen] = useState(false);

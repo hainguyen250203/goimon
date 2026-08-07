@@ -9,16 +9,23 @@ import { paymentConfig } from "~/modules/payment-config/infrastructure/payment-c
 import { printer } from "~/modules/printer/infrastructure/printer.schema";
 import { area, restaurantTable } from "~/modules/table/infrastructure/table.schema";
 import { auth } from "~/server/better-auth/config";
-import { account } from "~/server/better-auth/schema";
+import { account, user } from "~/server/better-auth/schema";
 import { db } from "~/server/db";
 
-type UserRole = "user" | "manager" | "admin" | "superadmin";
+type UserRole = "user" | "manager" | "admin";
 
 // Mỗi tài khoản mật khẩu trùng số điện thoại riêng của mình (không dùng mật
 // khẩu chung) để không tạo tài khoản demo thừa/dễ đoán trên môi trường không
-// phải local dev.
+// phải local dev. `isSuper: true` — role "superadmin" đã bỏ, cờ giám sát ẩn
+// giờ set thẳng ở đây (không có UI nào set được, xem schema.ts).
 const SEED_USERS = [
-  { name: "Nguyen Hai", phoneNumber: "0968916540", password: "$2b$10$sFZStD2cIe.LqELq6Yxhj.cDAAfi2mDndKJ7kvhG32ygje8mvmZza", role: "superadmin" as const },
+  {
+    name: "Nguyen Hai",
+    phoneNumber: "0968916540",
+    password: "$2b$10$sFZStD2cIe.LqELq6Yxhj.cDAAfi2mDndKJ7kvhG32ygje8mvmZza",
+    role: "admin" as const,
+    isSuper: true,
+  },
 ];
 
 type SeedUserFileEntry = {
@@ -34,12 +41,10 @@ type SeedUserFileEntry = {
 const VALID_PHONE_REGEX = /^0[35789]\d{8}$/;
 
 // user.json không có role "employee" trong hệ thống hiện tại (chỉ
-// user/manager/admin/superadmin) — coi "employee" và mọi giá trị lạ khác là
-// role thấp nhất "user".
-function mapFileRole(role: string): UserRole {
-  return role === "admin" || role === "manager" || role === "superadmin"
-    ? role
-    : "user";
+// user/manager/admin) — coi "employee" và mọi giá trị lạ khác (kể cả
+// "superadmin" cũ, đã bỏ) là role thấp nhất "user".
+function mapFileRole(fileRole: string): UserRole {
+  return fileRole === "admin" || fileRole === "manager" ? fileRole : "user";
 }
 
 // Khu A..Khu I (20 bàn/khu, tên "Khu A - B1"..) + Mang về (4 bàn đại diện cho
@@ -66,6 +71,9 @@ async function upsertSeedUser(seedUser: {
   phoneNumber: string;
   password: string;
   role: UserRole;
+  /** Cờ giám sát ẩn — chỉ script này set được, không qua `auth.api` nào
+   * (đã khoá `input: false` ở better-auth/config.ts). */
+  isSuper?: boolean;
 }) {
   const existing = await db.query.user.findFirst({
     where: (u, { eq }) => eq(u.phoneNumber, seedUser.phoneNumber),
@@ -75,6 +83,9 @@ async function upsertSeedUser(seedUser: {
       .update(account)
       .set({ password: seedUser.password })
       .where(and(eq(account.userId, existing.id), eq(account.providerId, "credential")));
+    if (seedUser.isSuper && !existing.isSuper) {
+      await db.update(user).set({ isSuper: true }).where(eq(user.id, existing.id));
+    }
     console.log(`  ghi đè mật khẩu user ${seedUser.name} (đã tồn tại)`);
     return;
   }
@@ -96,6 +107,10 @@ async function upsertSeedUser(seedUser: {
     .update(account)
     .set({ password: seedUser.password })
     .where(and(eq(account.userId, created.user.id), eq(account.providerId, "credential")));
+
+  if (seedUser.isSuper) {
+    await db.update(user).set({ isSuper: true }).where(eq(user.id, created.user.id));
+  }
 
   console.log(
     `  tạo user ${seedUser.name} (${seedUser.phoneNumber}, role=${seedUser.role})`,
@@ -197,6 +212,11 @@ async function seedPaymentConfig() {
 }
 
 async function main() {
+  // Seed role: chạy riêng `npm run db:sync-roles` (script độc lập, chỉ đụng
+  // bảng role, không đụng users/areas/tables/printer/payment-config) — không
+  // gộp vào đây để tránh vô tình ghi đè dữ liệu thật khi chạy lại toàn bộ
+  // seed.ts.
+
   console.log("Seeding users...");
   await seedUsers();
 

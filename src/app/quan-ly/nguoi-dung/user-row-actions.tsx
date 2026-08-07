@@ -23,8 +23,7 @@ import { Field } from "~/components/ui/field";
 import { FilterSelect } from "~/components/data-table/filter-select";
 import { toaster } from "~/components/ui/toaster";
 import { api } from "~/trpc/react";
-import type { UserAccount, UserRole } from "~/modules/user/domain/user-account.entity";
-import { ROLE_LABEL } from "./role-label";
+import type { UserAccount } from "~/modules/user/domain/user-account.entity";
 import { ResetPasswordDialog } from "./reset-password-dialog";
 
 /**
@@ -34,21 +33,21 @@ import { ResetPasswordDialog } from "./reset-password-dialog";
  */
 export function UserRowActions({
   user,
-  viewerRole,
+  roleOptions,
+  canSetRole,
+  canBanUnban,
+  canResetPassword,
 }: {
   user: UserAccount;
-  /** Chỉ superadmin mới gán được vai trò superadmin — ẩn option này khỏi
-   * dropdown nếu người xem không phải superadmin (server tự chặn lại ở
-   * user.router.ts, đây chỉ là UX). */
-  viewerRole: UserRole;
+  roleOptions: { value: string; label: string }[];
+  canSetRole: boolean;
+  canBanUnban: boolean;
+  canResetPassword: boolean;
 }) {
-  const roleOptions = (Object.keys(ROLE_LABEL) as UserRole[])
-    .filter((r) => r !== "superadmin" || viewerRole === "superadmin")
-    .map((value) => ({ value, label: ROLE_LABEL[value] }));
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [banConfirmOpen, setBanConfirmOpen] = useState(false);
   const [resetPasswordOpen, setResetPasswordOpen] = useState(false);
-  const [selectedRole, setSelectedRole] = useState<UserRole>(user.role);
+  const [selectedRole, setSelectedRole] = useState<string>(user.role);
 
   const utils = api.useUtils();
 
@@ -110,29 +109,34 @@ export function UserRowActions({
         </MenuTrigger>
         <MenuContent minW="10rem">
           <MenuItemGroup>
-            <MenuItem value="role" onClick={() => setRoleDialogOpen(true)}>
-              <UserCog size={16} />
-              Đổi vai trò
-            </MenuItem>
-            <MenuItem value="reset-password" onClick={() => setResetPasswordOpen(true)}>
-              <KeyRound size={16} />
-              Đặt lại mật khẩu
-            </MenuItem>
-            {user.banned ? (
-              <MenuItem value="unban" onClick={() => unban.mutate({ userId: user.id })}>
-                <ShieldCheck size={16} />
-                Bỏ cấm
-              </MenuItem>
-            ) : (
-              <MenuItem
-                value="ban"
-                color="fg.error"
-                onClick={() => setBanConfirmOpen(true)}
-              >
-                <ShieldBan size={16} />
-                Cấm
+            {canSetRole && (
+              <MenuItem value="role" onClick={() => setRoleDialogOpen(true)}>
+                <UserCog size={16} />
+                Đổi vai trò
               </MenuItem>
             )}
+            {canResetPassword && (
+              <MenuItem value="reset-password" onClick={() => setResetPasswordOpen(true)}>
+                <KeyRound size={16} />
+                Đặt lại mật khẩu
+              </MenuItem>
+            )}
+            {canBanUnban &&
+              (user.banned ? (
+                <MenuItem value="unban" onClick={() => unban.mutate({ userId: user.id })}>
+                  <ShieldCheck size={16} />
+                  Bỏ cấm
+                </MenuItem>
+              ) : (
+                <MenuItem
+                  value="ban"
+                  color="fg.error"
+                  onClick={() => setBanConfirmOpen(true)}
+                >
+                  <ShieldBan size={16} />
+                  Cấm
+                </MenuItem>
+              ))}
           </MenuItemGroup>
         </MenuContent>
       </MenuRoot>
@@ -148,7 +152,7 @@ export function UserRowActions({
                 width="full"
                 placeholder="Chọn vai trò"
                 value={selectedRole}
-                onValueChange={(value) => setSelectedRole(value as UserRole)}
+                onValueChange={(value) => setSelectedRole(value)}
                 options={roleOptions}
               />
             </Field>

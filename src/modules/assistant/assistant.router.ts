@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { adminProcedure, createTRPCRouter, superadminProcedure } from "~/server/api/trpc";
+import { permissionProcedure, createTRPCRouter, superOnlyProcedure } from "~/server/api/trpc";
 import { logActivity } from "~/modules/activity-log/log-activity";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "~/lib/pagination";
 
@@ -15,7 +15,7 @@ import { getSessionDetailForAdmin } from "./application/get-session-detail-for-a
 import { assistantDrizzleRepository } from "./infrastructure/assistant.drizzle-repository";
 
 export const assistantRouter = createTRPCRouter({
-  listSessions: adminProcedure
+  listSessions: permissionProcedure("tro-ly-ai.get")
     .input(
       z.object({
         page: z.number().int().min(1).default(1),
@@ -26,7 +26,7 @@ export const assistantRouter = createTRPCRouter({
       listSessions(assistantDrizzleRepository, { userId: ctx.session.user.id, ...input }),
     ),
 
-  createSession: adminProcedure
+  createSession: permissionProcedure("tro-ly-ai.su-dung")
     .input(z.object({ title: z.string().max(200).optional() }))
     .mutation(({ ctx, input }) =>
       createSession(assistantDrizzleRepository, {
@@ -35,7 +35,7 @@ export const assistantRouter = createTRPCRouter({
       }),
     ),
 
-  getSession: adminProcedure
+  getSession: permissionProcedure("tro-ly-ai.get")
     .input(z.object({ id: z.number().int().positive() }))
     .query(({ ctx, input }) =>
       getSessionWithMessages(assistantDrizzleRepository, {
@@ -44,7 +44,7 @@ export const assistantRouter = createTRPCRouter({
       }),
     ),
 
-  renameSession: adminProcedure
+  renameSession: permissionProcedure("tro-ly-ai.doi-ten")
     .input(z.object({ id: z.number().int().positive(), title: z.string().min(1).max(200) }))
     .mutation(async ({ ctx, input }) => {
       const session = await renameSession(assistantDrizzleRepository, {
@@ -62,7 +62,12 @@ export const assistantRouter = createTRPCRouter({
       return session;
     }),
 
-  getUsageSummary: adminProcedure.query(({ ctx }) =>
+  // Trang "Thống kê AI" (/quan-ly/tro-ly-ai/thong-ke) tự guard bằng
+  // "tro-ly-ai-thong-ke.get" — endpoint phải khớp đúng key đó, không phải
+  // "tro-ly-ai.get" (2 trang/quyền độc lập trong catalog), nếu không role có
+  // thong-ke.get mà thiếu tro-ly-ai.get sẽ qua được page guard rồi FORBIDDEN
+  // ngay khi gọi API này.
+  getUsageSummary: permissionProcedure("tro-ly-ai-thong-ke.get").query(({ ctx }) =>
     getUsageSummary(assistantDrizzleRepository, ctx.session.user.id),
   ),
 
@@ -70,7 +75,7 @@ export const assistantRouter = createTRPCRouter({
   // `api/assistant/chat` — tRPC mutation không stream token/tool-call theo
   // thời gian thực được (xem send-message.usecase.ts).
 
-  deleteSession: adminProcedure
+  deleteSession: permissionProcedure("tro-ly-ai.xoa-phien")
     .input(z.object({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       await deleteSession(assistantDrizzleRepository, {
@@ -85,10 +90,10 @@ export const assistantRouter = createTRPCRouter({
       });
     }),
 
-  // Trang giám sát toàn hệ thống (/quan-ly/tro-ly-ai/lich-su) — chỉ superadmin,
+  // Trang giám sát toàn hệ thống (/quan-ly/tro-ly-ai/lich-su) — chỉ isSuper,
   // xem được phiên chat của MỌI user, khác listSessions/getSession ở trên (tự
   // lọc theo ctx.session.user.id, dùng cho chính trang chat của người gọi).
-  listAllSessions: superadminProcedure
+  listAllSessions: superOnlyProcedure
     .input(
       z.object({
         page: z.number().int().min(1).default(1),
@@ -98,7 +103,7 @@ export const assistantRouter = createTRPCRouter({
     )
     .query(({ input }) => listAllSessions(assistantDrizzleRepository, input)),
 
-  getSessionDetail: superadminProcedure
+  getSessionDetail: superOnlyProcedure
     .input(z.object({ id: z.number().int().positive() }))
     .query(({ input }) => getSessionDetailForAdmin(assistantDrizzleRepository, input.id)),
 });

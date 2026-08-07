@@ -15,10 +15,10 @@ import { ListViewToolbar } from "~/components/data-table/list-view-toolbar";
 import { FilterSelect } from "~/components/data-table/filter-select";
 import { StatusDot } from "~/components/ui/status-dot";
 import { api } from "~/trpc/react";
-import type { UserAccount, UserRole } from "~/modules/user/domain/user-account.entity";
+import type { UserAccount } from "~/modules/user/domain/user-account.entity";
 import { CreateUserDialog } from "./create-user-dialog";
 import { UserRowActions } from "./user-row-actions";
-import { ROLE_DOT_COLOR, ROLE_LABEL } from "./role-label";
+import { getRoleDotColor, getRoleLabel } from "./role-label";
 
 const ALL = "all";
 
@@ -31,16 +31,21 @@ export function UserList({
   pageSize,
   role,
   banned,
-  viewerRole,
+  canCreate,
+  canSetRole,
+  canBanUnban,
+  canResetPassword,
 }: {
   page: number;
   pageSize: number;
-  role?: UserRole;
+  role?: string;
   banned?: boolean;
-  /** Role của người đang xem trang này — chỉ superadmin mới gán được
-   * superadmin cho người khác (xem create-user-dialog.tsx/user-row-actions.tsx). */
-  viewerRole: UserRole;
+  canCreate: boolean;
+  canSetRole: boolean;
+  canBanUnban: boolean;
+  canResetPassword: boolean;
 }) {
+  const canManageRow = canSetRole || canBanUnban || canResetPassword;
   const router = useRouter();
   const { data, isFetching } = api.user.list.useQuery(
     { page, pageSize, role, banned },
@@ -49,6 +54,8 @@ export function UserList({
     // đầu luôn có sẵn data.
     { placeholderData: keepPreviousData },
   );
+  const { data: roles } = api.role.listOptions.useQuery();
+  const roleOptions = (roles ?? []).map((r) => ({ value: r.name, label: getRoleLabel(r.name) }));
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
 
@@ -65,7 +72,7 @@ export function UserList({
       key: "role",
       header: "Vai trò",
       cell: (row) => (
-        <StatusDot color={ROLE_DOT_COLOR[row.role]}>{ROLE_LABEL[row.role]}</StatusDot>
+        <StatusDot color={getRoleDotColor(row.role)}>{getRoleLabel(row.role)}</StatusDot>
       ),
     },
     {
@@ -82,18 +89,30 @@ export function UserList({
       header: "Ngày tạo",
       cell: (row) => formatDate(row.createdAt),
     },
-    {
-      key: "actions",
-      header: "",
-      width: "3rem",
-      cell: (row) => <UserRowActions user={row} viewerRole={viewerRole} />,
-    },
+    ...(canManageRow
+      ? [
+          {
+            key: "actions",
+            header: "",
+            width: "3rem",
+            cell: (row: UserAccount) => (
+              <UserRowActions
+                user={row}
+                roleOptions={roleOptions}
+                canSetRole={canSetRole}
+                canBanUnban={canBanUnban}
+                canResetPassword={canResetPassword}
+              />
+            ),
+          } satisfies ListViewColumn<UserAccount>,
+        ]
+      : []),
   ];
 
   const buildHref = (params: {
     page?: number;
     pageSize?: number;
-    role?: UserRole;
+    role?: string;
     banned?: boolean;
   }) => {
     const search = new URLSearchParams();
@@ -113,10 +132,12 @@ export function UserList({
     <Stack gap={4}>
       <ListViewToolbar
         end={
-          <Button onClick={() => setDialogOpen(true)}>
-            <Plus size={16} />
-            Thêm người dùng
-          </Button>
+          canCreate && (
+            <Button onClick={() => setDialogOpen(true)}>
+              <Plus size={16} />
+              Thêm người dùng
+            </Button>
+          )
         }
       >
         <FilterSelect
@@ -127,22 +148,11 @@ export function UserList({
             router.push(
               buildHref({
                 page: 1,
-                role: value === ALL ? undefined : (value as UserRole),
+                role: value === ALL ? undefined : value,
               }),
             )
           }
-          options={[
-            { value: ALL, label: "Tất cả vai trò" },
-            { value: "user", label: "Nhân viên" },
-            { value: "manager", label: "Quản lý" },
-            { value: "admin", label: "Admin" },
-            // superadmin là vai trò giám sát ẨN — không lộ ra dropdown filter
-            // (cũng như dropdown gán role) với ai không phải chính superadmin,
-            // kể cả dạng "chỉ để xem" (xem user.router.ts's list()).
-            ...(viewerRole === "superadmin"
-              ? [{ value: "superadmin", label: "Super Admin" }]
-              : []),
-          ]}
+          options={[{ value: ALL, label: "Tất cả vai trò" }, ...roleOptions]}
         />
 
         <FilterSelect
@@ -174,7 +184,9 @@ export function UserList({
       />
       <ListViewPagination page={page} pageSize={pageSize} total={total} buildHref={buildHref} />
 
-      <CreateUserDialog open={dialogOpen} onOpenChange={setDialogOpen} viewerRole={viewerRole} />
+      {canCreate && (
+        <CreateUserDialog open={dialogOpen} onOpenChange={setDialogOpen} roleOptions={roleOptions} />
+      )}
     </Stack>
   );
 }

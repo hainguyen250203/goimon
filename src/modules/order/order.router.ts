@@ -1,14 +1,9 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
-import {
-  adminProcedure,
-  managerProcedure,
-  superadminProcedure,
-  userProcedure,
-  createTRPCRouter,
-} from "~/server/api/trpc";
+import { permissionProcedure, staffProcedure, createTRPCRouter } from "~/server/api/trpc";
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from "~/lib/pagination";
+import { getRolePermissions } from "~/modules/role/infrastructure/role-permission-cache";
 import { logActivity } from "~/modules/activity-log/log-activity";
 import { menuItemDrizzleRepository } from "~/modules/menu/infrastructure/menu-item.drizzle-repository";
 import { restaurantTableDrizzleRepository } from "~/modules/table/infrastructure/restaurant-table.drizzle-repository";
@@ -138,14 +133,40 @@ async function requireOpenShift(): Promise<number> {
   return shift.id;
 }
 
+// updateItems là staffProcedure (mọi nhân viên gọi được, không cần permission
+// key) vì bản thân việc sửa số lượng/gọi thêm ở đây là 1 phần luồng gọi món
+// cốt lõi — NHƯNG xoá hẳn 1 món khỏi đơn đã gọi (removedItemIds) là thao tác
+// rủi ro hơn, cần "don-hang.xoa-mon" riêng (không gộp vào staffProcedure hay
+// permissionProcedure ở tầng router vì phần còn lại của mutation vẫn phải
+// public — chỉ check thủ công đúng phần này).
+async function requireCanRemoveItems(isSuper: boolean, role: string | null | undefined): Promise<void> {
+  if (isSuper) return;
+  const permissions = await getRolePermissions(role ?? "user");
+  if (!permissions.has("don-hang.xoa-mon")) {
+    throw new TRPCError({ code: "FORBIDDEN" });
+  }
+}
+
+// Xem đơn đã xoá mềm: trước đây isSuper-only tuyệt đối (giám sát việc xoá),
+// giờ có permission key riêng "don-hang.xem-da-xoa" để cấp được cho role cụ
+// thể — isSuper vẫn luôn bypass.
+async function requireCanViewDeleted(isSuper: boolean, role: string | null | undefined): Promise<void> {
+  if (isSuper) return;
+  const permissions = await getRolePermissions(role ?? "user");
+  if (!permissions.has("don-hang.xem-da-xoa")) {
+    throw new TRPCError({ code: "FORBIDDEN" });
+  }
+}
+
 export const orderRouter = createTRPCRouter({
   // Trang Đơn hàng (admin /quan-ly/don-hang, chỉ hiển thị) — cũng được trang
-  // Lịch sử đơn hàng ở /goi-mon/cua-hang tái dùng nên là userProcedure, không
-  // chỉ managerProcedure như trước. `search` lọc đơn có món khớp tên (không
-  // dấu, server-side) — dùng cho ô tìm kiếm ở trang Lịch sử đơn hàng.
+  // Lịch sử đơn hàng ở /goi-mon/cua-hang tái dùng nên là staffProcedure
+  // (không cần permission key) — trang admin tự thêm guard "don-hang.get"
+  // riêng ở page.tsx. `search` lọc đơn có món khớp tên (không dấu,
+  // server-side) — dùng cho ô tìm kiếm ở trang Lịch sử đơn hàng.
   // Role "user" (nhân viên) chỉ xem được đơn do chính mình tạo ở trang Lịch
   // sử đơn hàng — manager/admin xem được toàn bộ (cả ở đây lẫn ở trang admin).
-  list: userProcedure
+  list: staffProcedure
     .input(
       z.object({
         page: z.number().int().min(1).default(1),
@@ -153,8 +174,8 @@ export const orderRouter = createTRPCRouter({
         status: z.enum(["open", "paid", "cancelled", "transferred"]).optional(),
         search: z.string().optional(),
         shiftId: z.number().int().positive().optional(),
-        // Chỉ superadmin xem được đơn đã xoá mềm — giám sát việc admin xoá,
-        // admin (người xoá) không tự xem lại được (xem CLAUDE.md/order.router.ts).
+        // Xem đơn đã xoá mềm cần "don-hang.xem-da-xoa" (hoặc isSuper) — xem
+        // requireCanViewDeleted bên dưới.
         deleted: z.boolean().optional(),
         // Trang Lịch sử ở /goi-mon/cua-hang set cờ này để CHỈ xem/search trong
         // ca đang mở (không nhận shiftId tuỳ ý từ client) — khác trang admin
@@ -164,8 +185,8 @@ export const orderRouter = createTRPCRouter({
       }),
     )
     .query(async ({ ctx, input }) => {
-      if (input.deleted && ctx.session.user.role !== "superadmin") {
-        throw new TRPCError({ code: "FORBIDDEN" });
+      if (input.deleted) {
+        await requireCanViewDeleted(ctx.session.user.isSuper, ctx.session.user.role);
       }
       let shiftId = input.shiftId;
       if (input.currentShiftOnly) {
@@ -177,10 +198,10 @@ export const orderRouter = createTRPCRouter({
       return listOrders(orderDrizzleRepository, { ...input, shiftId, createdBy });
     }),
 
-  // Xoá mềm — chỉ superadmin xoá được (bất kỳ trạng thái order nào), cũng
-  // chỉ superadmin xem lại được qua filter "deleted" ở `list` trên. Ghi vào
-  // activity_logs (khác order_events nội bộ) làm audit trail thông thường.
-  delete: superadminProcedure
+  // Xoá mềm (bất kỳ trạng thái order nào) — cấp qua "don-hang.xoa-don" (hoặc
+  // isSuper). Ghi vào activity_logs (khác order_events nội bộ) làm audit
+  // trail thông thường.
+  delete: permissionProcedure("don-hang.xoa-don")
     .input(z.object({ orderId: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       await deleteOrder(orderDrizzleRepository, { orderId: input.orderId });
@@ -197,7 +218,7 @@ export const orderRouter = createTRPCRouter({
   // cái này theo TỪNG LẦN gọi/trả món). Tìm không dấu server-side trên items_summary.
   // Role "user" chỉ xem được hành động do chính mình thao tác (khác trang
   // list ở trên lọc theo NGƯỜI TẠO ĐƠN — ở đây lọc theo NGƯỜI THAO TÁC event).
-  listOrderItemEvents: userProcedure
+  listOrderItemEvents: staffProcedure
     .input(
       z.object({
         page: z.number().int().min(1).default(1),
@@ -220,7 +241,7 @@ export const orderRouter = createTRPCRouter({
   // "items_transferred_in" (bản ghi đối xứng ở đơn nhận, tránh hiện trùng 2
   // dòng cho cùng 1 lần chuyển). Cùng quy tắc lọc theo actorId khi role "user"
   // như listOrderItemEvents ở trên.
-  listTableTransferEvents: userProcedure
+  listTableTransferEvents: staffProcedure
     .input(
       z.object({
         page: z.number().int().min(1).default(1),
@@ -241,23 +262,23 @@ export const orderRouter = createTRPCRouter({
 
   // Toàn bộ timeline của 1 order cụ thể (gọi món, trả món, in bill, thanh
   // toán, khuyến mãi, huỷ...) — trang lịch sử riêng của order đó ở /goi-mon.
-  getOrderTimeline: userProcedure
+  getOrderTimeline: staffProcedure
     .input(z.object({ orderId: z.number().int().positive() }))
     .query(({ input }) => getOrderTimeline(orderDrizzleRepository, input.orderId)),
 
   // Từ đây trở xuống: luồng gọi món (/goi-mon), mọi nhân viên đã đăng nhập đều gọi được.
-  listTablesForOrdering: userProcedure.query(() =>
+  listTablesForOrdering: staffProcedure.query(() =>
     listTablesForOrdering(restaurantTableDrizzleRepository, orderDrizzleRepository),
   ),
 
-  getTableOrder: userProcedure
+  getTableOrder: staffProcedure
     .input(z.object({ tableId: z.number().int().positive() }))
     .query(async ({ input }) => {
       const orderEntity = await getTableOrder(orderDrizzleRepository, input.tableId);
       return orderEntity ? orderEntity.toDetail() : null;
     }),
 
-  addItems: userProcedure
+  addItems: staffProcedure
     .input(
       z.object({
         tableId: z.number().int().positive(),
@@ -303,7 +324,7 @@ export const orderRouter = createTRPCRouter({
 
   // UI gom sửa số lượng/xoá món cục bộ (màn Món đã gọi), gọi 1 lần khi bấm
   // "Xác nhận" thay vì lưu ngay mỗi lần bấm +/- — xem submitted-order-panel.tsx.
-  updateItems: userProcedure
+  updateItems: staffProcedure
     .input(
       z.object({
         orderId: z.number().int().positive(),
@@ -317,6 +338,9 @@ export const orderRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      if (input.removedItemIds.length > 0) {
+        await requireCanRemoveItems(ctx.session.user.isSuper, ctx.session.user.role);
+      }
       await requireOpenShift();
       const existingOrder = await orderDrizzleRepository.findById(input.orderId);
       if (!existingOrder) throw new TRPCError({ code: "NOT_FOUND", message: "Không tìm thấy đơn hàng." });
@@ -361,7 +385,7 @@ export const orderRouter = createTRPCRouter({
       }
     }),
 
-  printBill: userProcedure
+  printBill: staffProcedure
     .input(z.object({ orderId: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       await requireOpenShift();
@@ -412,7 +436,7 @@ export const orderRouter = createTRPCRouter({
       return { ...orderDetail, printResult };
     }),
 
-  confirmPayment: userProcedure
+  confirmPayment: permissionProcedure("don-hang.thanh-toan")
     .input(
       z.object({
         orderId: z.number().int().positive(),
@@ -430,7 +454,7 @@ export const orderRouter = createTRPCRouter({
       );
     }),
 
-  cancel: userProcedure
+  cancel: permissionProcedure("don-hang.huy")
     .input(z.object({ orderId: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       await requireOpenShift();
@@ -442,7 +466,7 @@ export const orderRouter = createTRPCRouter({
       );
     }),
 
-  applyPromotion: userProcedure
+  applyPromotion: permissionProcedure("don-hang.khuyen-mai")
     .input(
       z.object({
         orderId: z.number().int().positive(),
@@ -460,7 +484,7 @@ export const orderRouter = createTRPCRouter({
       );
     }),
 
-  removePromotion: userProcedure
+  removePromotion: permissionProcedure("don-hang.khuyen-mai")
     .input(z.object({ orderId: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
       await requireOpenShift();
@@ -476,7 +500,7 @@ export const orderRouter = createTRPCRouter({
   // tới bàn đang trống, dialog UI (table-switcher-dialog.tsx) chỉ cho chọn
   // bàn trống nhưng vẫn phải chặn lại ở đây phòng gọi thẳng API. Không in
   // phiếu bếp — chỉ đổi bàn phục vụ, món không đổi gì nên bếp không cần biết.
-  moveTable: userProcedure
+  moveTable: staffProcedure
     .input(
       z.object({
         orderId: z.number().int().positive(),
@@ -508,7 +532,7 @@ export const orderRouter = createTRPCRouter({
   // mới nếu bàn đích đang trống. Khác moveTable (chuyển NGUYÊN đơn sang bàn
   // trống) — đơn nguồn ở đây vẫn tiếp tục tồn tại nếu còn món. Không in phiếu
   // bếp — món đã được bếp chuẩn bị rồi, chỉ đổi bàn phục vụ.
-  transferItems: userProcedure
+  transferItems: staffProcedure
     .input(
       z.object({
         sourceOrderId: z.number().int().positive(),
@@ -548,7 +572,7 @@ export const orderRouter = createTRPCRouter({
   // Gộp NGUYÊN đơn đang mở ở bàn này vào đơn đang mở SẴN ở bàn đích (khách
   // ghép bàn) — bàn đích bắt buộc đã có đơn đang mở, khác transferItems
   // (chuyển từng phần món, bàn đích có thể đang trống).
-  mergeOrders: userProcedure
+  mergeOrders: staffProcedure
     .input(
       z.object({
         sourceOrderId: z.number().int().positive(),
@@ -574,8 +598,8 @@ export const orderRouter = createTRPCRouter({
     }),
 
   // Từng món đã bán trong 1 ca — cho dialog "Tổng kết ca làm" ở trang
-  // /quan-ly/ca-lam-viec. managerProcedure vì trang này admin-only.
-  getShiftItemBreakdown: managerProcedure
+  // /quan-ly/ca-lam-viec (không dùng từ goi-mon) — cùng permission với trang đó.
+  getShiftItemBreakdown: permissionProcedure("ca-lam-viec.get")
     .input(z.object({ shiftId: z.number().int().positive() }))
     .query(({ input }) => getShiftItemBreakdown(orderDrizzleRepository, input.shiftId)),
 });

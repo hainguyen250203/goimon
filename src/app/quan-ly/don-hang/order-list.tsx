@@ -130,9 +130,9 @@ export function OrderList({
   status?: OrderStatus;
   shiftId?: number;
   /** true = đang xem filter "Đã xoá" (page.tsx đã tự kiểm tra canViewDeleted
-   * trước khi cho true, non-superadmin gõ tay ?status=deleted vẫn an toàn). */
+   * trước khi cho true, gõ tay ?status=deleted khi không có quyền vẫn an toàn). */
   deleted: boolean;
-  /** Chỉ superadmin thấy option filter "Đã xoá". */
+  /** Chỉ role có "don-hang.xem-da-xoa" (hoặc isSuper) thấy option filter "Đã xoá". */
   canViewDeleted: boolean;
   canDelete: boolean;
 }) {

@@ -33,12 +33,18 @@ export function PrinterList({
   page,
   pageSize,
   isActive,
-  canManage,
+  canCreate,
+  canUpdate,
+  canDelete,
+  canScanNetwork,
 }: {
   page: number;
   pageSize: number;
   isActive?: boolean;
-  canManage: boolean;
+  canCreate: boolean;
+  canUpdate: boolean;
+  canDelete: boolean;
+  canScanNetwork: boolean;
 }) {
   const router = useRouter();
   const { data, isFetching } = api.printer.list.useQuery(
@@ -79,7 +85,7 @@ export function PrinterList({
         </StatusDot>
       ),
     },
-    ...(canManage
+    ...(canUpdate || canDelete
       ? [
           {
             key: "actions",
@@ -88,6 +94,8 @@ export function PrinterList({
             cell: (row: Printer) => (
               <PrinterRowActions
                 item={row}
+                canUpdate={canUpdate}
+                canDelete={canDelete}
                 onEdit={(item) => {
                   setEditingItem(item);
                   setDialogOpen(true);
@@ -115,12 +123,14 @@ export function PrinterList({
     <Stack gap={4}>
       <ListViewToolbar
         end={
-          canManage && (
-            <>
+          <>
+            {canScanNetwork && (
               <Button variant="outline" onClick={() => setScanDialogOpen(true)}>
                 <ScanSearch size={16} />
                 Quét tìm máy in
               </Button>
+            )}
+            {canCreate && (
               <Button
                 onClick={() => {
                   setEditingItem(undefined);
@@ -131,8 +141,8 @@ export function PrinterList({
                 <Plus size={16} />
                 Thêm máy in
               </Button>
-            </>
-          )
+            )}
+          </>
         }
       >
         <FilterSelect

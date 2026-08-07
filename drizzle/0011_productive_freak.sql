@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD CONSTRAINT "users_role_roles_name_fk" FOREIGN KEY ("role") REFERENCES "public"."roles"("name") ON DELETE restrict ON UPDATE cascade;

@@ -9,7 +9,6 @@ import {
   ac,
   admin as adminRole,
   manager as managerRole,
-  superadmin as superadminRole,
   user as userRole,
   viewer as viewerRole,
 } from "./permissions";
@@ -38,7 +37,14 @@ export const auth = betterAuth({
   // Toàn bộ bảng nghiệp vụ trong app đặt tên số nhiều (orders, tables,
   // categories...) cho nhất quán — bảng do BetterAuth sinh ra cũng theo
   // đúng quy tắc này, không dùng tiền tố riêng. Xem CLAUDE.md.
-  user: { modelName: "users" },
+  user: {
+    modelName: "users",
+    additionalFields: {
+      // `input: false` — chặn set qua mọi API cập nhật hồ sơ công khai, chỉ
+      // set được trực tiếp qua DB/script (xem comment ở schema.ts).
+      isSuper: { type: "boolean", defaultValue: false, input: false },
+    },
+  },
   session: { modelName: "sessions" },
   account: { modelName: "accounts" },
   verification: { modelName: "verifications" },
@@ -55,7 +61,6 @@ export const auth = betterAuth({
         admin: adminRole,
         manager: managerRole,
         user: userRole,
-        superadmin: superadminRole,
         viewer: viewerRole,
       },
     }),

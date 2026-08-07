@@ -25,9 +25,13 @@ import type { MenuItem as MenuItemEntity } from "~/modules/menu/domain/menu-item
 
 export function MenuItemRowActions({
   item,
+  canUpdate,
+  canDelete,
   onEdit,
 }: {
   item: MenuItemEntity;
+  canUpdate: boolean;
+  canDelete: boolean;
   onEdit: (item: MenuItemEntity) => void;
 }) {
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -52,14 +56,18 @@ export function MenuItemRowActions({
         </MenuTrigger>
         <MenuContent minW="10rem">
           <MenuItemGroup>
-            <MenuItem value="edit" onClick={() => onEdit(item)}>
-              <Pencil size={16} />
-              Sửa
-            </MenuItem>
-            <MenuItem value="delete" color="fg.error" onClick={() => setConfirmOpen(true)}>
-              <Trash2 size={16} />
-              Xoá
-            </MenuItem>
+            {canUpdate && (
+              <MenuItem value="edit" onClick={() => onEdit(item)}>
+                <Pencil size={16} />
+                Sửa
+              </MenuItem>
+            )}
+            {canDelete && (
+              <MenuItem value="delete" color="fg.error" onClick={() => setConfirmOpen(true)}>
+                <Trash2 size={16} />
+                Xoá
+              </MenuItem>
+            )}
           </MenuItemGroup>
         </MenuContent>
       </MenuRoot>

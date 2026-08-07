@@ -10,6 +10,7 @@ import * as orderSchema from "~/modules/order/infrastructure/order.schema";
 import * as paymentConfigSchema from "~/modules/payment-config/infrastructure/payment-config.schema";
 import * as printerSchema from "~/modules/printer/infrastructure/printer.schema";
 import * as promotionSchema from "~/modules/promotion/infrastructure/promotion.schema";
+import * as roleSchema from "~/modules/role/infrastructure/role.schema";
 import * as shiftSchema from "~/modules/shift/infrastructure/shift.schema";
 import * as tableSchema from "~/modules/table/infrastructure/table.schema";
 
@@ -21,6 +22,7 @@ const schema = {
   ...printerSchema,
   ...activityLogSchema,
   ...promotionSchema,
+  ...roleSchema,
   ...shiftSchema,
   ...paymentConfigSchema,
   ...assistantSchema,

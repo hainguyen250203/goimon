@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
-import { adminProcedure, managerProcedure, createTRPCRouter } from "~/server/api/trpc";
+import { permissionProcedure, createTRPCRouter } from "~/server/api/trpc";
 import { getPaymentConfig } from "./application/get-payment-config.usecase";
 import { updatePaymentConfig } from "./application/update-payment-config.usecase";
 import { paymentConfigDrizzleRepository } from "./infrastructure/payment-config.drizzle-repository";
@@ -15,13 +15,13 @@ const paymentConfigInputSchema = z.object({
 });
 
 export const paymentConfigRouter = createTRPCRouter({
-  // managerProcedure: quản lý xem được (vd để đối chiếu lúc thu ngân), chỉ
-  // admin mới được sửa — chặn ở `update` bằng adminProcedure.
-  get: managerProcedure.query(() => getPaymentConfig(paymentConfigDrizzleRepository)),
+  // thanh-toan.get: quản lý xem được (vd để đối chiếu lúc thu ngân), chỉ
+  // ai có thanh-toan.action mới được sửa — chặn ở `update` bên dưới.
+  get: permissionProcedure("thanh-toan.get").query(() => getPaymentConfig(paymentConfigDrizzleRepository)),
 
   // Danh sách ngân hàng để đổ vào select — gọi API công khai của VietQR
   // (không phải tích hợp thanh toán), cache dài ở client vì gần như không đổi.
-  listBanks: managerProcedure.query(async () => {
+  listBanks: permissionProcedure("thanh-toan.get").query(async () => {
     try {
       return await listVietQrBanks();
     } catch (error) {
@@ -33,7 +33,7 @@ export const paymentConfigRouter = createTRPCRouter({
     }
   }),
 
-  update: adminProcedure
+  update: permissionProcedure("thanh-toan.sua")
     .input(paymentConfigInputSchema)
     .mutation(async ({ ctx, input }) => {
       const { before, after } = await updatePaymentConfig(paymentConfigDrizzleRepository, input);

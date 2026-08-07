@@ -13,6 +13,8 @@ import { ZodError } from "zod";
 
 import { auth } from "~/server/better-auth";
 import { db } from "~/server/db";
+import type { PermissionKey } from "~/modules/role/domain/permission-definitions";
+import { getRolePermissions } from "~/modules/role/infrastructure/role-permission-cache";
 
 /**
  * 1. CONTEXT
@@ -123,68 +125,47 @@ export const protectedProcedure = t.procedure
         session: { ...ctx.session, user: ctx.session.user },
       },
     });
-  })
-  // Role "viewer" chỉ được xem, KHÔNG được thao tác — chặn ở tầng gốc này
-  // (mọi role-gated procedure bên dưới đều kế thừa `protectedProcedure`) để
-  // áp dụng cho MỌI mutation hiện có lẫn tương lai, không phải tự nhớ sửa
-  // từng router. Không thể chỉ chèn "viewer" vào ROLE_RANK vì hầu hết router
-  // dùng CHUNG 1 procedure cho cả query lẫn mutation trên cùng tài nguyên
-  // (vd managerProcedure chặn cả menu.list lẫn menu.create) — rank không
-  // phân biệt được "được xem" với "được sửa", phải chặn theo `type` riêng.
-  .use(({ ctx, next, type }) => {
-    if (type === "mutation" && ctx.session.user.role === "viewer") {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Tài khoản chỉ xem, không thể thao tác.",
-      });
-    }
-    return next({ ctx });
   });
 
 /**
- * Role-gated procedures
+ * Permission-gated procedures
  *
- * Phân cấp `admin > manager > user` (mỗi role kế thừa quyền của role thấp hơn).
- * Mỗi tRPC procedure trong các module khai báo đúng procedure tối thiểu theo role
- * nghiệp vụ cần — không tự kiểm tra role rải rác trong usecase.
+ * Phân quyền theo permission key riêng từng trang (`<page>.get`/`<page>.action`,
+ * xem `~/modules/role/domain/permission-definitions.ts`), lưu trong bảng
+ * `role` (data-driven, sửa qua trang Vai trò thay vì sửa code) — thay hẳn
+ * thang rank cứng trước đây.
  *
  * @see https://trpc.io/docs/procedures
  */
-// "viewer" xếp ngang "manager" — tự động qua được mọi managerProcedure (xem
-// các trang Vận hành/Cấu hình), KHÔNG qua được adminProcedure/superadminProcedure
-// (Người dùng, AI, Nhật ký hoạt động tự động ẩn, không cần thêm gì). Mutation
-// đã bị chặn cứng ở protectedProcedure phía trên bất kể rank này.
-const ROLE_RANK = { user: 0, manager: 1, viewer: 1, admin: 2, superadmin: 3 } as const;
-type Role = keyof typeof ROLE_RANK;
 
-const minRoleProcedure = (minRole: Role) =>
-  protectedProcedure.use(({ ctx, next }) => {
-    const role = (ctx.session.user.role ?? "user") as Role;
-    if ((ROLE_RANK[role] ?? 0) < ROLE_RANK[minRole]) {
+/**
+ * Bất kỳ ai đã đăng nhập, KHÔNG cần permission key nào — dùng cho luồng vận
+ * hành cốt lõi ở `/goi-mon` (xem khu/bàn/menu, gọi món, thêm món, chuyển
+ * bàn/món, gộp bàn, in hoá đơn...) mà mọi nhân viên đều phải làm được bất kể
+ * role/quyền được cấp gì.
+ */
+export const staffProcedure = protectedProcedure;
+
+/** Yêu cầu có permission key tương ứng trong `role.permissions` — `isSuper` bypass. */
+export function permissionProcedure(key: PermissionKey) {
+  return protectedProcedure.use(async ({ ctx, next }) => {
+    if (ctx.session.user.isSuper) return next({ ctx });
+    const permissions = await getRolePermissions(ctx.session.user.role ?? "user");
+    if (!permissions.has(key)) {
       throw new TRPCError({ code: "FORBIDDEN" });
     }
     return next({ ctx });
   });
-
-/** Bất kỳ nhân viên đã đăng nhập nào (user/manager/admin). */
-export const userProcedure = minRoleProcedure("user");
-/** manager hoặc admin (viewer cũng qua — xem CLAUDE.md, xếp ngang manager). */
-export const managerProcedure = minRoleProcedure("manager");
-/** Chỉ admin (superadmin cũng qua được, rank cao hơn). */
-export const adminProcedure = minRoleProcedure("admin");
-/** Chỉ superadmin — vai trò giám sát toàn hệ thống (xem CLAUDE.md). */
-export const superadminProcedure = minRoleProcedure("superadmin");
+}
 
 /**
- * Ngoại lệ riêng cho "Báo cáo" — admin trở lên, HOẶC viewer. Không thể dùng
- * `adminProcedure` (viewer rank ngang manager, thấp hơn admin) mà cũng không
- * thể xếp viewer ngang admin (sẽ lộ luôn Người dùng/AI, cùng gate admin).
- * Đặt tên chung để tái dùng nếu có ngoại lệ tương tự sau này, hiện chỉ
- * `report.router.ts` dùng.
+ * Chỉ `isSuper` — vai trò giám sát ẨN, nằm ngoài hệ thống permission-key
+ * hẳn (không role nào, kể cả có mọi `.action`/`.get` khác, được cấp qua đây
+ * — xem CLAUDE.md). Dùng cho Nhật ký hoạt động, Lịch sử trò chuyện AI (toàn
+ * cục), xoá đơn hàng.
  */
-export const adminOrViewerProcedure = protectedProcedure.use(({ ctx, next }) => {
-  const role = (ctx.session.user.role ?? "user") as Role;
-  if ((ROLE_RANK[role] ?? 0) < ROLE_RANK.admin && role !== "viewer") {
+export const superOnlyProcedure = protectedProcedure.use(({ ctx, next }) => {
+  if (!ctx.session.user.isSuper) {
     throw new TRPCError({ code: "FORBIDDEN" });
   }
   return next({ ctx });

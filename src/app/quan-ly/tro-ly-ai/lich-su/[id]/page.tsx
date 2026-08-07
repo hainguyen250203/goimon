@@ -13,7 +13,7 @@ export default async function LichSuTroChuyenAiDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const session = await getSession();
-  if (session?.user.role !== "superadmin") {
+  if (!session?.user.isSuper) {
     redirect("/quan-ly");
   }
 
