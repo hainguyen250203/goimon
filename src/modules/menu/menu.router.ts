@@ -15,6 +15,7 @@ import { updateCategory } from "./application/update-category.usecase";
 import { deleteCategory } from "./application/delete-category.usecase";
 import { menuItemDrizzleRepository } from "./infrastructure/menu-item.drizzle-repository";
 import { logActivity } from "~/modules/activity-log/log-activity";
+import { toSafeErrorMessage } from "~/lib/db-errors";
 
 const categoryInputSchema = z.object({
   name: z.string().min(1, "Tên danh mục không được để trống"),
@@ -58,6 +59,8 @@ export const menuRouter = createTRPCRouter({
   create: permissionProcedure("mon-an.tao")
     .input(menuItemInputSchema)
     .mutation(async ({ ctx, input }) => {
+      // menu_items.name KHÔNG unique (chỉ categories.name mới có) — không
+      // cần bắt lỗi trùng tên ở đây.
       const item = await createMenuItem(menuItemDrizzleRepository, input);
       await logActivity({
         actorId: ctx.session.user.id,
@@ -108,7 +111,7 @@ export const menuRouter = createTRPCRouter({
       } catch (error) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: error instanceof Error ? error.message : "Xoá thất bại.",
+          message: toSafeErrorMessage(error, "Xoá thất bại."),
         });
       }
       await logActivity({
@@ -127,7 +130,19 @@ export const menuRouter = createTRPCRouter({
   createCategory: permissionProcedure("mon-an.danh-muc")
     .input(categoryInputSchema)
     .mutation(async ({ ctx, input }) => {
-      const item = await createCategory(menuItemDrizzleRepository, input);
+      let item;
+      try {
+        item = await createCategory(menuItemDrizzleRepository, input);
+      } catch (error) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: toSafeErrorMessage(
+            error,
+            "Tạo danh mục thất bại.",
+            `Tên danh mục "${input.name}" đã tồn tại.`,
+          ),
+        });
+      }
       await logActivity({
         actorId: ctx.session.user.id,
         action: "create",
@@ -141,7 +156,19 @@ export const menuRouter = createTRPCRouter({
   updateCategory: permissionProcedure("mon-an.danh-muc")
     .input(categoryInputSchema.extend({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
-      const { before, after } = await updateCategory(menuItemDrizzleRepository, input);
+      let before, after;
+      try {
+        ({ before, after } = await updateCategory(menuItemDrizzleRepository, input));
+      } catch (error) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: toSafeErrorMessage(
+            error,
+            "Cập nhật danh mục thất bại.",
+            `Tên danh mục "${input.name}" đã tồn tại.`,
+          ),
+        });
+      }
       await logActivity({
         actorId: ctx.session.user.id,
         action: "update",
@@ -163,7 +190,7 @@ export const menuRouter = createTRPCRouter({
       } catch (error) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: error instanceof Error ? error.message : "Xoá thất bại.",
+          message: toSafeErrorMessage(error, "Xoá thất bại."),
         });
       }
       await logActivity({

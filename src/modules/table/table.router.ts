@@ -15,6 +15,7 @@ import { updateArea } from "./application/update-area.usecase";
 import { deleteArea } from "./application/delete-area.usecase";
 import { restaurantTableDrizzleRepository } from "./infrastructure/restaurant-table.drizzle-repository";
 import { logActivity } from "~/modules/activity-log/log-activity";
+import { toSafeErrorMessage } from "~/lib/db-errors";
 
 const areaInputSchema = z.object({
   name: z.string().min(1, "Tên khu vực không được để trống"),
@@ -47,7 +48,19 @@ export const tableRouter = createTRPCRouter({
   create: permissionProcedure("ban.tao")
     .input(tableInputSchema)
     .mutation(async ({ ctx, input }) => {
-      const item = await createTable(restaurantTableDrizzleRepository, input);
+      let item;
+      try {
+        item = await createTable(restaurantTableDrizzleRepository, input);
+      } catch (error) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: toSafeErrorMessage(
+            error,
+            "Tạo bàn thất bại.",
+            `Tên bàn "${input.name}" đã tồn tại.`,
+          ),
+        });
+      }
       await logActivity({
         actorId: ctx.session.user.id,
         action: "create",
@@ -61,7 +74,19 @@ export const tableRouter = createTRPCRouter({
   update: permissionProcedure("ban.sua")
     .input(tableInputSchema.extend({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
-      const { before, after } = await updateTable(restaurantTableDrizzleRepository, input);
+      let before, after;
+      try {
+        ({ before, after } = await updateTable(restaurantTableDrizzleRepository, input));
+      } catch (error) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: toSafeErrorMessage(
+            error,
+            "Cập nhật bàn thất bại.",
+            `Tên bàn "${input.name}" đã tồn tại.`,
+          ),
+        });
+      }
       await logActivity({
         actorId: ctx.session.user.id,
         action: "update",
@@ -83,7 +108,7 @@ export const tableRouter = createTRPCRouter({
       } catch (error) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: error instanceof Error ? error.message : "Xoá thất bại.",
+          message: toSafeErrorMessage(error, "Xoá thất bại."),
         });
       }
       await logActivity({
@@ -100,7 +125,19 @@ export const tableRouter = createTRPCRouter({
   createArea: permissionProcedure("ban.khu-vuc")
     .input(areaInputSchema)
     .mutation(async ({ ctx, input }) => {
-      const item = await createArea(restaurantTableDrizzleRepository, input);
+      let item;
+      try {
+        item = await createArea(restaurantTableDrizzleRepository, input);
+      } catch (error) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: toSafeErrorMessage(
+            error,
+            "Tạo khu vực thất bại.",
+            `Tên khu vực "${input.name}" đã tồn tại.`,
+          ),
+        });
+      }
       await logActivity({
         actorId: ctx.session.user.id,
         action: "create",
@@ -114,7 +151,19 @@ export const tableRouter = createTRPCRouter({
   updateArea: permissionProcedure("ban.khu-vuc")
     .input(areaInputSchema.extend({ id: z.number().int().positive() }))
     .mutation(async ({ ctx, input }) => {
-      const { before, after } = await updateArea(restaurantTableDrizzleRepository, input);
+      let before, after;
+      try {
+        ({ before, after } = await updateArea(restaurantTableDrizzleRepository, input));
+      } catch (error) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: toSafeErrorMessage(
+            error,
+            "Cập nhật khu vực thất bại.",
+            `Tên khu vực "${input.name}" đã tồn tại.`,
+          ),
+        });
+      }
       await logActivity({
         actorId: ctx.session.user.id,
         action: "update",
@@ -136,7 +185,7 @@ export const tableRouter = createTRPCRouter({
       } catch (error) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: error instanceof Error ? error.message : "Xoá thất bại.",
+          message: toSafeErrorMessage(error, "Xoá thất bại."),
         });
       }
       await logActivity({

@@ -10,6 +10,7 @@ import { updatePromotion } from "./application/update-promotion.usecase";
 import { deletePromotion } from "./application/delete-promotion.usecase";
 import { promotionDrizzleRepository } from "./infrastructure/promotion.drizzle-repository";
 import { logActivity } from "~/modules/activity-log/log-activity";
+import { toSafeErrorMessage } from "~/lib/db-errors";
 
 // Xem printer.router.ts — drizzle-zod@0.8 sinh schema kiểu zod/v4, không
 // .extend() tương thích được với `z` classic nên viết tay thay vì sinh.
@@ -84,7 +85,7 @@ export const promotionRouter = createTRPCRouter({
       } catch (error) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: error instanceof Error ? error.message : "Xoá thất bại.",
+          message: toSafeErrorMessage(error, "Xoá thất bại."),
         });
       }
       await logActivity({

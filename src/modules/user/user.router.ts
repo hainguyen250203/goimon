@@ -12,6 +12,7 @@ import { unbanUser } from "./application/unban-user.usecase";
 import { userBetterAuthRepository } from "./infrastructure/user.betterauth-repository";
 import { logActivity } from "~/modules/activity-log/log-activity";
 import { roleDrizzleRepository } from "~/modules/role/infrastructure/role.drizzle-repository";
+import { toSafeErrorMessage } from "~/lib/db-errors";
 
 // roleSchema chỉ validate "có phải chuỗi không rỗng" — role thật là dữ liệu
 // (bảng `role`, xem trang Vai trò), không còn union cố định. `assertRoleExists`
@@ -62,10 +63,11 @@ export const userRouter = createTRPCRouter({
       } catch (error) {
         throw new TRPCError({
           code: "CONFLICT",
-          message:
-            error instanceof Error
-              ? error.message
-              : "Tạo tài khoản thất bại.",
+          message: toSafeErrorMessage(
+            error,
+            "Tạo tài khoản thất bại.",
+            `Số điện thoại "${input.phoneNumber}" đã được đăng ký.`,
+          ),
         });
       }
       await logActivity({

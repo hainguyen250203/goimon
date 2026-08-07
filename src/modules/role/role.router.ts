@@ -3,6 +3,7 @@ import { TRPCError } from "@trpc/server";
 
 import { permissionProcedure, staffProcedure, createTRPCRouter } from "~/server/api/trpc";
 import { logActivity } from "~/modules/activity-log/log-activity";
+import { toSafeErrorMessage } from "~/lib/db-errors";
 import { permissionDefinitions, type PermissionKey } from "./domain/permission-definitions";
 import { listRoles } from "./application/list-roles.usecase";
 import { listRoleOptions } from "./application/list-role-options.usecase";
@@ -41,7 +42,11 @@ export const roleRouter = createTRPCRouter({
       } catch (error) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: error instanceof Error ? error.message : "Tạo vai trò thất bại.",
+          message: toSafeErrorMessage(
+            error,
+            "Tạo vai trò thất bại.",
+            `Tên vai trò "${input.name}" đã tồn tại.`,
+          ),
         });
       }
       invalidateRolePermissionCache();
@@ -64,7 +69,11 @@ export const roleRouter = createTRPCRouter({
       } catch (error) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: error instanceof Error ? error.message : "Cập nhật vai trò thất bại.",
+          message: toSafeErrorMessage(
+            error,
+            "Cập nhật vai trò thất bại.",
+            `Tên vai trò "${input.name}" đã tồn tại.`,
+          ),
         });
       }
       invalidateRolePermissionCache();
@@ -86,7 +95,7 @@ export const roleRouter = createTRPCRouter({
       } catch (error) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: error instanceof Error ? error.message : "Xoá thất bại.",
+          message: toSafeErrorMessage(error, "Xoá thất bại."),
         });
       }
       invalidateRolePermissionCache();

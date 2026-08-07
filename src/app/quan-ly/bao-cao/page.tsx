@@ -8,7 +8,7 @@ import { getMyPermissions, hasPermission } from "~/modules/role/get-my-permissio
 import { getDefaultReportRange } from "~/modules/report/application/get-default-report-range.usecase";
 import { formatVNDateInputValue, toInclusiveEndDateInputValue, toQueryRange } from "~/lib/vn-date-range";
 import { ReportView } from "./report-view";
-import { ALL_REPORT_SECTIONS, SECTION_PERMISSION_KEY } from "./ui/report-section-picker";
+import { ALL_REPORT_SECTIONS, SECTION_PERMISSION_KEY } from "./ui/report-sections";
 
 export default async function BaoCaoPage({
   searchParams,

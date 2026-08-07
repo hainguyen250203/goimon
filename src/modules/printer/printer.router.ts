@@ -11,6 +11,7 @@ import { scanNetworkForPrinters } from "./application/scan-network-for-printers.
 import { printerDrizzleRepository } from "./infrastructure/printer.drizzle-repository";
 import { tcpPrinterScanner } from "./infrastructure/tcp-printer-scanner";
 import { logActivity } from "~/modules/activity-log/log-activity";
+import { toSafeErrorMessage } from "~/lib/db-errors";
 
 // Cổng raw/JetDirect chuẩn của máy in mạng (ESC/POS) — khớp cổng mặc định
 // đang dùng khi tạo máy in thủ công (xem printer-form-dialog.tsx).
@@ -89,7 +90,7 @@ export const printerRouter = createTRPCRouter({
       } catch (error) {
         throw new TRPCError({
           code: "CONFLICT",
-          message: error instanceof Error ? error.message : "Xoá thất bại.",
+          message: toSafeErrorMessage(error, "Xoá thất bại."),
         });
       }
       await logActivity({

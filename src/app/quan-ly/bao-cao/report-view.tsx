@@ -9,7 +9,7 @@ import { useLocalStorageState } from "~/lib/use-local-storage-state";
 import { KpiCard } from "../kpi-card";
 import { toQueryRange } from "~/lib/vn-date-range";
 import { ReportSettingsDrawer } from "./report-settings-drawer";
-import { type ReportSectionKey } from "./ui/report-section-picker";
+import { type ReportSectionKey } from "./ui/report-sections";
 import { ShiftDetailCards } from "./ui/shift-detail-cards";
 import { TopItemsChart } from "./ui/top-items-chart";
 import { PaymentMethodPieChart } from "./ui/payment-method-pie-chart";
@@ -36,7 +36,7 @@ export function ReportView({
   initialEnd: string;
   categoryIds: number[];
   /** Phần role có quyền xem (permission, không phải sở thích cá nhân) — xem
-   * report-section-picker.tsx's SECTION_PERMISSION_KEY. */
+   * report-sections.ts's SECTION_PERMISSION_KEY. */
   allowedSections: ReportSectionKey[];
 }) {
   const { start, end } = toQueryRange(initialStart, initialEnd);

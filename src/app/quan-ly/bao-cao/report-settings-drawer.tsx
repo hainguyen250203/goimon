@@ -15,7 +15,8 @@ import {
 import { Field } from "~/components/ui/field";
 import { api } from "~/trpc/react";
 import { CategoryFilter } from "./ui/category-filter";
-import { ReportSectionPicker, type ReportSectionKey } from "./ui/report-section-picker";
+import { ReportSectionPicker } from "./ui/report-section-picker";
+import type { ReportSectionKey } from "./ui/report-sections";
 
 /**
  * Drawer điều khiển trang Báo cáo — layout copy từ
