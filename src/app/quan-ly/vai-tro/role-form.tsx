@@ -56,7 +56,10 @@ export function RoleForm({ item }: { item?: Role }) {
       .then(() => {
         toaster.create({ title: isEdit ? "Đã cập nhật vai trò" : "Đã thêm vai trò", type: "success" });
         void utils.role.list.invalidate();
-        back();
+        // Sửa vai trò: ở lại trang này sau khi lưu (hay sửa tiếp nhiều lần
+        // liên tục, không muốn bị đá về danh sách mỗi lần bấm Lưu). Thêm mới
+        // thì vẫn quay lại danh sách — vai trò mới tạo cần thấy nó xuất hiện.
+        if (!isEdit) back();
       })
       .catch((error: unknown) => {
         toaster.create({

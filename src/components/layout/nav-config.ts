@@ -189,3 +189,19 @@ export function filterNavByRole(nav: NavItem[], permissions: ResolvedPermissions
     }))
     .filter((item) => !item.children || item.children.length > 0);
 }
+
+/**
+ * True nếu role thấy được ÍT NHẤT 1 mục có trang thật trong sidebar quản lý
+ * — dùng để quyết định hiện nút "Quản lý nhà hàng" ở /goi-mon/cua-hang và
+ * chặn vào /quan-ly khi không có gì để xem. KHÔNG dùng `permissions.keys.length
+ * > 0`: role "user" mặc định có vài permission hành động CHỈ dùng trong Gọi
+ * món (vd "don-hang.thanh-toan" để xác nhận thanh toán tại bàn) — các key này
+ * không phải `getKey` của trang quản lý nào cả (không nằm trong danh sách
+ * `getKey` bên trên), nên không được tính là "có quyền vào quản lý". Bỏ sót
+ * điều này khiến nhân viên phục vụ bình thường vẫn thấy nút + vào được
+ * /quan-ly rồi gặp trang Tổng quan trắng vì thiếu "dashboard.get".
+ */
+export function hasAnyAdminAccess(permissions: ResolvedPermissions): boolean {
+  if (permissions.isSuper) return true;
+  return ADMIN_NAV.some((item) => item.getKey && permissions.keys.includes(item.getKey));
+}

@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { AdminShell } from "~/components/layout/admin-shell";
+import { hasAnyAdminAccess } from "~/components/layout/nav-config";
 import { getSession } from "~/server/better-auth/server";
 import { getMyPermissions } from "~/modules/role/get-my-permissions";
 
@@ -16,9 +17,10 @@ export default async function QuanLyLayout({
   }
 
   const permissions = await getMyPermissions();
-  // Không có bất kỳ quyền quan-ly nào (không isSuper, không .get key nào) —
-  // vd role "user" (chỉ dùng goi-mon) — đá về /goi-mon.
-  if (!permissions.isSuper && permissions.keys.length === 0) {
+  // Không thấy được trang quản lý nào (không isSuper, không getKey nào của
+  // ADMIN_NAV khớp) — vd role "user" (chỉ dùng goi-mon, dù có vài permission
+  // hành động riêng cho Gọi món) — đá về /goi-mon. Xem hasAnyAdminAccess.
+  if (!hasAnyAdminAccess(permissions)) {
     redirect("/goi-mon");
   }
 
